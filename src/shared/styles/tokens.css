@@ -1,8 +1,16 @@
 :root{
+  /* Brand base (tuyo) */
   --brand-900:#16203F;
   --brand-800:#1B2543;
   --brand-700:#343C57;
 
+  /* Accent azul (USYC) */
+  --accent:#1570FF;
+  --accent-2:#0E2F5B; /* más institucional */
+  --accent-soft: rgba(21,112,255,.10);
+  --accent-soft-2: rgba(14,47,91,.10);
+
+  /* Base UI (tuya) */
   --bg:#F6F7FA;
   --panel:#FFFFFF;
   --border:#E3E6EE;
@@ -10,11 +18,21 @@
   --text:#0B1220;
   --muted:#5B6270;
 
+  /* Estados (tuyo + softs) */
   --ok:#0E7A4F;
   --warn:#B45309;
   --danger:#B42318;
 
+  --ok-soft: rgba(14,122,79,.12);
+  --warn-soft: rgba(180,83,9,.12);
+  --danger-soft: rgba(180,35,24,.10);
+
+  /* Layout */
   --radius:14px;
+  --radius-lg: 18px;
   --shadow: 0 10px 28px rgba(11,18,32,.10);
-  --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  --shadow-soft: 0 12px 40px rgba(11,18,32,.08);
+
+  /* Tipografía */
+  --font-sans: var(--font-sans, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial);
 }

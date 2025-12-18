@@ -1,142 +1,343 @@
+/* ===== Sidebar base ===== */
 .sidebar{
-  height: 100vh;
   position: sticky;
   top: 0;
-  background: var(--brand-800, #1B2543);
-  color: #fff;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  border-right: 1px solid rgba(255,255,255,.10);
+  height: 100vh;
+  width: 260px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px;
+  gap: 10px;
+
+  /* Tipografía general del sidebar */
+  font-size: 13px;
+  line-height: 1.25;
+
+  /* ✅ Animación sutil */
+  transition: width .24s ease;
+  will-change: width;
+}
+
+.collapsed{ width: 78px; }
+
+/* ===== Top ===== */
+.top{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .brand{
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 16px 16px 12px;
-}
-
-.logoWrap{
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(255,255,255,.10);
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255,255,255,.12);
-}
-
-.logo{
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-  display: block;
-}
-
-.brandText{
+  display:flex;
+  align-items:center;
+  gap: 10px;
   min-width: 0;
 }
 
-.brandName{
-  font-weight: 800;
-  letter-spacing: .3px;
-  line-height: 1.1;
+.logoWrap{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+
+  transition: box-shadow .24s ease, width .24s ease, height .24s ease;
 }
 
+.logo{ width: 30px; height: 30px; object-fit: contain; transition: width .24s ease, height .24s ease; }
+
+/* ✅ texto del brand con fade */
+.brandText{
+  min-width: 0;
+  transition: opacity .18s ease, transform .18s ease;
+  transform-origin: left center;
+}
+.collapsed .brandText{
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+}
+
+.brandName{
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: var(--text);
+  line-height: 1.05;
+  font-size: 14px;
+}
 .brandSub{
   margin-top: 2px;
-  font-size: 12px;
-  opacity: .82;
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.nav{
-  padding: 10px 10px 14px;
-  display: grid;
-  gap: 6px;
-  align-content: start;
+.collapseBtn{
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display:grid;
+  place-items:center;
+  color: var(--brand-900);
+  transition: background .15s ease, transform .15s ease;
 }
+.collapseBtn:hover{
+  background: rgba(11,18,32,.03);
+  transform: translateY(-1px);
+}
+
+/* ===== Nav ===== */
+.nav{
+  flex: 1;
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.group{ display:flex; flex-direction: column; gap: 6px; }
+
+.groupTitle{
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .9px;
+  color: rgba(11,18,32,.42);
+  padding: 8px 10px 4px;
+}
+
+.groupDivider{
+  height: 1px;
+  background: var(--border);
+  margin: 10px 6px;
+}
+
+.groupItems{ display:flex; flex-direction: column; gap: 6px; }
+
+.itemWrap{ position: relative; }
 
 .item{
-  display: flex;
-  align-items: center;
+  position: relative;
+  display:flex;
+  align-items:center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  color: rgba(255,255,255,.92);
-  border: 1px solid rgba(255,255,255,0);
-  transition: background .15s ease, border-color .15s ease, transform .1s ease;
+  padding: 8px 10px;
+  border-radius: 14px;
+  color: rgba(11,18,32,.84);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 13px;
+  border: 1px solid transparent;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
 }
+
+/* Ícono más fino */
+.iconWrap{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display:grid;
+  place-items:center;
+  background: rgba(22,32,63,.03);
+  border: 1px solid rgba(22,32,63,.06);
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.icon{ color: var(--brand-900); }
 
 .item:hover{
-  background: rgba(255,255,255,.10);
-  border-color: rgba(255,255,255,.10);
+  background: rgba(11,18,32,.03);
+  border-color: rgba(11,18,32,.06);
+  transform: translateY(-1px);
+}
+.item:hover .iconWrap{
+  transform: translateY(-1px);
 }
 
+/* Active moderno: barrita + fondo suave */
 .active{
-  background: rgba(255,255,255,.14);
-  border-color: rgba(255,255,255,.14);
+  background: var(--accent-soft, rgba(21,112,255,.10));
+  border-color: rgba(21,112,255,.16);
+  box-shadow: none;
 }
 
-.icon{
-  opacity: .95;
-}
-
-.label{
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.footer{
-  padding: 12px 16px 16px;
-  border-top: 1px solid rgba(255,255,255,.10);
-}
-
-.pill{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+.active::before{
+  content:"";
+  position:absolute;
+  left: 6px;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  transform: translateY(-50%);
   border-radius: 999px;
-  background: rgba(255,255,255,.10);
-  border: 1px solid rgba(255,255,255,.12);
-  font-size: 12px;
-  font-weight: 700;
+  background: var(--accent, #1570FF);
 }
 
-.hint{
-  margin-top: 8px;
-  font-size: 12px;
-  opacity: .78;
+.active .iconWrap{
+  background: rgba(21,112,255,.10);
+  border-color: rgba(21,112,255,.16);
 }
 
-@media (max-width: 900px){
-  .sidebar{
-    height: auto;
-    position: relative;
-    grid-template-rows: auto auto;
-    border-right: none;
-    border-bottom: 1px solid rgba(255,255,255,.10);
-  }
+.active .icon{
+  color: var(--accent, #1570FF);
+}
 
-  .footer{
-    display: none;
-  }
+/* ✅ label con fade al colapsar */
+.label{
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.collapsed .label{
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+}
 
-  .nav{
-    padding: 8px 10px 12px;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: 8px;
-  }
+/* ===== Tooltip (colapsado) ===== */
+.tooltip{
+  position: absolute;
+  left: 72px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--brand-900);
+  color: #fff;
+  padding: 7px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 18px 40px rgba(0,0,0,.25);
+}
 
-  .label{
-    display: none; /* en móvil, solo íconos */
-  }
+.itemWrap:hover .tooltip{ opacity: 1; }
 
-  .item{
-    justify-content: center;
-  }
+/* ===== Footer (Perfil) ===== */
+.footer{
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.profileRow{
+  position: relative;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(11,18,32,.02);
+  border: 1px solid rgba(11,18,32,.06);
+}
+
+.profileIcon{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display:grid;
+  place-items:center;
+  background: rgba(22,32,63,.04);
+  border: 1px solid rgba(22,32,63,.07);
+  color: var(--brand-900);
+}
+
+.profileText{
+  min-width: 0;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.collapsed .profileText{
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+}
+
+.profileName{
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.1;
+  font-size: 13px;
+}
+.profileMeta{
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 750;
+  color: var(--muted);
+}
+
+/* Tooltip footer colapsado */
+.tooltipFooter{
+  left: 72px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* ===========================
+   Collapsed header (fix logo)
+   =========================== */
+.collapsed .top{
+  position: relative;
+  justify-content: center;
+  padding: 6px 6px 0;
+  min-height: 52px;
+}
+
+.collapsed .brand{
+  width: 100%;
+  justify-content: center;
+  padding-right: 40px; /* reserva espacio para el botón */
+}
+
+/* logo más “marca” en colapsado */
+.collapsed .logoWrap{
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  box-shadow: 0 8px 16px rgba(11,18,32,.07);
+}
+
+.collapsed .logo{
+  width: 34px;
+  height: 34px;
+}
+
+/* ✅ SOLO UNA definición del botón en colapsado (sin duplicados) */
+.collapsed .collapseBtn{
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  z-index: 3;
+}
+
+/* Collapsed nav alignment */
+.collapsed .item{
+  justify-content: center;
+  padding: 8px 8px;
+}
+
+.collapsed .active::before{
+  left: 3px;
+  height: 16px;
+}
+
+/* Footer centrado */
+.collapsed .profileRow{
+  justify-content: center;
+  padding: 10px 8px;
 }

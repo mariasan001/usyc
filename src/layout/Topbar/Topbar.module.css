@@ -1,54 +1,61 @@
 .topbar{
-  background: var(--panel, #fff);
-  border-bottom: 1px solid var(--border, #E3E6EE);
-  padding: 14px 18px;
-  display: flex;
-  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display:flex;
+  align-items:center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
+
+  padding: 14px 18px;
+  background: rgba(246,247,250,.75);       /* var(--bg) con blur */
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(227,230,238,.9);
 }
 
 .left{
-  display: flex;
-  align-items: center;
-  gap: 10px;
   min-width: 0;
 }
 
 .title{
   margin: 0;
   font-size: 18px;
+  line-height: 1.1;
+  font-weight: 900;
   letter-spacing: .2px;
+  color: var(--text);
 }
 
-.badge{
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(27,37,67,.08);
-  border: 1px solid rgba(27,37,67,.12);
-  color: var(--brand-800, #1B2543);
+.subtitle{
+  margin: 4px 0 0;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 450;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .right{
-  display: flex;
-  align-items: center;
+  display:flex;
+  align-items:center;
   gap: 10px;
 }
 
 .search{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #F3F5F9;
-  border: 1px solid #E7EAF2;
-  min-width: 340px;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 26px rgba(11,18,32,.06);
+  min-width: 320px;
+}
+
+.searchIcon{
+  color: rgba(11,18,32,.55);
 }
 
 .searchInput{
@@ -56,11 +63,20 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 14px;
-  color: var(--text, #0B1220);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 750;
 }
 
+.searchInput::placeholder{
+  color: rgba(11,18,32,.45);
+}
+
+/* Responsive */
 @media (max-width: 900px){
-  .search{ min-width: 0; width: 100%; }
-  .topbar{ padding: 12px 12px; }
+  .search{ min-width: 220px; }
+}
+@media (max-width: 640px){
+  .subtitle{ display:none; }
+  .search{ min-width: 180px; }
 }

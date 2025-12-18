@@ -1,24 +1,35 @@
 .shell{
   min-height: 100vh;
+  background: var(--bg);
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  background: var(--bg, #F6F7FA);
+  grid-template-columns: 260px minmax(0, 1fr);
+    transition: grid-template-columns .22s ease;
+  will-change: grid-template-columns;
 }
+
+:global(html[data-sidebar-collapsed="1"]) .shell{
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+
 
 .main{
   min-width: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
 }
 
 .content{
+  flex: 1;
+  min-width: 0;
   padding: 18px;
+}
+
+/* Contenedor principal estilo “panel” */
+.content > *{
   min-width: 0;
 }
 
+/* Responsive: en pantallas chicas, sidebar puede ir colapsado (si lo manejas) */
 @media (max-width: 900px){
-  .shell{
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
+  .content{ padding: 14px; }
 }
