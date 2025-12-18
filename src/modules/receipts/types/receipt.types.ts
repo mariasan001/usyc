@@ -40,3 +40,18 @@ export type ReceiptQuery = {
   dateTo?: string;            // "YYYY-MM-DD"
   folio?: string;
 };
+// src/modules/receipts/types/student.types.ts
+export type StudentPlanDuration = 6 | 12 | 24 | 36 | 48;
+
+export type Student = {
+  id: string;
+  matricula: string;
+  nombre: string;
+
+  carrera: string;
+  duracionMeses: StudentPlanDuration;
+
+  fechaInicio: string;        // ISO yyyy-mm-dd
+  mensualidad: number;        // costo mensual estándar
+  createdAt: string;
+};

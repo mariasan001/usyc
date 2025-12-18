@@ -376,3 +376,9 @@ function openLedger(r: Receipt) {
     </div>
   );
 }
+
+/**ahora awui va cmabiar las cosas  por que este no muestra ensi reciboss registrado cmo comente son alumnso wue si tinee en comun que 
+ * que tine que impremir su revipspero  d eforma secunda ahor la tbala mostrar alosiguent e:nombre,  fecha ingres , fehca de temrino (swe claula conlsomeses que se agregaron o años  ,carrera estas como no s crreinte ,  ocn audeudo 
+ * no se estasi que muesd anecotra run alunmo  aciones seri aver detalle que acmente se ve al selccioanr el nombre  t al er detale mandari 
+ * la nform delalumno y laproyecion depagos que tendir wue ahcer por me aiscmo estapaenteado   creo separemsolo de  revismopro que so es indepedniete )
+ */

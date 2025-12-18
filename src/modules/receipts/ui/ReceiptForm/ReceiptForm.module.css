@@ -1,20 +1,87 @@
 .form{
-  display:grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 
+/* fila de 2 columnas (Duración + Fecha) */
 .row{
-  display:grid;
+  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-.actions{
-  display:flex;
-  justify-content:flex-end;
-  padding-top: 6px;
+/* contenedor para el select (como si fuera un Input) */
+.field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
+.label{
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(11,18,32,.65);
+  letter-spacing: .2px;
+}
+
+/* select con look moderno */
+.select{
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 12px;
+  outline: none;
+
+  /* para que no se vea “nativo feo” */
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* flechita minimal */
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(11,18,32,.55) 50%),
+    linear-gradient(135deg, rgba(11,18,32,.55) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 18px,
+    calc(100% - 13px) 18px,
+    0 0;
+  background-size:
+    5px 5px,
+    5px 5px,
+    100% 100%;
+  background-repeat: no-repeat;
+
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.select:focus{
+  border-color: rgba(21,112,255,.35);
+  box-shadow: 0 0 0 4px rgba(21,112,255,.12);
+}
+
+.select:hover{
+  border-color: rgba(11,18,32,.14);
+}
+
+/* actions */
+.actions{
+  padding-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* responsive */
 @media (max-width: 980px){
-  .row{ grid-template-columns: 1fr; }
+  .row{
+    grid-template-columns: 1fr;
+  }
+
+  .actions{
+    justify-content: stretch;
+  }
 }
