@@ -1,8 +1,18 @@
 export type ReceiptStatus = 'VALID' | 'CANCELLED';
 
+// ✅ nuevo: duración del plan
+export type StudentPlanDuration = 6 | 12 | 24 | 36 | 48;
+
 export type ReceiptAlumno = {
-  matricula?: string; // opcional por si el plantel no maneja matrícula
+  matricula?: string; // opcional
   nombre: string;
+
+  // ✅ nuevo (plan del alumno)
+  carrera?: string;
+  duracionMeses?: StudentPlanDuration;
+
+  // ✅ opcional: si luego quieres “fecha ingreso” fija por alumno
+  fechaInicio?: string; // "YYYY-MM-DD"
 };
 
 export type Receipt = {
@@ -11,47 +21,36 @@ export type Receipt = {
   alumno: ReceiptAlumno;
   concepto: string;
 
-  monto: number;       // 1234.56
-  montoLetras: string; // "MIL DOSCIENTOS ... 56/100 M.N."
+  monto: number;
+  montoLetras: string;
 
-  fechaPago: string;   // ISO: "2025-12-18"
-
+  fechaPago: string; // "YYYY-MM-DD"
   status: ReceiptStatus;
 
   cancelReason?: string;
-  cancelledAt?: string; // ISO datetime
+  cancelledAt?: string;
 
-  createdAt: string;   // ISO datetime
-  updatedAt: string;   // ISO datetime
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ReceiptCreateInput = {
   alumnoNombre: string;
   alumnoMatricula?: string;
+
+  // ✅ nuevo (lo que ya mandas desde el form)
+  alumnoCarrera: string;
+  alumnoDuracionMeses: StudentPlanDuration;
+
   concepto: string;
   monto: number;
-  fechaPago: string; // "YYYY-MM-DD"
+  fechaPago: string;
 };
 
 export type ReceiptQuery = {
-  q?: string;                 // busca por folio / alumno / concepto
+  q?: string;
   status?: ReceiptStatus | 'ALL';
-  dateFrom?: string;          // "YYYY-MM-DD"
-  dateTo?: string;            // "YYYY-MM-DD"
+  dateFrom?: string;
+  dateTo?: string;
   folio?: string;
-};
-// src/modules/receipts/types/student.types.ts
-export type StudentPlanDuration = 6 | 12 | 24 | 36 | 48;
-
-export type Student = {
-  id: string;
-  matricula: string;
-  nombre: string;
-
-  carrera: string;
-  duracionMeses: StudentPlanDuration;
-
-  fechaInicio: string;        // ISO yyyy-mm-dd
-  mensualidad: number;        // costo mensual estándar
-  createdAt: string;
 };

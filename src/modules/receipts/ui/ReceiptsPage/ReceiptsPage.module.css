@@ -18,3 +18,17 @@
   .grid{ grid-template-columns: 1fr; }
   .leftCol{ position: relative; top: 0; }
 }
+.grid{
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 16px;
+
+  /* 👇 clave: que los hijos se estiren a la altura de la fila */
+  align-items: stretch;
+}
+
+/* 👇 por si tenías align-self:start en alguno */
+.left,
+.right{
+  height: 100%;
+}

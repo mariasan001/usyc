@@ -1,30 +1,81 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Eye, Printer, RefreshCcw, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Eye, RefreshCcw } from 'lucide-react';
 
 import Table from '@/shared/ui/Table/Table';
 import Badge from '@/shared/ui/Badge/Badge';
 import Button from '@/shared/ui/Button/Button';
-import Modal from '@/shared/ui/Modal/Modal';
-import Input from '@/shared/ui/Input/Input';
 
-import type { Receipt } from '../../types/receipt.types';
+import type { Receipt, StudentPlanDuration } from '../../types/receipt.types';
 import s from './ReceiptsTable.module.css';
-import { encodeReceiptQr } from '@/qr/utils/qr.codec';
 
 import StudentLedgerModal from '../StudentLedgerModal/StudentLedgerModal';
 import type { StudentRef } from '../../utils/student-ledger.utils';
 
 type UiQuery = {
   q: string;
-  status: 'ALL' | 'VALID' | 'CANCELLED';
+  status: 'ALL' | 'CORRIENTE' | 'ADEUDO';
   dateFrom: string;
   dateTo: string;
 };
 
-function openPrint(url: string) {
-  window.open(url, '_blank', 'noopener,noreferrer');
+// ✅ Por si Receipt.alumno todavía no trae estos campos en tu type base.
+// (Así TS no se pone exquisito)
+type ReceiptPlan = Receipt & {
+  alumno: Receipt['alumno'] & {
+    carrera?: string;
+    duracionMeses?: StudentPlanDuration;
+    fechaInicio?: string;
+  };
+};
+
+type StudentRow = {
+  key: string;
+  nombre: string;
+  matricula: string | null;
+
+  carrera: string;
+  duracionMeses: StudentPlanDuration;
+
+  fechaIngreso: string; // inferida por primer pago (o alumno.fechaInicio)
+  fechaTermino: string; // ingreso + duracionMeses
+
+  ultimoPago: string;
+  estado: 'CORRIENTE' | 'ADEUDO';
+};
+
+function normalizeKey(str: string) {
+  return str
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function addMonthsISO(iso: string, months: number) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, (m - 1) + months, d);
+  const yy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+function inRange(iso: string, from: string, to: string) {
+  if (from && iso < from) return false;
+  if (to && iso > to) return false;
+  return true;
+}
+
+// ✅ heurística simple: “corriente” si pagó en el mes actual
+function isCorriente(ultimoPagoISO: string) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  const ymNow = `${y}-${String(m).padStart(2, '0')}`;
+  return ultimoPagoISO.slice(0, 7) === ymNow;
 }
 
 export default function ReceiptsTable({
@@ -34,7 +85,6 @@ export default function ReceiptsTable({
   query,
   setQuery,
   onRefresh,
-  onCancel,
 }: {
   items: Receipt[];
   loading?: boolean;
@@ -42,93 +92,113 @@ export default function ReceiptsTable({
   query: UiQuery;
   setQuery: (q: UiQuery) => void;
   onRefresh: () => Promise<void>;
-  onCancel: (folio: string, reason: string) => Promise<any>;
 }) {
-  const [view, setView] = useState<Receipt | null>(null);
+  const [ledgerOpen, setLedgerOpen] = useState(false);
+  const [ledgerStudent, setLedgerStudent] = useState<StudentRef | null>(null);
 
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState<Receipt | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
-  const [canceling, setCanceling] = useState(false);
+  // ✅ paginación
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  // ✅ Selección para imprimir lote
-  const [selectedFolios, setSelectedFolios] = useState<Set<string>>(new Set());
+  const students = useMemo<StudentRow[]>(() => {
+    const map = new Map<string, StudentRow>();
 
-  const empty = useMemo(() => !loading && items.length === 0, [loading, items.length]);
-const [ledgerOpen, setLedgerOpen] = useState(false);
-const [ledgerStudent, setLedgerStudent] = useState<StudentRef | null>(null);
+    for (const raw of items as ReceiptPlan[]) {
+      const matricula = (raw.alumno.matricula ?? '').trim();
+      const nombre = (raw.alumno.nombre ?? '').trim();
 
-function openLedger(r: Receipt) {
-  setLedgerStudent({ nombre: r.alumno.nombre, matricula: r.alumno.matricula ?? null });
-  setLedgerOpen(true);
-}
+      const key = matricula ? `m:${matricula}` : `n:${normalizeKey(nombre)}`;
 
-  const allVisibleSelected = useMemo(() => {
-    if (items.length === 0) return false;
-    return items.every((r) => selectedFolios.has(r.folio));
-  }, [items, selectedFolios]);
+      const carrera = (raw.alumno.carrera ?? '').trim();
+      const duracionMeses = (raw.alumno.duracionMeses ?? 6) as StudentPlanDuration;
 
-  const someVisibleSelected = useMemo(() => {
-    return items.some((r) => selectedFolios.has(r.folio));
-  }, [items, selectedFolios]);
+      // ingreso: si viene alumno.fechaInicio úsala; si no, primer pago
+      const ingreso = (raw.alumno.fechaInicio ?? raw.fechaPago);
 
-  const selectedCount = selectedFolios.size;
-
-  function toggleOne(folio: string, checked: boolean) {
-    setSelectedFolios((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(folio);
-      else next.delete(folio);
-      return next;
-    });
-  }
-
-  function toggleAllVisible(checked: boolean) {
-    setSelectedFolios((prev) => {
-      const next = new Set(prev);
-      for (const r of items) {
-        if (checked) next.add(r.folio);
-        else next.delete(r.folio);
+      const prev = map.get(key);
+      if (!prev) {
+        map.set(key, {
+          key,
+          nombre: nombre || '—',
+          matricula: matricula || null,
+          carrera: carrera || '—',
+          duracionMeses,
+          fechaIngreso: ingreso,
+          fechaTermino: addMonthsISO(ingreso, duracionMeses),
+          ultimoPago: raw.fechaPago,
+          estado: isCorriente(raw.fechaPago) ? 'CORRIENTE' : 'ADEUDO',
+        });
+        continue;
       }
-      return next;
-    });
-  }
 
-  function clearSelection() {
-    setSelectedFolios(new Set());
-  }
+      const fechaIngreso = ingreso < prev.fechaIngreso ? ingreso : prev.fechaIngreso;
+      const ultimoPago = raw.fechaPago > prev.ultimoPago ? raw.fechaPago : prev.ultimoPago;
 
-  function printOne(folio: string) {
-    openPrint(`/recibos/print?folio=${encodeURIComponent(folio)}`);
-  }
+      const finalDur = prev.duracionMeses ?? duracionMeses;
+      const finalCarrera = prev.carrera !== '—' ? prev.carrera : (carrera || '—');
 
-  function printSelected() {
-    if (selectedCount === 0) return;
-    const folios = Array.from(selectedFolios).join(',');
-    openPrint(`/recibos/print?folios=${encodeURIComponent(folios)}`);
-  }
-
-  function openCancel(r: Receipt) {
-    setCancelTarget(r);
-    setCancelReason('');
-    setCancelOpen(true);
-  }
-
-  async function confirmCancel() {
-    if (!cancelTarget) return;
-    if (!cancelReason.trim()) return;
-
-    try {
-      setCanceling(true);
-      await onCancel(cancelTarget.folio, cancelReason.trim());
-      setCancelOpen(false);
-      setCancelTarget(null);
-
-      // (opcional) si cancelas un recibo seleccionado, lo dejamos seleccionado.
-      // Si quieres quitarlo: setSelectedFolios(prev=>{...})
-    } finally {
-      setCanceling(false);
+      map.set(key, {
+        ...prev,
+        nombre: prev.nombre !== '—' ? prev.nombre : (nombre || '—'),
+        matricula: prev.matricula ?? (matricula || null),
+        carrera: finalCarrera,
+        duracionMeses: finalDur,
+        fechaIngreso,
+        fechaTermino: addMonthsISO(fechaIngreso, finalDur),
+        ultimoPago,
+        estado: isCorriente(ultimoPago) ? 'CORRIENTE' : 'ADEUDO',
+      });
     }
+
+    return Array.from(map.values()).sort((a, b) =>
+      b.fechaIngreso.localeCompare(a.fechaIngreso),
+    );
+  }, [items]);
+
+  const filtered = useMemo(() => {
+    const q = query.q.trim().toLowerCase();
+
+    return students.filter((st) => {
+      if (query.status !== 'ALL' && st.estado !== query.status) return false;
+      if (!inRange(st.fechaIngreso, query.dateFrom, query.dateTo)) return false;
+
+      if (!q) return true;
+      return (
+        st.nombre.toLowerCase().includes(q) ||
+        (st.matricula ?? '').toLowerCase().includes(q) ||
+        st.carrera.toLowerCase().includes(q)
+      );
+    });
+  }, [students, query]);
+
+  const empty = useMemo(
+    () => !loading && filtered.length === 0,
+    [loading, filtered.length],
+  );
+
+  // ✅ reset page al cambiar filtros
+  useEffect(() => {
+    setPage(1);
+  }, [query.q, query.status, query.dateFrom, query.dateTo]);
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+
+  const startIdx = total === 0 ? 0 : (safePage - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const pageItems = filtered.slice(startIdx, endIdx);
+
+  function openLedger(st: StudentRow) {
+    setLedgerStudent({
+      nombre: st.nombre,
+      matricula: st.matricula,
+      carrera: st.carrera,
+      duracionMeses: st.duracionMeses,
+      fechaIngreso: st.fechaIngreso,
+      fechaTermino: st.fechaTermino,
+    });
+    setLedgerOpen(true);
   }
 
   return (
@@ -136,7 +206,7 @@ function openLedger(r: Receipt) {
       <div className={s.toolbar}>
         <input
           className={s.search}
-          placeholder="Buscar (folio, alumno, concepto)…"
+          placeholder="Buscar alumno (nombre, matrícula, carrera)…"
           value={query.q}
           onChange={(e) => setQuery({ ...query, q: e.target.value })}
         />
@@ -144,11 +214,14 @@ function openLedger(r: Receipt) {
         <select
           className={s.select}
           value={query.status}
-          onChange={(e) => setQuery({ ...query, status: e.target.value as UiQuery['status'] })}
+          onChange={(e) =>
+            setQuery({ ...query, status: e.target.value as UiQuery['status'] })
+          }
+          title="Estado"
         >
           <option value="ALL">Todos</option>
-          <option value="VALID">Válidos</option>
-          <option value="CANCELLED">Cancelados</option>
+          <option value="CORRIENTE">Corriente</option>
+          <option value="ADEUDO">Con adeudo</option>
         </select>
 
         <input
@@ -156,35 +229,17 @@ function openLedger(r: Receipt) {
           type="date"
           value={query.dateFrom}
           onChange={(e) => setQuery({ ...query, dateFrom: e.target.value })}
-          title="Desde"
+          title="Ingreso desde"
         />
         <input
           className={s.date}
           type="date"
           value={query.dateTo}
           onChange={(e) => setQuery({ ...query, dateTo: e.target.value })}
-          title="Hasta"
+          title="Ingreso hasta"
         />
 
         <div className={s.toolbarRight}>
-          {selectedCount > 0 ? (
-            <>
-              <span className={s.selCount}>{selectedCount} seleccionados</span>
-              <button className={s.clearSel} onClick={clearSelection} type="button">
-                Limpiar
-              </button>
-            </>
-          ) : null}
-
-          <Button
-            variant="secondary"
-            onClick={printSelected}
-            leftIcon={<Printer size={16} />}
-            disabled={selectedCount === 0}
-          >
-            Imprimir seleccionados
-          </Button>
-
           <Button variant="secondary" onClick={onRefresh} leftIcon={<RefreshCcw size={16} />}>
             Refrescar
           </Button>
@@ -193,192 +248,128 @@ function openLedger(r: Receipt) {
 
       {error ? <div className={s.error}>{error}</div> : null}
 
-      <Table>
-        <thead>
-          <tr>
-            <th className={s.checkCell}>
-              <input
-                className={s.check}
-                type="checkbox"
-                checked={allVisibleSelected}
-                ref={(el) => {
-                  if (!el) return;
-                  el.indeterminate = !allVisibleSelected && someVisibleSelected;
-                }}
-                onChange={(e) => toggleAllVisible(e.target.checked)}
-                title="Seleccionar todos los visibles"
-              />
-            </th>
-            <th>Folio</th>
-            <th>Alumno</th>
-            <th>Concepto</th>
-            <th>Monto</th>
-            <th>Fecha</th>
-            <th>Estatus</th>
-            <th style={{ textAlign: 'right' }}>Acciones</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {loading ? (
+      <div className={s.tableShell}>
+        <Table>
+          <thead>
             <tr>
-              <td colSpan={8} className={s.muted}>
-                Cargando…
-              </td>
+              <th className={s.thAlumno}>Alumno</th>
+              <th className={s.thCarrera}>Carrera</th>
+              <th className={s.thDate}>Ingreso</th>
+              <th className={s.thDate}>Término</th>
+              <th className={s.thEstado}>Estado</th>
+              <th className={s.thActions}>Acciones</th>
             </tr>
-          ) : empty ? (
-            <tr>
-              <td colSpan={8} className={s.muted}>
-                Sin recibos (aún). Genera el primero 💳
-              </td>
-            </tr>
-          ) : (
-            items.map((r) => (
-              <tr key={r.folio}>
-                <td className={s.checkCell}>
-                  <input
-                    className={s.check}
-                    type="checkbox"
-                    checked={selectedFolios.has(r.folio)}
-                    onChange={(e) => toggleOne(r.folio, e.target.checked)}
-                    title="Seleccionar para imprimir"
-                  />
-                </td>
+          </thead>
 
-                <td className={s.mono}>{r.folio}</td>
-               <td>
-  <button className={s.studentBtn} onClick={() => openLedger(r)} type="button">
-    {r.alumno.nombre}
-  </button>
-</td>
-                <td>{r.concepto}</td>
-                <td className={s.mono}>${r.monto.toFixed(2)}</td>
-                <td className={s.mono}>{r.fechaPago}</td>
-                <td>
-                  {r.status === 'VALID' ? <Badge tone="ok">Válido</Badge> : <Badge tone="warn">Cancelado</Badge>}
-                </td>
-
-                <td className={s.actionsCell}>
-                  <button className={s.iconBtn} onClick={() => setView(r)} title="Ver">
-                    <Eye size={16} />
-                  </button>
-
-                  <button className={s.iconBtn} onClick={() => printOne(r.folio)} title="Imprimir">
-                    <Printer size={16} />
-                  </button>
-
-                  <button
-                    className={s.iconBtn}
-                    onClick={() => openCancel(r)}
-                    title="Cancelar"
-                    disabled={r.status === 'CANCELLED'}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={6} className={s.muted}>Cargando…</td>
+              </tr>
+            ) : empty ? (
+              <tr>
+                <td colSpan={6} className={s.muted}>
+                  Sin alumnos todavía. Registra el primero ✍️
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </Table>
+            ) : (
+              pageItems.map((st) => (
+                <tr key={st.key}>
+                  <td className={s.tdAlumno}>
+                    <button className={s.studentBtn} onClick={() => openLedger(st)} type="button">
+                      <span className={s.studentName}>{st.nombre}</span>
+                      <span className={s.studentMeta}>
+                        {st.matricula ? `Matrícula: ${st.matricula}` : 'Sin matrícula'}
+                        <span className={s.dot}>•</span>
+                        Último pago: {st.ultimoPago}
+                      </span>
+                    </button>
+                  </td>
 
-      {/* Modal ver detalle */}
-      <Modal open={Boolean(view)} onClose={() => setView(null)} title="Detalle del recibo">
-        {view ? (
-          <div className={s.detail}>
-            <div>
-              <span>Folio</span>
-              <b>{view.folio}</b>
-            </div>
-            <div>
-              <span>Alumno</span>
-              <b>{view.alumno.nombre}</b>
-            </div>
-            <div>
-              <span>Matrícula</span>
-              <b>{view.alumno.matricula ?? '—'}</b>
-            </div>
-            <div>
-              <span>Concepto</span>
-              <b>{view.concepto}</b>
-            </div>
-            <div>
-              <span>Monto</span>
-              <b>${view.monto.toFixed(2)}</b>
-            </div>
-            <div className={s.full}>
-              <span>Monto en letras</span>
-              <b>{view.montoLetras}</b>
-            </div>
-            <div>
-              <span>Fecha</span>
-              <b>{view.fechaPago}</b>
-            </div>
-            <div>
-              <span>Estatus</span>
-              <b>{view.status === 'VALID' ? 'Válido' : 'Cancelado'}</b>
-            </div>
-            {view.status === 'CANCELLED' ? (
-              <div className={s.full}>
-                <span>Motivo</span>
-                <b>{view.cancelReason ?? '—'}</b>
-              </div>
-            ) : null}
+                  <td className={s.tdCarrera}>
+                    <div className={s.carrera}>
+                      <span className={s.carreraName}>{st.carrera}</span>
+                      <span className={s.carreraMeta}>{st.duracionMeses} meses</span>
+                    </div>
+                  </td>
 
-            <div className={s.full}>
-              <span>Contenido QR</span>
-              <b className={s.mono}>{encodeReceiptQr(view.folio)}</b>
-            </div>
+                  <td className={s.mono}>{st.fechaIngreso}</td>
+                  <td className={s.mono}>{st.fechaTermino}</td>
 
-            <div className={s.full}>
-              <Button onClick={() => printOne(view.folio)} leftIcon={<Printer size={16} />}>
-                Imprimir este recibo
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-<StudentLedgerModal
-  open={ledgerOpen}
-  onClose={() => setLedgerOpen(false)}
-  student={ledgerStudent}
-  allReceipts={items}
-/>
-      {/* Modal cancelar */}
-      <Modal open={cancelOpen} onClose={() => setCancelOpen(false)} title="Cancelar recibo">
-        <div className={s.cancelBox}>
-          <p className={s.cancelText}>
-            Vas a cancelar el folio <b>{cancelTarget?.folio}</b>. Esto quedará registrado.
-          </p>
+                  <td>
+                    {st.estado === 'CORRIENTE' ? (
+                      <Badge tone="ok">Corriente</Badge>
+                    ) : (
+                      <Badge tone="warn">Adeudo</Badge>
+                    )}
+                  </td>
 
-          <Input
-            label="Motivo (obligatorio)"
-            placeholder="Ej: pago duplicado, error de captura…"
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-          />
+                  <td className={s.actionsCell}>
+                    <button className={s.iconBtn} onClick={() => openLedger(st)} title="Ver detalle">
+                      <Eye size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </Table>
+      </div>
 
-          <div className={s.cancelActions}>
-            <Button variant="secondary" onClick={() => setCancelOpen(false)}>
-              Volver
-            </Button>
-            <Button
-              variant="danger"
-              onClick={confirmCancel}
-              disabled={!cancelReason.trim()}
-              loading={canceling}
-            >
-              Confirmar cancelación
-            </Button>
-          </div>
+      {/* ✅ Paginación */}
+      <div className={s.pager}>
+        <div className={s.pagerLeft}>
+          <span className={s.pagerText}>
+            Mostrando <b>{total === 0 ? 0 : startIdx + 1}</b>–<b>{endIdx}</b> de <b>{total}</b>
+          </span>
         </div>
-      </Modal>
+
+        <div className={s.pagerRight}>
+          <label className={s.rowsLabel}>
+            Filas
+            <select
+              className={s.rowsSelect}
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </label>
+
+          <button
+            className={s.pageBtn}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            type="button"
+            title="Anterior"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <span className={s.pageInfo}>
+            Página <b>{safePage}</b> de <b>{totalPages}</b>
+          </span>
+
+          <button
+            className={s.pageBtn}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+            type="button"
+            title="Siguiente"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      <StudentLedgerModal
+        open={ledgerOpen}
+        onClose={() => setLedgerOpen(false)}
+        student={ledgerStudent}
+        allReceipts={items}
+      />
     </div>
   );
 }
-
-/**ahora awui va cmabiar las cosas  por que este no muestra ensi reciboss registrado cmo comente son alumnso wue si tinee en comun que 
- * que tine que impremir su revipspero  d eforma secunda ahor la tbala mostrar alosiguent e:nombre,  fecha ingres , fehca de temrino (swe claula conlsomeses que se agregaron o años  ,carrera estas como no s crreinte ,  ocn audeudo 
- * no se estasi que muesd anecotra run alunmo  aciones seri aver detalle que acmente se ve al selccioanr el nombre  t al er detale mandari 
- * la nform delalumno y laproyecion depagos que tendir wue ahcer por me aiscmo estapaenteado   creo separemsolo de  revismopro que so es indepedniete )
- */

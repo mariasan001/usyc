@@ -1,128 +1,298 @@
-.wrap{ display:grid; gap: 12px; }
+.wrap{
+  width: 100%;
+  min-width: 0; /* 🔥 evita overflow que pisa al card de al lado */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 
+  /* ✅ base más compacta */
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+/* Toolbar */
 .toolbar{
-  display:flex;
+  display: flex;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  align-items: center;
+  min-width: 0;
 }
 
 .search{
   flex: 1;
   min-width: 220px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid #E7EAF2;
-  background: #F3F5F9;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+  padding: 0 12px;
   outline: none;
-}
-
-.select, .date{
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid #E7EAF2;
-  background: #fff;
-  outline: none;
-}
-
-.error{
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(180,35,24,.10);
-  border: 1px solid rgba(180,35,24,.18);
-  color: var(--danger);
-  font-weight: 700;
+  font: inherit;
   font-size: 13px;
 }
 
-.muted{
-  color: var(--muted);
-  padding: 16px !important;
+.select,
+.date{
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  padding: 0 12px;
+  outline: none;
+  font: inherit;
+  font-size: 13px;
 }
 
-.mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.date{
+  min-width: 150px;
+}
 
+.toolbarRight{
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+/* Table Shell */
+.tableShell{
+  border: 1px solid #e7ebf3;
+  border-radius: 16px;
+  overflow: hidden; /* esquinas clean */
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, 0.06);
+}
+
+/* Estilos al <table> del componente Table (sin tocar el Table.tsx) */
+.tableShell :global(table){
+  width: 100%;
+  table-layout: fixed; /* 🔥 evita que “invada” columnas */
+  border-collapse: separate;
+  border-spacing: 0;
+
+  /* ✅ tipografía compacta */
+  font-size: 13px;
+}
+
+.tableShell :global(thead th){
+  background: #ffffff;
+  font-weight: 700;
+  font-size: 11.5px;          /* ✅ más chica */
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 1px solid #edf0f6;
+  padding: 12px 14px;         /* ✅ más compacto */
+}
+
+.tableShell :global(tbody td){
+  padding: 12px 14px;         /* ✅ más compacto */
+  border-bottom: 1px solid #f0f2f8;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.tableShell :global(tbody tr:last-child td){
+  border-bottom: 0;
+}
+
+.tableShell :global(tbody tr){
+  background: #fff;
+}
+
+.tableShell :global(tbody tr:hover){
+  background: #fbfcff;
+}
+
+/* Column sizing (por clases en th) */
+.thAlumno{ width: 44%; }
+.thCarrera{ width: 18%; }
+.thDate{ width: 14%; }
+.thEstado{ width: 12%; }
+.thActions{ width: 12%; text-align: right; }
+
+.tdAlumno{ min-width: 0; }
+.tdCarrera{ min-width: 0; }
+
+.mono{
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12.5px;          /* ✅ más chica */
+  color: #111827;
+  white-space: nowrap;
+}
+
+/* Alumno cell */
+.studentBtn{
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  min-width: 0;
+}
+
+.studentName{
+  font-weight: 800;
+  font-size: 14px;            /* ✅ antes “se veía grandote” */
+  color: #0f172a;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studentMeta{
+  font-size: 12px;            /* ✅ más compacta */
+  font-weight: 600;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dot{
+  margin: 0 8px;
+  color: #c1c7d6;
+}
+
+/* Carrera cell */
+.carrera{
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.carreraName{
+  font-weight: 700;
+  font-size: 13px;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.carreraMeta{
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* Actions */
 .actionsCell{
   text-align: right;
-  display:flex;
-  justify-content:flex-end;
-  gap: 8px;
+  white-space: nowrap;
 }
 
 .iconBtn{
-  width: 34px;
-  height: 34px;
+  width: 36px;                /* ✅ más chico */
+  height: 36px;
   border-radius: 12px;
-  border: 1px solid var(--border);
-  background: #fff;
-  display:grid;
-  place-items:center;
-  cursor:pointer;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
-.iconBtn:hover{ background:#F6F7FA; }
-.iconBtn:disabled{ opacity:.45; cursor:not-allowed; }
-
-.detail{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 14px;
+.iconBtn:hover{
+  background: #f7f9fd;
 }
 
-.detail div{ display:flex; flex-direction:column; gap: 4px; }
-.detail span{ font-size: 12px; color: var(--muted); }
-.detail b{ font-size: 14px; color: var(--text); }
-.full{ grid-column: 1 / -1; }
-
-.cancelBox{ display:grid; gap: 12px; }
-.cancelText{ margin: 0; color: var(--text); }
-.cancelActions{ display:flex; justify-content:flex-end; gap: 10px; flex-wrap: wrap; }
-
-@media (max-width: 900px){
-  .detail{ grid-template-columns: 1fr; }
+/* States */
+.muted{
+  color: #6b7280;
+  padding: 16px 14px !important;
+  text-align: center;
+  font-size: 13px;
 }
-.toolbarRight{
-  display:flex;
-  align-items:center;
+
+.error{
+  border: 1px solid #fee2e2;
+  background: #fff1f2;
+  color: #9f1239;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+/* Pagination */
+.pager{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 2px 0;
+  min-width: 0;
+}
+
+.pagerText{
+  color: #6b7280;
+  font-size: 13px; /* ✅ más chico */
+}
+
+.pagerRight{
+  display: flex;
+  align-items: center;
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
-.checkCell{
-  width: 38px;
+.rowsLabel{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #6b7280;
+  font-size: 13px;
 }
 
-.check{
-  width: 16px;
-  height: 16px;
+.rowsSelect{
+  height: 36px;               /* ✅ más chico */
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.pageBtn{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
-.selCount{
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 800;
+.pageBtn:disabled{
+  opacity: .45;
+  cursor: not-allowed;
 }
 
-.clearSel{
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 900;
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 10px;
+.pageInfo{
+  color: #6b7280;
+  font-size: 13px;
+  white-space: nowrap;
 }
-.clearSel:hover{
-  background: #F6F7FA;
+
+/* Responsive: si se aprieta, permitir scroll horizontal dentro del shell sin “encimarse” */
+@media (max-width: 980px){
+  .tableShell{
+    overflow-x: auto; /* scroll en lugar de invadir el layout */
+  }
+
+  .tableShell :global(table){
+    min-width: 860px;
+  }
 }
-.studentBtn{
-  border: none;
-  background: transparent;
-  color: #1570FF;
-  font-weight: 900;
-  cursor: pointer;
-  padding: 0;
-}
-.studentBtn:hover{ text-decoration: underline; }

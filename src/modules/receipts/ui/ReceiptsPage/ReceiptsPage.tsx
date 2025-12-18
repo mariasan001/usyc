@@ -2,9 +2,11 @@
 
 import Card from '@/shared/ui/Card/Card';
 import Badge from '@/shared/ui/Badge/Badge';
+
 import ReceiptForm from '../ReceiptForm/ReceiptForm';
 import ReceiptsTable from '../ReceiptsTable/ReceiptsTable';
 import { useReceipts } from '../../hooks/useReceipts';
+
 import s from './ReceiptsPage.module.css';
 
 export default function ReceiptsPage() {
@@ -13,18 +15,18 @@ export default function ReceiptsPage() {
   return (
     <div className={s.grid}>
       <Card
-        title="Nuevo recibo"
-        subtitle="Captura alumno, concepto, monto y fecha"
-        right={<Badge tone="info">Emisión</Badge>}
+        title="Registrar alumno y pago"
+        subtitle="Captura datos del alumno "
+        right={<Badge tone="info">Registro</Badge>}
         className={s.left}
       >
         <ReceiptForm onCreate={vm.createReceipt} creating={vm.creating} />
       </Card>
 
       <Card
-        title="Recibos"
-        subtitle="Consulta, filtra y cancela con motivo"
-        right={<Badge tone="info">Historial</Badge>}
+        title="Alumnos"
+        subtitle="Directorio general • ver historial y proyección por alumno"
+        right={<Badge tone="info">Directorio</Badge>}
         className={s.right}
       >
         <ReceiptsTable
@@ -34,7 +36,7 @@ export default function ReceiptsPage() {
           query={vm.query}
           setQuery={vm.setQuery}
           onRefresh={vm.refresh}
-          onCancel={vm.cancelReceipt}
+          // ✅ ya no se cancela aquí (eso va dentro del modal de alumno / historial)
         />
       </Card>
     </div>

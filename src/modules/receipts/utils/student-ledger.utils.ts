@@ -132,3 +132,5 @@ export function calcEstimatedEndDate(cfg: PlanConfig) {
   const end = addMonths(start, Math.max(0, cfg.durationMonths - 1));
   return labelUpper(end);
 }
+
+
