@@ -1,0 +1,128 @@
+.wrap{ display:grid; gap: 12px; }
+
+.toolbar{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search{
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #E7EAF2;
+  background: #F3F5F9;
+  outline: none;
+}
+
+.select, .date{
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #E7EAF2;
+  background: #fff;
+  outline: none;
+}
+
+.error{
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(180,35,24,.10);
+  border: 1px solid rgba(180,35,24,.18);
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.muted{
+  color: var(--muted);
+  padding: 16px !important;
+}
+
+.mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+.actionsCell{
+  text-align: right;
+  display:flex;
+  justify-content:flex-end;
+  gap: 8px;
+}
+
+.iconBtn{
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+
+.iconBtn:hover{ background:#F6F7FA; }
+.iconBtn:disabled{ opacity:.45; cursor:not-allowed; }
+
+.detail{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+
+.detail div{ display:flex; flex-direction:column; gap: 4px; }
+.detail span{ font-size: 12px; color: var(--muted); }
+.detail b{ font-size: 14px; color: var(--text); }
+.full{ grid-column: 1 / -1; }
+
+.cancelBox{ display:grid; gap: 12px; }
+.cancelText{ margin: 0; color: var(--text); }
+.cancelActions{ display:flex; justify-content:flex-end; gap: 10px; flex-wrap: wrap; }
+
+@media (max-width: 900px){
+  .detail{ grid-template-columns: 1fr; }
+}
+.toolbarRight{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.checkCell{
+  width: 38px;
+}
+
+.check{
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.selCount{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.clearSel{
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+.clearSel:hover{
+  background: #F6F7FA;
+}
+.studentBtn{
+  border: none;
+  background: transparent;
+  color: #1570FF;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0;
+}
+.studentBtn:hover{ text-decoration: underline; }

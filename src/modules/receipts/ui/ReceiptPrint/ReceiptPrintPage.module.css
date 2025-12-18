@@ -1,0 +1,62 @@
+.wrap{
+  padding: 16px;
+  display:grid;
+  gap: 12px;
+}
+
+.controls{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.back{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background:#fff;
+  color: var(--text);
+  font-weight: 800;
+  text-decoration:none;
+}
+.back:hover{ background:#F6F7FA; }
+
+.right{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+.loading{
+  color: var(--muted);
+  font-weight: 800;
+  padding: 10px 2px;
+}
+
+.missing{
+  font-weight: 800;
+  color: var(--text);
+}
+
+.pages{
+  display:grid;
+  gap: 16px;
+}
+
+/* cada recibo una “hoja” */
+.printPage{
+  break-after: page;
+  page-break-after: always;
+}
+
+@media print{
+  .wrap{ padding:0; }
+  .controls{ display:none; }
+  .pages{ gap:0; }
+}

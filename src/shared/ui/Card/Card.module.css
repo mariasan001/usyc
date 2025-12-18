@@ -1,0 +1,23 @@
+.card{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.header{
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.headText{ min-width:0; }
+.title{ margin:0; font-size:15px; letter-spacing:.2px; }
+.sub{ margin:6px 0 0; font-size:13px; color: var(--muted); }
+
+.right{ display:flex; gap:8px; align-items:center; }
+.body{ padding: 16px; }

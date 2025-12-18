@@ -1,0 +1,85 @@
+.backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(10,12,16,.55);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 9999;
+}
+
+/* ✅ el contenedor del modal */
+.modal{
+  position: relative;
+  width: min(980px, 96vw);
+  max-height: 86vh;                 /* ✅ evita que se “coma” la pantalla */
+  background: #fff;
+  border: 1px solid rgba(16,24,40,.12);
+  border-radius: 18px;
+  overflow: hidden;                  /* ✅ recorta header/bordes */
+  display: flex;
+  flex-direction: column;            /* ✅ header + body */
+  box-shadow: 0 24px 80px rgba(0,0,0,.22);
+}
+
+.header{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(16,24,40,.10);
+  background: #fff;
+}
+
+.titleWrap{ min-width: 0; }
+.title{
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: #0B1220;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.close{
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 10px;
+}
+.close:hover{ background: rgba(16,24,40,.06); }
+
+/* ✅ cuando no hay título */
+.floatingClose{
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 1px solid rgba(16,24,40,.10);
+  background: rgba(255,255,255,.9);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 12px;
+  z-index: 2;
+}
+
+/* ✅ LO IMPORTANTE: scroll real */
+.body{
+  padding: 16px;
+  overflow: auto;                    /* ✅ aquí está la cura */
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;                     /* ✅ evita bugs de flex overflow */
+}
+
+/* móvil */
+@media (max-width: 640px){
+  .backdrop{ padding: 8px; }
+  .modal{
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 16px;
+  }
+  .body{ padding: 12px; }
+}

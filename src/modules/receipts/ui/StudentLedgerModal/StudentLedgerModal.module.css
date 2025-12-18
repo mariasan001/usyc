@@ -1,0 +1,111 @@
+.modalBody{ display:grid; gap: 14px; }
+
+.header{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  padding: 14px 16px;
+  background:#1570FF;
+  border-radius: 12px;
+  color:#fff;
+}
+.studentName{ font-weight: 900; letter-spacing:.4px; }
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.35);
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  align-items:center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background:#fff;
+  overflow:hidden;
+}
+.stat{ padding: 14px 10px; text-align:center; }
+.divider{ height: 70%; background: #E8ECF4; }
+.statLabel{ color: var(--muted); font-weight: 800; margin-top: 6px; }
+.statValueRed{ font-size: 34px; font-weight: 900; color:#D22; }
+.statValueGreen{ font-size: 34px; font-weight: 900; color:#118B3B; }
+.statValueDark{ font-size: 34px; font-weight: 900; color:#111; }
+
+.meta{
+  display:flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-weight: 800;
+}
+.meta span{ display:inline-flex; align-items:center; gap: 8px; }
+
+.h3{ margin: 6px 0 0; font-size: 22px; font-weight: 900; }
+.hint{ margin: 0; color: var(--muted); font-weight: 700; }
+
+.mono{ font-variant-numeric: tabular-nums; }
+
+.paidRow{ background: rgba(17,139,59,.10); }
+
+.badgePaid{
+  display:inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(17,139,59,.18);
+  color:#118B3B;
+  font-weight: 900;
+}
+.badgePending{
+  display:inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(210,34,34,.16);
+  color:#8A0F0F;
+  font-weight: 900;
+}
+
+.done{ font-weight: 900; color:#333; }
+
+.config{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background:#fff;
+  padding: 12px;
+  display:grid;
+  gap: 10px;
+}
+.configLabel{ font-weight: 900; color:#1570FF; }
+.configRow{
+  display:grid;
+  grid-template-columns: 1fr 200px 220px;
+  gap: 10px;
+}
+.select, .input{
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 0 12px;
+  font-weight: 800;
+  background:#fff;
+}
+.configNote{ color: var(--muted); font-size: 12px; font-weight: 700; }
+
+.footerActions{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 980px){
+  .stats{ grid-template-columns: 1fr; gap: 0; }
+  .divider{ display:none; }
+  .configRow{ grid-template-columns: 1fr; }
+}

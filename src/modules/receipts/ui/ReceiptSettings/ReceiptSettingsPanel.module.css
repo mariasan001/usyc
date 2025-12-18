@@ -1,0 +1,106 @@
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 0.9fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.form{ display:grid; gap: 12px; }
+
+.logoRow{
+  display:flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.logoLabel{ display:grid; gap: 8px; font-weight: 800; color: var(--text); }
+.file{ display:none; }
+
+.logoBtn{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background:#fff;
+  cursor:pointer;
+  font-weight: 800;
+}
+.logoBtn:hover{ background:#F6F7FA; }
+
+.actions{
+  display:flex;
+  justify-content:flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.preview{
+  display:grid;
+  gap: 10px;
+}
+
+.previewTitle{
+  font-weight: 900;
+  color: var(--text);
+}
+
+.previewCard{
+  border: 1px solid var(--border);
+  background:#fff;
+  border-radius: 16px;
+  padding: 12px;
+  display:grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items:center;
+}
+
+.previewLogo{
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  border: 1px dashed #B8C6D9;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+.previewLogo img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.previewLogoEmpty{
+  font-weight: 900;
+  color:#6B7A90;
+}
+
+.previewMeta{
+  display:grid;
+  gap: 6px;
+}
+.previewPlantel{
+  font-weight: 900;
+  color:#0E2F5B;
+}
+.previewSerie{
+  font-weight: 800;
+  color: var(--muted);
+}
+.previewFooter{
+  font-weight: 800;
+  color: var(--text);
+}
+
+.previewHint{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+}
