@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { DollarSign, Percent, User } from 'lucide-react';
+import { DollarSign, User } from 'lucide-react';
 
 import Modal from '@/shared/ui/Modal/Modal';
 import Table from '@/shared/ui/Table/Table';
@@ -28,26 +28,23 @@ function fmtMoney(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
 }
 
-const DURATIONS = [
-  { label: '6 Meses', value: 6 },
-  { label: '1 Año (12 meses)', value: 12 },
-  { label: '2 Años (24 meses)', value: 24 },
-  { label: '3 Años (36 meses)', value: 36 },
-  { label: '4 Años (48 meses)', value: 48 },
-] as const;
-
 export default function StudentLedgerModal({
   open,
   onClose,
   student,
   allReceipts,
-  onPayMonth, // opcional: si luego quieres “Pagar” que rellene el ReceiptForm
+  onPayMonth,
 }: {
   open: boolean;
   onClose: () => void;
   student: StudentRef | null;
   allReceipts: Receipt[];
-  onPayMonth?: (payload: { student: StudentRef; concepto: string; monto: number; fechaSugerida: string }) => void;
+  onPayMonth?: (payload: {
+    student: StudentRef;
+    concepto: string;
+    monto: number;
+    fechaSugerida: string;
+  }) => void;
 }) {
   const studentKey = useMemo(() => {
     if (!student) return '';
@@ -72,7 +69,7 @@ export default function StudentLedgerModal({
 
   const [cfg, setCfg] = useState<PlanConfig>(fallbackCfg);
 
-  // cargar config guardada por alumno al abrir
+  // cargar cfg al abrir
   useEffect(() => {
     if (!open || !student) return;
     const loaded = loadStudentPlan(studentKey, fallbackCfg);
@@ -80,7 +77,7 @@ export default function StudentLedgerModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, studentKey]);
 
-  // guardar config al cambiar (cuando el modal está abierto)
+  // guardar cfg (sin UI de ajustes, pero sí persistencia)
   useEffect(() => {
     if (!open || !student) return;
     saveStudentPlan(studentKey, cfg);
@@ -98,7 +95,6 @@ export default function StudentLedgerModal({
     const row = planRows.find((x) => x.key === rowKey);
     if (!row || !student) return;
 
-    // fecha sugerida: primer día del mes del row
     const fechaSugerida = `${row.key}-01`;
 
     if (onPayMonth) {
@@ -112,18 +108,27 @@ export default function StudentLedgerModal({
       return;
     }
 
-    // fallback (sin wiring): solo abre recibos (si luego quieres leer query params, lo armamos)
     window.open('/recibos', '_blank', 'noopener,noreferrer');
   }
 
   return (
     <Modal open={open} onClose={onClose} title="">
       {!student ? null : (
-        <div className={s.modalBody}>
-          {/* Header azul */}
+        <div className={s.shell}>
+          {/* Header */}
           <div className={s.header}>
             <div className={s.headerLeft}>
-              <div className={s.studentName}>{student.nombre.toUpperCase()}</div>
+              <div className={s.kicker}>Detalle del alumno</div>
+              <div className={s.titleRow}>
+                <div className={s.studentName}>{student.nombre}</div>
+                {student.matricula ? <span className={s.dot}>•</span> : null}
+                <div className={s.studentMeta}>
+                  {student.matricula ? `Matrícula: ${student.matricula}` : 'Sin matrícula'}
+                </div>
+              </div>
+              <div className={s.sub}>
+                Proyección y mensualidades calculadas con tu configuración guardada.
+              </div>
             </div>
 
             <div className={s.headerRight}>
@@ -131,122 +136,116 @@ export default function StudentLedgerModal({
                 <User size={14} />
                 <span>{student.matricula ?? '—'}</span>
               </div>
+
+            
             </div>
           </div>
 
-          {/* Stats */}
-          <div className={s.stats}>
-            <div className={s.stat}>
-              <div className={s.statValueRed}>{fmtMoney(summary.deuda)}</div>
-              <div className={s.statLabel}>Deuda Acumulada</div>
+          {/* Content scroll */}
+          <div className={s.content}>
+            {/* Stats */}
+            <div className={s.stats}>
+              <div className={s.statCard}>
+                <div className={s.statLabel}>Deuda acumulada</div>
+                <div className={s.statValueRed}>{fmtMoney(summary.deuda)}</div>
+              </div>
+
+              <div className={s.statCard}>
+                <div className={s.statLabel}>Total pagado</div>
+                <div className={s.statValueGreen}>{fmtMoney(summary.totalPagado)}</div>
+              </div>
+
+              <div className={s.statCard}>
+                <div className={s.statTop}>
+                  <div className={s.statLabel}>Progreso</div>
+                  <div className={s.statPct}>{summary.progreso}%</div>
+                </div>
+
+                <div className={s.progressTrack} aria-hidden="true">
+                  <div
+                    className={s.progressFill}
+                    style={{ width: `${Math.max(0, Math.min(100, summary.progreso))}%` }}
+                  />
+                </div>
+
+                <div className={s.progressHint}>Calculado con tu proyección guardada.</div>
+              </div>
             </div>
 
-            <div className={s.divider} />
+            {/* Info bar */}
+            <div className={s.infoBar}>
+              <span className={s.infoItem}>
+                <DollarSign size={14} />
+                Mensualidad: <b>{fmtMoney(cfg.monthlyAmount)}</b>
+              </span>
 
-            <div className={s.stat}>
-              <div className={s.statValueGreen}>{fmtMoney(summary.totalPagado)}</div>
-              <div className={s.statLabel}>Total Pagado</div>
+              <span className={s.sep}>•</span>
+
+              <span className={s.infoItem}>
+                Duración: <b>{cfg.durationMonths} meses</b>
+              </span>
+
+              <span className={s.sep}>•</span>
+
+              <span className={s.infoItem}>
+                Fin estimado: <b>{endLabel}</b>
+              </span>
             </div>
 
-            <div className={s.divider} />
-
-            <div className={s.stat}>
-              <div className={s.statValueDark}>{summary.progreso}%</div>
-              <div className={s.statLabel}>Progreso de Pagos</div>
-            </div>
-          </div>
-
-          <div className={s.meta}>
-            <span><DollarSign size={14} /> Mensualidad: <b>{fmtMoney(cfg.monthlyAmount)}</b></span>
-            <span><Percent size={14} /> Duración: <b>{cfg.durationMonths} meses</b></span>
-            <span>Fin estimado: <b>{endLabel}</b></span>
-          </div>
-
-          <h3 className={s.h3}>Desglose de Mensualidades</h3>
-          <p className={s.hint}>Generado automáticamente según la fecha de inicio y duración configurada.</p>
-
-          <Table>
-            <thead>
-              <tr>
-                <th>Periodo / Mes</th>
-                <th>Concepto</th>
-                <th>Monto Esperado</th>
-                <th>Estado</th>
-                <th>Fecha Pago</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {planRows.map((row) => (
-                <tr key={row.key} className={row.estado === 'PAGADO' ? s.paidRow : undefined}>
-                  <td>{row.periodoLabel}</td>
-                  <td>{row.concepto}</td>
-                  <td className={s.mono}>{fmtMoney(row.montoEsperado)}</td>
-                  <td>
-                    {row.estado === 'PAGADO' ? (
-                      <span className={s.badgePaid}>PAGADO</span>
-                    ) : (
-                      <span className={s.badgePending}>PENDIENTE</span>
-                    )}
-                  </td>
-                  <td className={s.mono}>{row.fechaPago ?? '-'}</td>
-                  <td>
-                    {row.estado === 'PAGADO' ? (
-                      <span className={s.done}>✓ Listo</span>
-                    ) : (
-                      <Button onClick={() => payRow(row.key)} leftIcon={<DollarSign size={16} />}>
-                        Pagar
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-
-          {/* Configuración */}
-          <div className={s.config}>
-            <div className={s.configLabel}>Duración de la Carrera</div>
-
-            <div className={s.configRow}>
-              <select
-                className={s.select}
-                value={cfg.durationMonths}
-                onChange={(e) => setCfg({ ...cfg, durationMonths: Number(e.target.value) })}
-              >
-                {DURATIONS.map((d) => (
-                  <option key={d.value} value={d.value}>{d.label}</option>
-                ))}
-              </select>
-
-              <input
-                className={s.input}
-                type="date"
-                value={cfg.startDate}
-                onChange={(e) => setCfg({ ...cfg, startDate: e.target.value })}
-                title="Inicio del periodo"
-              />
-
-              <input
-                className={s.input}
-                type="number"
-                min={0}
-                value={cfg.monthlyAmount}
-                onChange={(e) => setCfg({ ...cfg, monthlyAmount: Number(e.target.value || 0) })}
-                title="Monto mensual esperado"
-                placeholder="Monto mensual"
-              />
+            {/* Table */}
+            <div className={s.sectionHead}>
+              <div className={s.h3}>Desglose de mensualidades</div>
+              <div className={s.hint}>Generado automáticamente según inicio y duración.</div>
             </div>
 
-            <div className={s.configNote}>
-              Tip: esto queda guardado por alumno (local) y se usa para calcular progreso y deuda.
+            <div className={s.tableShell}>
+              <Table>
+                <thead>
+                  <tr>
+                    <th className={s.thPeriodo}>Periodo</th>
+                    <th className={s.thConcepto}>Concepto</th>
+                    <th className={s.thMonto}>Monto</th>
+                    <th className={s.thEstado}>Estado</th>
+                    <th className={s.thFecha}>Fecha pago</th>
+                    <th className={s.thAccion}>Acción</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {planRows.map((row) => (
+                    <tr key={row.key} className={row.estado === 'PAGADO' ? s.paidRow : undefined}>
+                      <td className={s.periodCell}>{row.periodoLabel}</td>
+                      <td className={s.conceptCell}>{row.concepto}</td>
+                      <td className={s.mono}>{fmtMoney(row.montoEsperado)}</td>
+                      <td>
+                        {row.estado === 'PAGADO' ? (
+                          <span className={s.badgePaid}>Pagado</span>
+                        ) : (
+                          <span className={s.badgePending}>Pendiente</span>
+                        )}
+                      </td>
+                      <td className={s.mono}>{row.fechaPago ?? '-'}</td>
+                      <td className={s.actionCell}>
+                        {row.estado === 'PAGADO' ? (
+                          <span className={s.done}>✓ Listo</span>
+                        ) : (
+                          <button className={s.payBtn} onClick={() => payRow(row.key)} type="button">
+                            <DollarSign size={16} />
+                            Pagar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
             </div>
           </div>
 
-          <div className={s.footerActions}>
+          {/* Footer */}
+          <div className={s.footer}>
             <Badge tone="info">Proyección automática</Badge>
-            <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+           
           </div>
         </div>
       )}

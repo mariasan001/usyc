@@ -11,8 +11,8 @@
 /* ✅ el contenedor del modal */
 .modal{
   position: relative;
-  width: min(980px, 96vw);
-  max-height: 86vh;                 /* ✅ evita que se “coma” la pantalla */
+  width: min(1265px, 96vw);
+  max-height: 96vh;                 /* ✅ evita que se “coma” la pantalla */
   background: #fff;
   border: 1px solid rgba(16,24,40,.12);
   border-radius: 18px;

@@ -1,13 +1,17 @@
 .wrap{
   width: 100%;
-  min-width: 0; /* 🔥 evita overflow que pisa al card de al lado */
-  display: flex;
-  flex-direction: column;
+  min-width: 0;
+
+  /* ✅ layout fijo: toolbar / scroll table / pager */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 12px;
 
-  /* ✅ base más compacta */
-  font-size: 13px;
-  line-height: 1.25;
+  height: 75%;
+  min-height: 0;
+
+  font-size: 12.5px;
+  line-height: 1.22;
 }
 
 /* Toolbar */
@@ -29,7 +33,7 @@
   padding: 0 12px;
   outline: none;
   font: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .select,
@@ -41,12 +45,10 @@
   padding: 0 12px;
   outline: none;
   font: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
-.date{
-  min-width: 150px;
-}
+.date{ min-width: 150px; }
 
 .toolbarRight{
   margin-left: auto;
@@ -54,57 +56,58 @@
   gap: 10px;
 }
 
-/* Table Shell */
+/* ✅ SCROLL AREA */
+.tableScroll{
+  min-height: 0;     /* 🔥 */
+  overflow: auto;    /* ✅ aquí aparece el scroll */
+  border-radius: 16px;
+}
+
+/* Shell */
 .tableShell{
   border: 1px solid #e7ebf3;
   border-radius: 16px;
-  overflow: hidden; /* esquinas clean */
   background: #fff;
   box-shadow: 0 10px 26px rgba(16, 24, 40, 0.06);
+  overflow: hidden; /* esquinas clean */
 }
 
-/* Estilos al <table> del componente Table (sin tocar el Table.tsx) */
+/* Table */
 .tableShell :global(table){
   width: 100%;
-  table-layout: fixed; /* 🔥 evita que “invada” columnas */
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-
-  /* ✅ tipografía compacta */
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .tableShell :global(thead th){
   background: #ffffff;
-  font-weight: 700;
-  font-size: 11.5px;          /* ✅ más chica */
+  font-weight: 800;
+  font-size: 11.25px;
   letter-spacing: .06em;
   text-transform: uppercase;
   color: #6b7280;
   border-bottom: 1px solid #edf0f6;
-  padding: 12px 14px;         /* ✅ más compacto */
+  padding: 12px 14px;
+
+  /* opcional: header pegajoso dentro del scroll */
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .tableShell :global(tbody td){
-  padding: 12px 14px;         /* ✅ más compacto */
+  padding: 12px 14px;
   border-bottom: 1px solid #f0f2f8;
   vertical-align: middle;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
-.tableShell :global(tbody tr:last-child td){
-  border-bottom: 0;
-}
+.tableShell :global(tbody tr:last-child td){ border-bottom: 0; }
+.tableShell :global(tbody tr:hover){ background: #fbfcff; }
 
-.tableShell :global(tbody tr){
-  background: #fff;
-}
-
-.tableShell :global(tbody tr:hover){
-  background: #fbfcff;
-}
-
-/* Column sizing (por clases en th) */
+/* Column sizing */
 .thAlumno{ width: 44%; }
 .thCarrera{ width: 18%; }
 .thDate{ width: 14%; }
@@ -117,7 +120,7 @@
 .mono{
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12.5px;          /* ✅ más chica */
+  font-size: 12px;
   color: #111827;
   white-space: nowrap;
 }
@@ -137,8 +140,8 @@
 }
 
 .studentName{
-  font-weight: 800;
-  font-size: 14px;            /* ✅ antes “se veía grandote” */
+  font-weight: 850;
+  font-size: 13.5px;
   color: #0f172a;
   line-height: 1.15;
   overflow: hidden;
@@ -147,9 +150,24 @@
 }
 
 .studentMeta{
-  font-size: 12px;            /* ✅ más compacta */
-  font-weight: 600;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.metaLine{
+  font-size: 12px;
+  font-weight: 650;
   color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaLineMuted{
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #8b93a7;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -168,8 +186,8 @@
 }
 
 .carreraName{
-  font-weight: 700;
-  font-size: 13px;
+  font-weight: 750;
+  font-size: 12.75px;
   color: #0f172a;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -178,7 +196,7 @@
 
 .carreraMeta{
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
   color: #6b7280;
   white-space: nowrap;
 }
@@ -190,7 +208,7 @@
 }
 
 .iconBtn{
-  width: 36px;                /* ✅ más chico */
+  width: 36px;
   height: 36px;
   border-radius: 12px;
   border: 1px solid #e7ebf3;
@@ -201,16 +219,14 @@
   cursor: pointer;
 }
 
-.iconBtn:hover{
-  background: #f7f9fd;
-}
+.iconBtn:hover{ background: #f7f9fd; }
 
 /* States */
 .muted{
   color: #6b7280;
   padding: 16px 14px !important;
   text-align: center;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .error{
@@ -219,7 +235,7 @@
   color: #9f1239;
   padding: 10px 12px;
   border-radius: 14px;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 /* Pagination */
@@ -234,7 +250,7 @@
 
 .pagerText{
   color: #6b7280;
-  font-size: 13px; /* ✅ más chico */
+  font-size: 12.5px;
 }
 
 .pagerRight{
@@ -250,17 +266,17 @@
   align-items: center;
   gap: 10px;
   color: #6b7280;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .rowsSelect{
-  height: 36px;               /* ✅ más chico */
+  height: 36px;
   border-radius: 14px;
   border: 1px solid #e7ebf3;
   background: #ffffff;
   padding: 0 12px;
   font: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .pageBtn{
@@ -282,17 +298,19 @@
 
 .pageInfo{
   color: #6b7280;
-  font-size: 13px;
+  font-size: 12.5px;
   white-space: nowrap;
 }
 
-/* Responsive: si se aprieta, permitir scroll horizontal dentro del shell sin “encimarse” */
+/* Responsive horizontal */
 @media (max-width: 980px){
-  .tableShell{
-    overflow-x: auto; /* scroll en lugar de invadir el layout */
-  }
-
   .tableShell :global(table){
     min-width: 860px;
   }
+}
+
+@media (max-width: 720px){
+  .studentName{ font-size: 13px; }
+  .metaLine{ font-size: 11.5px; }
+  .metaLineMuted{ font-size: 11px; }
 }

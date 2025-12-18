@@ -1,17 +1,16 @@
 export type ReceiptStatus = 'VALID' | 'CANCELLED';
 
-// ✅ nuevo: duración del plan
+// duración del plan
 export type StudentPlanDuration = 6 | 12 | 24 | 36 | 48;
 
 export type ReceiptAlumno = {
-  matricula?: string; // opcional
+  matricula?: string;
   nombre: string;
 
-  // ✅ nuevo (plan del alumno)
   carrera?: string;
   duracionMeses?: StudentPlanDuration;
 
-  // ✅ opcional: si luego quieres “fecha ingreso” fija por alumno
+  // ✅ ahora sí lo usamos en el registro del alumno
   fechaInicio?: string; // "YYYY-MM-DD"
 };
 
@@ -19,12 +18,12 @@ export type Receipt = {
   folio: string;
 
   alumno: ReceiptAlumno;
-  concepto: string;
 
+  concepto?: string; // ✅ ahora opcional (porque ya no se captura)
   monto: number;
   montoLetras: string;
 
-  fechaPago: string; // "YYYY-MM-DD"
+  fechaPago: string;
   status: ReceiptStatus;
 
   cancelReason?: string;
@@ -34,17 +33,21 @@ export type Receipt = {
   updatedAt: string;
 };
 
+
+// ✅ ahora es input para “registrar alumno” usando este mismo form
 export type ReceiptCreateInput = {
   alumnoNombre: string;
   alumnoMatricula?: string;
 
-  // ✅ nuevo (lo que ya mandas desde el form)
   alumnoCarrera: string;
   alumnoDuracionMeses: StudentPlanDuration;
 
-  concepto: string;
+  // ✅ se quedan
   monto: number;
   fechaPago: string;
+
+  // ❌ ya no
+  // concepto: string;
 };
 
 export type ReceiptQuery = {

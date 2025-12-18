@@ -20,8 +20,7 @@ type UiQuery = {
   dateTo: string;
 };
 
-// ✅ Por si Receipt.alumno todavía no trae estos campos en tu type base.
-// (Así TS no se pone exquisito)
+// ✅ por si Receipt.alumno aún no trae plan
 type ReceiptPlan = Receipt & {
   alumno: Receipt['alumno'] & {
     carrera?: string;
@@ -38,8 +37,8 @@ type StudentRow = {
   carrera: string;
   duracionMeses: StudentPlanDuration;
 
-  fechaIngreso: string; // inferida por primer pago (o alumno.fechaInicio)
-  fechaTermino: string; // ingreso + duracionMeses
+  fechaIngreso: string;
+  fechaTermino: string;
 
   ultimoPago: string;
   estado: 'CORRIENTE' | 'ADEUDO';
@@ -69,7 +68,7 @@ function inRange(iso: string, from: string, to: string) {
   return true;
 }
 
-// ✅ heurística simple: “corriente” si pagó en el mes actual
+// ✅ heurística: “corriente” si pagó en el mes actual
 function isCorriente(ultimoPagoISO: string) {
   const now = new Date();
   const y = now.getFullYear();
@@ -100,6 +99,7 @@ export default function ReceiptsTable({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // ✅ agrupar recibos -> alumnos únicos
   const students = useMemo<StudentRow[]>(() => {
     const map = new Map<string, StudentRow>();
 
@@ -112,10 +112,11 @@ export default function ReceiptsTable({
       const carrera = (raw.alumno.carrera ?? '').trim();
       const duracionMeses = (raw.alumno.duracionMeses ?? 6) as StudentPlanDuration;
 
-      // ingreso: si viene alumno.fechaInicio úsala; si no, primer pago
-      const ingreso = (raw.alumno.fechaInicio ?? raw.fechaPago);
+      // ingreso: si viene fechaInicio úsala; si no, primer pago
+      const ingreso = raw.alumno.fechaInicio ?? raw.fechaPago;
 
       const prev = map.get(key);
+
       if (!prev) {
         map.set(key, {
           key,
@@ -134,7 +135,7 @@ export default function ReceiptsTable({
       const fechaIngreso = ingreso < prev.fechaIngreso ? ingreso : prev.fechaIngreso;
       const ultimoPago = raw.fechaPago > prev.ultimoPago ? raw.fechaPago : prev.ultimoPago;
 
-      const finalDur = prev.duracionMeses ?? duracionMeses;
+      const finalDur = (prev.duracionMeses ?? duracionMeses) as StudentPlanDuration;
       const finalCarrera = prev.carrera !== '—' ? prev.carrera : (carrera || '—');
 
       map.set(key, {
@@ -150,9 +151,8 @@ export default function ReceiptsTable({
       });
     }
 
-    return Array.from(map.values()).sort((a, b) =>
-      b.fechaIngreso.localeCompare(a.fechaIngreso),
-    );
+    // ✅ orden: más nuevo ingreso arriba
+    return Array.from(map.values()).sort((a, b) => b.fechaIngreso.localeCompare(a.fechaIngreso));
   }, [items]);
 
   const filtered = useMemo(() => {
@@ -171,10 +171,7 @@ export default function ReceiptsTable({
     });
   }, [students, query]);
 
-  const empty = useMemo(
-    () => !loading && filtered.length === 0,
-    [loading, filtered.length],
-  );
+  const empty = useMemo(() => !loading && filtered.length === 0, [loading, filtered.length]);
 
   // ✅ reset page al cambiar filtros
   useEffect(() => {
@@ -203,6 +200,7 @@ export default function ReceiptsTable({
 
   return (
     <div className={s.wrap}>
+      {/* Toolbar (fijo) */}
       <div className={s.toolbar}>
         <input
           className={s.search}
@@ -214,9 +212,7 @@ export default function ReceiptsTable({
         <select
           className={s.select}
           value={query.status}
-          onChange={(e) =>
-            setQuery({ ...query, status: e.target.value as UiQuery['status'] })
-          }
+          onChange={(e) => setQuery({ ...query, status: e.target.value as UiQuery['status'] })}
           title="Estado"
         >
           <option value="ALL">Todos</option>
@@ -248,79 +244,93 @@ export default function ReceiptsTable({
 
       {error ? <div className={s.error}>{error}</div> : null}
 
-      <div className={s.tableShell}>
-        <Table>
-          <thead>
-            <tr>
-              <th className={s.thAlumno}>Alumno</th>
-              <th className={s.thCarrera}>Carrera</th>
-              <th className={s.thDate}>Ingreso</th>
-              <th className={s.thDate}>Término</th>
-              <th className={s.thEstado}>Estado</th>
-              <th className={s.thActions}>Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
+      {/* ✅ SCROLL AREA (solo la tabla) */}
+      <div className={s.tableScroll}>
+        <div className={s.tableShell}>
+          <Table>
+            <thead>
               <tr>
-                <td colSpan={6} className={s.muted}>Cargando…</td>
+                <th className={s.thAlumno}>Alumno</th>
+                <th className={s.thCarrera}>Carrera</th>
+                <th className={s.thDate}>Ingreso</th>
+                <th className={s.thDate}>Término</th>
+                <th className={s.thEstado}>Estado</th>
+                <th className={s.thActions}>Acciones</th>
               </tr>
-            ) : empty ? (
-              <tr>
-                <td colSpan={6} className={s.muted}>
-                  Sin alumnos todavía. Registra el primero ✍️
-                </td>
-              </tr>
-            ) : (
-              pageItems.map((st) => (
-                <tr key={st.key}>
-                  <td className={s.tdAlumno}>
-                    <button className={s.studentBtn} onClick={() => openLedger(st)} type="button">
-                      <span className={s.studentName}>{st.nombre}</span>
-                      <span className={s.studentMeta}>
-                        {st.matricula ? `Matrícula: ${st.matricula}` : 'Sin matrícula'}
-                        <span className={s.dot}>•</span>
-                        Último pago: {st.ultimoPago}
-                      </span>
-                    </button>
-                  </td>
+            </thead>
 
-                  <td className={s.tdCarrera}>
-                    <div className={s.carrera}>
-                      <span className={s.carreraName}>{st.carrera}</span>
-                      <span className={s.carreraMeta}>{st.duracionMeses} meses</span>
-                    </div>
-                  </td>
-
-                  <td className={s.mono}>{st.fechaIngreso}</td>
-                  <td className={s.mono}>{st.fechaTermino}</td>
-
-                  <td>
-                    {st.estado === 'CORRIENTE' ? (
-                      <Badge tone="ok">Corriente</Badge>
-                    ) : (
-                      <Badge tone="warn">Adeudo</Badge>
-                    )}
-                  </td>
-
-                  <td className={s.actionsCell}>
-                    <button className={s.iconBtn} onClick={() => openLedger(st)} title="Ver detalle">
-                      <Eye size={16} />
-                    </button>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className={s.muted}>Cargando…</td>
+                </tr>
+              ) : empty ? (
+                <tr>
+                  <td colSpan={6} className={s.muted}>
+                    Sin alumnos todavía. Registra el primero ✍️
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </Table>
+              ) : (
+                pageItems.map((st) => (
+                  <tr key={st.key}>
+                    <td className={s.tdAlumno}>
+                      <button className={s.studentBtn} onClick={() => openLedger(st)} type="button">
+                        <span className={s.studentName}>{st.nombre}</span>
+
+                        {/* ✅ “Último pago” ya no se amontona */}
+                        <span className={s.studentMeta}>
+                          <span className={s.metaLine}>
+                            {st.matricula ? `Matrícula: ${st.matricula}` : 'Sin matrícula'}
+                          </span>
+                          <span className={s.metaLineMuted}>Último pago: {st.ultimoPago}</span>
+                        </span>
+                      </button>
+                    </td>
+
+                    <td className={s.tdCarrera}>
+                      <div className={s.carrera}>
+                        {/* ✅ carreras largas => ... + title */}
+                        <span className={s.carreraName} title={st.carrera}>{st.carrera}</span>
+                        <span className={s.carreraMeta}>{st.duracionMeses} meses</span>
+                      </div>
+                    </td>
+
+                    <td className={s.mono}>{st.fechaIngreso}</td>
+                    <td className={s.mono}>{st.fechaTermino}</td>
+
+                    <td>
+                      {st.estado === 'CORRIENTE' ? (
+                        <Badge tone="ok">Corriente</Badge>
+                      ) : (
+                        <Badge tone="warn">Adeudo</Badge>
+                      )}
+                    </td>
+
+                    <td className={s.actionsCell}>
+                      <button
+                        className={s.iconBtn}
+                        onClick={() => openLedger(st)}
+                        title="Ver detalle"
+                        type="button"
+                      >
+                        <Eye size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </div>
       </div>
 
-      {/* ✅ Paginación */}
+      {/* Pager (fijo) */}
       <div className={s.pager}>
         <div className={s.pagerLeft}>
           <span className={s.pagerText}>
-            Mostrando <b>{total === 0 ? 0 : startIdx + 1}</b>–<b>{endIdx}</b> de <b>{total}</b>
+            Total alumnos: <b>{total}</b>
+            <span className={s.dot}>•</span>
+            Mostrando <b>{total === 0 ? 0 : startIdx + 1}</b>–<b>{endIdx}</b>
           </span>
         </div>
 

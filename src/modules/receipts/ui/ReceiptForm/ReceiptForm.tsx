@@ -22,20 +22,14 @@ export default function ReceiptForm({
 }) {
   const [alumnoNombre, setAlumnoNombre] = useState('');
   const [alumnoMatricula, setAlumnoMatricula] = useState('');
-
-  // ✅ nuevos
   const [alumnoCarrera, setAlumnoCarrera] = useState('');
   const [alumnoDuracionMeses, setAlumnoDuracionMeses] = useState<StudentPlanDuration>(6);
 
-  const [concepto, setConcepto] = useState('');
-  const [monto, setMonto] = useState('');
   const [fechaPago, setFechaPago] = useState(todayISO());
+  const [monto, setMonto] = useState('');
 
   const canSubmit = useMemo(() => {
     if (!alumnoNombre.trim()) return false;
-    if (!concepto.trim()) return false;
-
-    // ✅ si capturas plan, exige carrera (duración ya trae default)
     if (alumnoCarrera.trim().length === 0) return false;
 
     const n = Number(monto);
@@ -43,7 +37,7 @@ export default function ReceiptForm({
 
     if (!fechaPago) return false;
     return true;
-  }, [alumnoNombre, concepto, monto, fechaPago, alumnoCarrera]);
+  }, [alumnoNombre, alumnoCarrera, monto, fechaPago]);
 
   async function submit() {
     if (!canSubmit) return;
@@ -53,54 +47,56 @@ export default function ReceiptForm({
     await onCreate({
       alumnoNombre: alumnoNombre.trim(),
       alumnoMatricula: alumnoMatricula.trim() || undefined,
-
       alumnoCarrera: alumnoCarrera.trim(),
       alumnoDuracionMeses,
-
-      concepto: concepto.trim(),
       monto: n,
       fechaPago,
     });
 
-    // reset suave (mantén fecha)
     setAlumnoNombre('');
     setAlumnoMatricula('');
     setAlumnoCarrera('');
     setAlumnoDuracionMeses(6);
-    setConcepto('');
     setMonto('');
+    setFechaPago(todayISO());
   }
 
   return (
     <div className={s.form}>
-      <Input
-        label="Nombre del alumno"
-        placeholder="Ej: Diana Pérez"
-        value={alumnoNombre}
-        onChange={(e) => setAlumnoNombre(e.target.value)}
-      />
+      <div className={s.fields}>
+        <div className={s.span2}>
+          <Input
+            label="Nombre del alumno"
+            placeholder="Ej: Diana Pérez"
+            value={alumnoNombre}
+            onChange={(e) => setAlumnoNombre(e.target.value)}
+          />
+        </div>
 
-      <Input
-        label="Matrícula"
-        placeholder="Ej: LEN-24-01"
-        value={alumnoMatricula}
-        onChange={(e) => setAlumnoMatricula(e.target.value)}
-      />
+        <div className={s.span2}>
+          <Input
+            label="Carrera"
+            placeholder="Ej: Enfermería"
+            value={alumnoCarrera}
+            onChange={(e) => setAlumnoCarrera(e.target.value)}
+          />
+        </div>
 
-      <Input
-        label="Carrera"
-        placeholder="Ej: Enfermería"
-        value={alumnoCarrera}
-        onChange={(e) => setAlumnoCarrera(e.target.value)}
-      />
+        <Input
+          label="Matrícula"
+          placeholder="Ej: LEN-24-01"
+          value={alumnoMatricula}
+          onChange={(e) => setAlumnoMatricula(e.target.value)}
+        />
 
-      <div className={s.row}>
         <div className={s.field}>
           <label className={s.label}>Duración</label>
           <select
             className={s.select}
             value={alumnoDuracionMeses}
-            onChange={(e) => setAlumnoDuracionMeses(Number(e.target.value) as StudentPlanDuration)}
+            onChange={(e) =>
+              setAlumnoDuracionMeses(Number(e.target.value) as StudentPlanDuration)
+            }
           >
             <option value={6}>6 meses</option>
             <option value={12}>1 año (12 meses)</option>
@@ -110,28 +106,28 @@ export default function ReceiptForm({
           </select>
         </div>
 
-        <Input
-          label="Fecha de pago"
-          type="date"
-          value={fechaPago}
-          onChange={(e) => setFechaPago(e.target.value)}
-        />
+        <div className={s.span2}>
+          <Input
+            label="Fecha"
+            type="date"
+            value={fechaPago}
+            onChange={(e) => setFechaPago(e.target.value)}
+          />
+        </div>
+
+        <div className={s.span2}>
+          <Input
+            label="Importe ($)"
+            placeholder="0.00"
+            value={monto}
+            inputMode="decimal"
+            onChange={(e) => setMonto(e.target.value)}
+          />
+          <p className={s.hint}>
+            Se registrará como <b>pago inicial</b> (puedes ver historial en el directorio).
+          </p>
+        </div>
       </div>
-
-      <Input
-        label="Concepto de pago"
-        placeholder="Ej: Colegiatura, Inscripción, Constancia…"
-        value={concepto}
-        onChange={(e) => setConcepto(e.target.value)}
-      />
-
-      <Input
-        label="Importe ($)"
-        placeholder="0.00"
-        value={monto}
-        inputMode="decimal"
-        onChange={(e) => setMonto(e.target.value)}
-      />
 
       <div className={s.actions}>
         <Button
@@ -140,7 +136,7 @@ export default function ReceiptForm({
           loading={creating}
           leftIcon={<Plus size={16} />}
         >
-          Agregar Nuevo 
+          Agregar Nuevo
         </Button>
       </div>
     </div>

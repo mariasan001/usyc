@@ -15,10 +15,7 @@ export function nowIso() {
 }
 
 export function normalizeText(s: string) {
-  return (s ?? '')
-    .toString()
-    .trim()
-    .toLowerCase();
+  return (s ?? '').toString().trim().toLowerCase();
 }
 
 export function inRangeDate(dateISO: string, from?: string, to?: string) {
@@ -37,9 +34,14 @@ export function matchesQuery(r: Receipt, q?: string) {
     r.folio,
     r.alumno?.nombre ?? '',
     r.alumno?.matricula ?? '',
-    r.concepto ?? '',
+    // ❌ concepto ya no existe en el flujo de registro
     String(r.monto ?? ''),
+    // usa fechaPago como fecha del registro / pago inicial
     r.fechaPago ?? '',
+    // ✅ si existen estos datos, ayudan a buscar
+    r.alumno?.carrera ?? '',
+    String(r.alumno?.duracionMeses ?? ''),
+    r.alumno?.fechaInicio ?? '',
   ]
     .map(normalizeText)
     .join(' | ');
@@ -59,7 +61,6 @@ export function applyFilters(list: Receipt[], query?: ReceiptQuery) {
     if (status !== 'ALL' && r.status !== status) return false;
 
     if (!inRangeDate(r.fechaPago, query.dateFrom, query.dateTo)) {
-      // si no mandan rango, inRangeDate regresa true
       if (query.dateFrom || query.dateTo) return false;
     }
 
@@ -76,17 +77,26 @@ export function createReceiptFromInput(opts: {
   const ts = nowIso();
 
   const monto = Number(opts.input.monto ?? 0);
+
   return {
     folio: opts.folio,
 
     alumno: {
       nombre: opts.input.alumnoNombre.trim(),
       matricula: opts.input.alumnoMatricula?.trim() || undefined,
+
+      // ✅ si tu input ya trae estos campos, guárdalos
+      carrera: opts.input.alumnoCarrera?.trim() || undefined,
+      duracionMeses: opts.input.alumnoDuracionMeses,
+      // ✅ si decidiste manejar fechaInicio aparte, guárdala (si no existe, quítala)
+      // fechaInicio: opts.input.fechaInicio,
     },
 
-    concepto: opts.input.concepto.trim(),
+    // ❌ concepto fuera
     monto,
     montoLetras: moneyToWordsMXN(monto),
+
+    // lo seguimos usando como fecha del movimiento/registro
     fechaPago: opts.input.fechaPago,
 
     status: 'VALID',

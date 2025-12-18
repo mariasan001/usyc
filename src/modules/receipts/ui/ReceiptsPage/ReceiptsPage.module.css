@@ -1,34 +1,63 @@
 .grid{
-  display:grid;
-  grid-template-columns: 420px minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.leftCol{
-  position: sticky;
-  top: 14px;
-  display: grid;
-  gap: 16px;
-}
-
-.right{ min-width: 0; }
-
-@media (max-width: 980px){
-  .grid{ grid-template-columns: 1fr; }
-  .leftCol{ position: relative; top: 0; }
-}
-.grid{
   display: grid;
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 16px;
 
-  /* 👇 clave: que los hijos se estiren a la altura de la fila */
+  /* ✅ altura fija del layout: NO crece con más alumnos */
+  --page-offset: 24px; /* ajusta si tienes topbar */
+  height: calc(85dvh - var(--page-offset));
+
   align-items: stretch;
+  min-height: 0; /* 🔥 clave para que el overflow funcione en hijos */
 }
 
-/* 👇 por si tenías align-self:start en alguno */
+/* ✅ Ambos cards como columna y con “encierro” */
 .left,
 .right{
+  min-width: 0;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 🔥 */
+}
+
+/* Izquierda */
+.leftBody{
+  flex: 1;
+  min-height: 0;
+}
+
+/* Derecha */
+.rightBody{
+  flex: 1;
+  min-height: 0;  /* 🔥 */
+  display: flex;
+}
+
+/* ✅ contenedor de altura disponible; el scroll real lo hace la tabla interna */
+.rightScroll{
+  flex: 1;
+  min-height: 0;
+  overflow: hidden; /* ✅ evita “doble scroll” */
+}
+
+/* Responsive */
+@media (max-width: 980px){
+  .grid{
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .left,
+  .right{
+    height: auto;
+  }
+
+  .rightBody{
+    display: block;
+  }
+
+  .rightScroll{
+    overflow: visible;
+  }
 }

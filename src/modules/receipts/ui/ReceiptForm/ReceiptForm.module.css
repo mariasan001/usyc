@@ -1,87 +1,81 @@
 .form{
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
-/* fila de 2 columnas (Duración + Fecha) */
-.row{
+/* ✅ más compacto */
+.fields{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;                 /* antes 14px */
+  padding: 0;
+  min-width: 0;
 }
 
-/* contenedor para el select (como si fuera un Input) */
-.field{
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.span2{
+  grid-column: 1 / -1;
+  min-width: 0;
 }
 
+.field{ min-width: 0; }
+
+/* Labels */
 .label{
-  font-size: 12px;
+  display: block;
+  margin: 0 0 6px;           /* antes 8px */
+  font-size: 11.5px;         /* más fino */
   font-weight: 800;
-  color: rgba(11,18,32,.65);
-  letter-spacing: .2px;
+  color: #0f172a;
+  letter-spacing: .01em;
 }
 
-/* select con look moderno */
+/* ✅ Select más bajito */
 .select{
-  height: 42px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--panel);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
+  width: 100%;
+  height: 40px;              /* antes 44px */
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
   padding: 0 12px;
   outline: none;
-
-  /* para que no se vea “nativo feo” */
-  appearance: none;
-  -webkit-appearance: none;
-
-  /* flechita minimal */
-  background-image:
-    linear-gradient(45deg, transparent 50%, rgba(11,18,32,.55) 50%),
-    linear-gradient(135deg, rgba(11,18,32,.55) 50%, transparent 50%),
-    linear-gradient(to right, transparent, transparent);
-  background-position:
-    calc(100% - 18px) 18px,
-    calc(100% - 13px) 18px,
-    0 0;
-  background-size:
-    5px 5px,
-    5px 5px,
-    100% 100%;
-  background-repeat: no-repeat;
-
-  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  font: inherit;
+  font-size: 13px;
+  color: #0f172a;
 }
 
 .select:focus{
-  border-color: rgba(21,112,255,.35);
-  box-shadow: 0 0 0 4px rgba(21,112,255,.12);
+  border-color: #cfd8ef;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
 }
 
-.select:hover{
-  border-color: rgba(11,18,32,.14);
+/* ✅ hint más pegadito */
+.hint{
+  margin: 6px 0 0;           /* antes 8px */
+  font-size: 11.5px;
+  color: #6b7280;
+  line-height: 1.25;
 }
 
-/* actions */
+/* ✅ Footer: lo subimos y reducimos padding */
 .actions{
-  padding-top: 4px;
+  margin-top: 10px;          /* en vez de empujarlo hasta abajo */
+  padding: 12px 0 0;         /* antes 16px */
   display: flex;
   justify-content: flex-end;
+  border-top: 1px solid #eef2fb;
 }
 
-/* responsive */
-@media (max-width: 980px){
-  .row{
-    grid-template-columns: 1fr;
-  }
+/* ✅ botón un poco más “presente” */
+.actions :global(button){
+  min-width: 190px;
+}
 
-  .actions{
-    justify-content: stretch;
-  }
+/* Mobile */
+@media (max-width: 520px){
+  .fields{ grid-template-columns: 1fr; }
+  .span2{ grid-column: auto; }
+  .actions{ justify-content: stretch; }
+  .actions :global(button){ width: 100%; min-width: 0; }
 }
