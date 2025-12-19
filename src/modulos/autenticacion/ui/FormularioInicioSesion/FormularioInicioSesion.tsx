@@ -3,20 +3,13 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
-import {
-  AlertTriangle,
-  Lock,
-  Eye,
-  EyeOff,
-  User,
-  LogIn,
-  Loader2,
-} from 'lucide-react';
+import { AlertTriangle, Lock, Eye, EyeOff, User, LogIn, Loader2 } from 'lucide-react';
 
 import s from './FormularioInicioSesion.module.css';
 
 import { AutenticacionServicio } from '../../servicios/autenticacion.servicio';
 import type { CredencialesInicioSesion } from '../../tipos/autenticacion.tipos';
+import { guardarSesion } from '../../utils/sesion.utils';
 
 // ✅ Helper seguro: convierte unknown -> string sin usar any
 function obtenerMensajeError(err: unknown): string {
@@ -56,8 +49,11 @@ export default function FormularioInicioSesion() {
 
     try {
       const res = await AutenticacionServicio.iniciarSesion(form);
-      console.log('Sesión iniciada:', res);
 
+      // ✅ CLAVE: guarda sesión para que el sidebar lea rol y filtre menú
+      guardarSesion(res);
+
+      // ✅ redirect por rol (el servicio ya te regresa destino)
       router.push(res.destino);
     } catch (err: unknown) {
       setError(obtenerMensajeError(err));
@@ -107,7 +103,7 @@ export default function FormularioInicioSesion() {
                   className={s.input}
                   value={form.usuario}
                   onChange={(e) => setForm((p) => ({ ...p, usuario: e.target.value }))}
-                  placeholder="Ej: director o caja"
+                  placeholder="Ej: admin o caja"
                   autoComplete="username"
                 />
               </div>
@@ -157,7 +153,7 @@ export default function FormularioInicioSesion() {
 
             <div className={s.hint}>
               <span className={s.dot} />
-              Demo: <b>director / 1234</b> · <b>caja / 1234</b>
+              Demo: <b>admin / 1234</b> · <b>caja / 1234</b>
             </div>
           </form>
         </div>

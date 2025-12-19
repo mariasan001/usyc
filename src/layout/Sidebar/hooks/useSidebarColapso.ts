@@ -1,35 +1,38 @@
 // src/layout/Sidebar/hooks/useSidebarColapso.ts
-
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { STORAGE_KEY_SIDEBAR } from '../constants/navegacion.constants';
 
-const useIsoLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+function leerColapsoInicial(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(STORAGE_KEY_SIDEBAR) === '1';
+  } catch {
+    return false;
+  }
+}
 
 export function useSidebarColapso() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    const v = leerColapsoInicial();
+    if (typeof window !== 'undefined') {
+      document.documentElement.dataset.sidebarCollapsed = v ? '1' : '0';
+    }
+    return v;
+  });
+
   const [animating, setAnimating] = useState(false);
 
-  useIsoLayoutEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SIDEBAR) === '1';
-      setCollapsed(saved);
-      document.documentElement.dataset.sidebarCollapsed = saved ? '1' : '0';
-    } catch {}
-  }, []);
-
+  // persiste cuando cambia
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_SIDEBAR, collapsed ? '1' : '0');
+      document.documentElement.dataset.sidebarCollapsed = collapsed ? '1' : '0';
     } catch {}
   }, [collapsed]);
 
   function toggle() {
-    const next = !collapsed;
-    document.documentElement.dataset.sidebarCollapsed = next ? '1' : '0';
-
     setAnimating(true);
-    setCollapsed(next);
+    setCollapsed((prev) => !prev);
     window.setTimeout(() => setAnimating(false), 260);
   }
 

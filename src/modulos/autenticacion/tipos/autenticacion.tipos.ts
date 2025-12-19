@@ -1,6 +1,6 @@
 // src/modulos/autenticacion/tipos/autenticacion.tipos.ts
 
-export type RolUsuario = 'DIRECTOR' | 'CAJA';
+export type RolUsuario = 'ADMIN' | 'CAJA';
 
 export type CredencialesInicioSesion = {
   usuario: string;
@@ -16,6 +16,6 @@ export type UsuarioSesion = {
 
 export type RespuestaInicioSesion = {
   token: string;
-  destino: string; // ✅ nuevo: a dónde redirigir después del login
   usuario: UsuarioSesion;
+  destino: string; // ✅ para redirección según rol
 };

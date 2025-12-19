@@ -21,7 +21,7 @@ export default function HomePage() {
     // Con sesión => redirección por rol
     const rol = sesion.usuario.rol;
 
-    if (rol === 'DIRECTOR') {
+    if (rol === 'ADMIN') {
       router.replace('/alumnos'); // o /inicio/dashboard si lo creas
       return;
     }

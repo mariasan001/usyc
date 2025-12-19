@@ -7,12 +7,9 @@ export function esActivo(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-export function filtrarPorRol(
-  items: ItemNavegacion[],
-  rolActual: RolUsuario | null
-) {
-  // modo mock: si no hay rol, mostramos todo
-  if (!rolActual) return items;
+export function filtrarPorRol(items: ItemNavegacion[], rolActual: RolUsuario | null) {
+  // ✅ si no hay rol (sin sesión), no mostramos el menú
+  if (!rolActual) return [];
 
   return items.filter((it) => {
     if (!it.roles || it.roles.length === 0) return true;
