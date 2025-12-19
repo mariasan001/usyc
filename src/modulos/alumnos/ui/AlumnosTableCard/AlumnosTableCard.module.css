@@ -177,7 +177,6 @@
   background: #f7f9fd;
   z-index: 3;
   padding-right: 10px;
-  box-shadow: -10px 0 16px rgba(17,24,39,.06);
 }
 
 /* ✅ Sticky última columna (Acciones) en filas
@@ -190,7 +189,6 @@
   background: #fff;
   z-index: 2;
   padding-right: 10px;
-  box-shadow: -10px 0 16px rgba(17,24,39,.06);
 }
 
 /* ✅ Ajustes responsive */
