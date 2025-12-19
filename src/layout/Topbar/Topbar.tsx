@@ -12,6 +12,9 @@ function metaFromPath(pathname: string) {
   if (pathname.startsWith('/recibos')) {
     return { title: 'Recibos', subtitle: 'Emite, consulta, imprime y cancela' };
   }
+  if (pathname.startsWith('/alumnos')) {
+    return { title: 'Centro de Alumnos', subtitle: 'Busca,crea alumnos ' };
+  }
   if (pathname.startsWith('/verificar')) {
     return { title: 'Verificación QR', subtitle: 'Valida recibos por folio o QR' };
   }

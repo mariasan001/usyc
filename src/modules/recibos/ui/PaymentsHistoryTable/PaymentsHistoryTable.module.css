@@ -1,0 +1,247 @@
+/* src/features/receipts/ui/PaymentsHistoryTable/PaymentsHistoryTable.module.css */
+.wrap{
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+
+  font-size: 12.5px;
+  line-height: 1.22;
+}
+
+.toolbar{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.search{
+  flex: 1;
+  min-width: 260px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+  padding: 0 12px;
+  outline: none;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.select,.date{
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  padding: 0 12px;
+  outline: none;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.date{ min-width: 150px; }
+
+.toolbarRight{
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.tableShell{
+  border: 1px solid #e7ebf3;
+  border-radius: 16px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, 0.06);
+}
+
+.tableShell :global(table){
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+
+.tableShell :global(thead th){
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #ffffff;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 1px solid #edf0f6;
+  padding: 12px 14px;
+}
+
+.tableShell :global(tbody td){
+  padding: 12px 14px;
+  border-bottom: 1px solid #f0f2f8;
+  vertical-align: middle;
+}
+
+.tableShell :global(tbody tr:hover){ background: #fbfcff; }
+
+.thCheck{ width: 44px; }
+.thFolio{ width: 120px; }
+.thAlumno{ width: 26%; }
+.thCarrera{ width: 16%; }
+.thDate{ width: 120px; }
+.thMoney{ width: 140px; }
+.thConcepto{ width: 16%; }
+.thStatus{ width: 120px; }
+.thMotivo{ width: 180px; }
+.thActions{ width: 120px; text-align: right; }
+
+.tdAlumno{ min-width: 0; }
+
+.alumno{
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.alumnoName{
+  font-weight: 850;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.alumnoMeta{
+  font-weight: 650;
+  color: #8b93a7;
+  font-size: 11.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mono{
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  white-space: nowrap;
+}
+
+.ellipsis{
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.motivo{
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowCanceled{
+  opacity: .75;
+}
+
+.actionsCell{
+  text-align: right;
+  white-space: nowrap;
+}
+
+.iconBtn{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.iconBtn:disabled{
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.iconBtn:hover{ background: #f7f9fd; }
+
+.muted{
+  color: #6b7280;
+  padding: 18px 14px !important;
+  text-align: center;
+}
+
+.error{
+  border: 1px solid #fee2e2;
+  background: #fff1f2;
+  color: #9f1239;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.pager{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 2px 0;
+  min-width: 0;
+}
+
+.pagerText{ color: #6b7280; }
+
+.pagerRight{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.rowsLabel{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #6b7280;
+}
+
+.rowsSelect{
+  height: 36px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  padding: 0 12px;
+  font: inherit;
+}
+
+.pageBtn{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pageBtn:disabled{ opacity: .45; cursor: not-allowed; }
+
+.pageInfo{
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+@media (max-width: 980px){
+  .tableShell :global(table){ min-width: 1100px; }
+}

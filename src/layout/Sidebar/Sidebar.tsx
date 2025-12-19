@@ -7,7 +7,10 @@ import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
+  Users,
   Receipt,
+  Send,
+  Printer,
   QrCode,
   PanelLeftClose,
   PanelLeftOpen,
@@ -24,9 +27,17 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  // ===== GENERAL =====
   { href: '/', label: 'Inicio', icon: LayoutDashboard, group: 'GENERAL' },
-  { href: '/recibos', label: 'Recibos', icon: Receipt, group: 'CAJA' },
-  { href: '/verificar', label: 'Verificar QR', icon: QrCode, group: 'CAJA' },
+  { href: '/alumnos', label: 'Alumnos', icon: Users, group: 'GENERAL' },
+
+  // ===== CAJA / COMPROBANTES =====
+  // Nota: el folder sigue siendo /recibos, pero en UI es “Historial de pagos”
+  { href: '/recibos', label: 'Historial de pagos', icon: Receipt, group: 'CAJA' },
+  { href: '/recibos/emision', label: 'Emisión de comprobantes', icon: Send, group: 'CAJA' },
+
+  // ===== UTILIDADES =====
+  { href: '/verificar', label: 'Verificar QR', icon: QrCode, group: 'UTILIDADES' },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -98,7 +109,8 @@ export default function Sidebar() {
           {!collapsed ? (
             <div className={s.brandText}>
               <div className={s.brandName}>USYC</div>
-              <div className={s.brandSub}>Control de Recibos</div>
+              {/* 🔁 Renombrado (ya no “Control de Recibos”) */}
+              <div className={s.brandSub}>Caja • Pagos • Comprobantes</div>
             </div>
           ) : null}
         </div>
@@ -137,6 +149,7 @@ export default function Sidebar() {
                       <span className={s.iconWrap}>
                         <Icon size={18} className={s.icon} />
                       </span>
+
                       {!collapsed ? <span className={s.label}>{it.label}</span> : null}
                     </Link>
 

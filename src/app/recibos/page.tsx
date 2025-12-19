@@ -1,10 +1,9 @@
 import AppShell from '@/layout/AppShell/AppShell';
-import ReceiptsPage from '@/modules/receipts/ui/ReceiptsPage/ReceiptsPage';
+import PaymentsHistoryPage from '@/modules/recibos/pages/PaymentsHistoryPage';
 
 export default function Page() {
   return (
     <AppShell>
-      <ReceiptsPage />
-    </AppShell>
+   <PaymentsHistoryPage />    </AppShell>
   );
 }
