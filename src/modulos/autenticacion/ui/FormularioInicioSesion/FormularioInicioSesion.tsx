@@ -58,7 +58,7 @@ export default function FormularioInicioSesion() {
       const res = await AutenticacionServicio.iniciarSesion(form);
       console.log('Sesión iniciada:', res);
 
-      router.push('/'); // luego lo cambiamos a redirect por rol
+      router.push(res.destino);
     } catch (err: unknown) {
       setError(obtenerMensajeError(err));
     } finally {

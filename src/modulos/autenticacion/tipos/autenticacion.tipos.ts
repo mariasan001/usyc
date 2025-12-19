@@ -16,5 +16,6 @@ export type UsuarioSesion = {
 
 export type RespuestaInicioSesion = {
   token: string;
+  destino: string; // ✅ nuevo: a dónde redirigir después del login
   usuario: UsuarioSesion;
 };
