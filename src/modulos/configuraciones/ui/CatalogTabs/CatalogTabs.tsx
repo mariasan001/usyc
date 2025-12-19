@@ -5,35 +5,37 @@ import s from './CatalogTabs.module.css';
 
 export type CatalogKey = 'escolaridades' | 'carreras' | 'estatusRecibo';
 
-export default function CatalogTabs({
-  value,
-  onChange,
-}: {
+type Props = {
   value: CatalogKey;
   onChange: (k: CatalogKey) => void;
-}) {
+};
+
+const TABS: Array<{ key: CatalogKey; label: string }> = [
+  { key: 'escolaridades', label: 'Escolaridades' },
+  { key: 'carreras', label: 'Carreras' },
+  { key: 'estatusRecibo', label: 'Estatus Recibo' },
+];
+
+export default function CatalogTabs({ value, onChange }: Props) {
   return (
-    <div className={s.tabs}>
-      <button
-        className={`${s.tab} ${value === 'escolaridades' ? s.active : ''}`}
-        onClick={() => onChange('escolaridades')}
-      >
-        Escolaridades
-      </button>
+    <div className={s.tabs} role="tablist" aria-label="Catálogos">
+      {TABS.map((t) => {
+        const isActive = value === t.key;
 
-      <button
-        className={`${s.tab} ${value === 'carreras' ? s.active : ''}`}
-        onClick={() => onChange('carreras')}
-      >
-        Carreras
-      </button>
-
-      <button
-        className={`${s.tab} ${value === 'estatusRecibo' ? s.active : ''}`}
-        onClick={() => onChange('estatusRecibo')}
-      >
-        Estatus Recibo
-      </button>
+        return (
+          <button
+            key={t.key}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            className={`${s.tab} ${isActive ? s.active : ''}`}
+            onClick={() => onChange(t.key)}
+            disabled={isActive} // opcional, puedes quitarlo si no te gusta
+          >
+            {t.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

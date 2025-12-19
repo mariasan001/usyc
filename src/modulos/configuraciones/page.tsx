@@ -110,7 +110,7 @@ export default function ConfiguracionCatalogosPage() {
       <header className={s.header}>
         <div className={s.titleBlock}>
           <h1 className={s.h1}>Configuración · Catálogos</h1>
-          <p className={s.subtitle}>Administra escolaridades, carreras y estatus. El backend manda, nosotros obedecemos 😄</p>
+          <p className={s.subtitle}>Administra escolaridades, carreras y estatus.</p>
         </div>
 
         <div className={s.actions}>
@@ -145,21 +145,23 @@ export default function ConfiguracionCatalogosPage() {
       </section>
 
       {modal.open && (
-        <CatalogModal
-          catalog={modal.catalog}
-          mode={modal.mode}
-          initialValue={modal.item}
-          onClose={() => setModal({ open: false })}
-          onSave={handleSave}
-          isSaving={
-            modal.catalog === 'escolaridades'
-              ? escolaridades.isSaving
-              : modal.catalog === 'carreras'
-              ? carreras.isSaving
-              : estatus.isSaving
-          }
-        />
-      )}
+  <CatalogModal
+    catalog={modal.catalog}
+    mode={modal.mode}
+    initialValue={modal.item}
+    escolaridadesOptions={escolaridades.items} // ✅ para el select
+    isSaving={
+      modal.catalog === 'escolaridades'
+        ? escolaridades.isSaving
+        : modal.catalog === 'carreras'
+        ? carreras.isSaving
+        : estatus.isSaving
+    }
+    onClose={() => setModal({ open: false })}
+    onSave={handleSave}
+  />
+)}
+
     </div>
   );
 }

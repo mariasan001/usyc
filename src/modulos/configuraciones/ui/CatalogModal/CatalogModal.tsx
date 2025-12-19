@@ -1,8 +1,9 @@
 // src/modules/configuraciones/catalogos/ui/CatalogModal/CatalogModal.tsx
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CatalogKey } from '../CatalogTabs/CatalogTabs';
+import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
 import s from './CatalogModal.module.css';
 
 type Props = {
@@ -12,6 +13,9 @@ type Props = {
   isSaving?: boolean;
   onClose: () => void;
   onSave: (payload: any) => Promise<void>;
+
+  // ✅ nuevo: opciones para el select
+  escolaridadesOptions?: Escolaridad[];
 };
 
 export default function CatalogModal({
@@ -21,6 +25,7 @@ export default function CatalogModal({
   isSaving,
   onClose,
   onSave,
+  escolaridadesOptions = [],
 }: Props) {
   const title = useMemo(() => {
     const name =
@@ -32,40 +37,45 @@ export default function CatalogModal({
     return mode === 'create' ? `Crear ${name}` : `Editar ${name}`;
   }, [catalog, mode]);
 
-  // ✅ helper: strings limpios
-  const str = (v: any) => String(v ?? '').trim();
+  const escolaridadesSorted = useMemo(() => {
+    return [...escolaridadesOptions].sort((a, b) =>
+      (a.nombre ?? '').localeCompare(b.nombre ?? ''),
+    );
+  }, [escolaridadesOptions]);
 
-  // form state por catálogo (shape correcto)
+  // form state
   const [form, setForm] = useState<any>(() => {
     if (catalog === 'escolaridades') {
       return {
-        codigo: str(initialValue?.codigo),
-        nombre: str(initialValue?.nombre),
-        // si tu back soporta activo aquí, ok:
+        codigo: initialValue?.codigo ?? '',
+        nombre: initialValue?.nombre ?? '',
         activo: initialValue?.activo ?? true,
       };
     }
 
     if (catalog === 'carreras') {
+      // ✅ default: si es create y no hay escolaridadId, selecciona la primera escolaridad si existe
+      const fallbackEscolaridadId =
+        typeof initialValue?.escolaridadId === 'number'
+          ? initialValue.escolaridadId
+          : escolaridadesSorted[0]?.id ?? 0;
+
       return {
-        carreraId: str(initialValue?.carreraId),
-        escolaridadId: Number(initialValue?.escolaridadId ?? 0),
-        nombre: str(initialValue?.nombre),
-        montoMensual: Number(initialValue?.montoMensual ?? 0),
-        montoInscripcion: Number(initialValue?.montoInscripcion ?? 0),
-        duracionAnios: Number(initialValue?.duracionAnios ?? 0),
-        duracionMeses: Number(initialValue?.duracionMeses ?? 0),
-        // si tu back soporta activo aquí, ok:
+        carreraId: initialValue?.carreraId ?? '', // 👈 string "01"
+        escolaridadId: fallbackEscolaridadId,
+        nombre: initialValue?.nombre ?? '',
+        montoMensual: initialValue?.montoMensual ?? 0,
+        montoInscripcion: initialValue?.montoInscripcion ?? 0,
+        duracionAnios: initialValue?.duracionAnios ?? 0,
+        duracionMeses: initialValue?.duracionMeses ?? 0,
         activo: initialValue?.activo ?? true,
       };
     }
 
-    // ✅ estatusRecibo según swagger:
-    // create: {codigo, nombre}
-    // update: {nombre}
+    // ✅ EstatusRecibo (NO tiene "activo" en tu API)
     return {
-      codigo: str(initialValue?.codigo),
-      nombre: str(initialValue?.nombre),
+      codigo: initialValue?.codigo ?? '',
+      nombre: initialValue?.nombre ?? '',
     };
   });
 
@@ -75,26 +85,24 @@ export default function CatalogModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSaving) return;
 
-    // ✅ Escolaridades
     if (catalog === 'escolaridades') {
       const payload =
         mode === 'create'
-          ? { codigo: str(form.codigo), nombre: str(form.nombre), activo: !!form.activo }
-          : { nombre: str(form.nombre), activo: !!form.activo };
-
+          ? { codigo: String(form.codigo).trim(), nombre: String(form.nombre).trim(), activo: !!form.activo }
+          : { nombre: String(form.nombre).trim(), activo: !!form.activo };
       await onSave(payload);
       return;
     }
 
-    // ✅ Carreras
     if (catalog === 'carreras') {
       const payload =
         mode === 'create'
           ? {
-              carreraId: str(form.carreraId),
-              escolaridadId: Number(form.escolaridadId),
-              nombre: str(form.nombre),
+              carreraId: String(form.carreraId).trim(), // ✅ string
+              escolaridadId: Number(form.escolaridadId), // ✅ id num
+              nombre: String(form.nombre).trim(),
               montoMensual: Number(form.montoMensual),
               montoInscripcion: Number(form.montoInscripcion),
               duracionAnios: Number(form.duracionAnios),
@@ -103,7 +111,7 @@ export default function CatalogModal({
             }
           : {
               escolaridadId: Number(form.escolaridadId),
-              nombre: str(form.nombre),
+              nombre: String(form.nombre).trim(),
               montoMensual: Number(form.montoMensual),
               montoInscripcion: Number(form.montoInscripcion),
               duracionAnios: Number(form.duracionAnios),
@@ -115,33 +123,34 @@ export default function CatalogModal({
       return;
     }
 
-    // ✅ EstatusRecibo (AQUÍ estaba el bug: NO mandar activo)
+    // ✅ Estatus Recibo (create requiere codigo+nombre, update solo nombre según tu types)
     if (mode === 'create') {
-      await onSave({ codigo: str(form.codigo), nombre: str(form.nombre) });
+      await onSave({
+        codigo: String(form.codigo).trim(),
+        nombre: String(form.nombre).trim(),
+      });
     } else {
-      await onSave({ nombre: str(form.nombre) });
+      await onSave({ nombre: String(form.nombre).trim() });
     }
   }
 
-  const showActivo = catalog !== 'estatusRecibo'; // ✅ estatusRecibo no tiene activo en swagger
-  const showCodigoEscolaridad = catalog === 'escolaridades' && mode === 'create';
   const showCarreraId = catalog === 'carreras' && mode === 'create';
-  const showEscolaridadId = catalog === 'carreras';
-  const showCarreraExtras = catalog === 'carreras';
+  const showEscolaridadSelect = catalog === 'carreras';
+  const showActivo = catalog !== 'estatusRecibo'; // ✅ estatus no lleva activo
 
   return (
     <div className={s.backdrop} role="dialog" aria-modal="true">
       <div className={s.modal}>
         <div className={s.head}>
           <h3 className={s.h3}>{title}</h3>
-          <button className={s.close} onClick={onClose} disabled={isSaving} aria-label="Cerrar">
+          <button className={s.close} onClick={onClose} disabled={isSaving} type="button">
             ✕
           </button>
         </div>
 
         <form className={s.form} onSubmit={submit}>
-          {/* Escolaridades: codigo solo en create */}
-          {showCodigoEscolaridad && (
+          {/* ESCOLARIDADES */}
+          {catalog === 'escolaridades' && mode === 'create' && (
             <div className={s.field}>
               <label>Código</label>
               <input
@@ -153,57 +162,66 @@ export default function CatalogModal({
             </div>
           )}
 
-          {/* EstatusRecibo: codigo solo en create */}
-          {catalog === 'estatusRecibo' && mode === 'create' && (
-            <div className={s.field}>
-              <label>Código</label>
-              <input
-                value={form.codigo}
-                onChange={(e) => set('codigo', e.target.value)}
-                placeholder="EMITIDO, PAGADO, CANCELADO…"
-                required
-              />
-            </div>
-          )}
-
-          {/* Carreras: carreraId solo en create */}
+          {/* CARRERAS */}
           {showCarreraId && (
             <div className={s.field}>
-              <label>ID Carrera</label>
+              <label>Código de Carrera</label>
               <input
                 value={form.carreraId}
                 onChange={(e) => set('carreraId', e.target.value)}
                 placeholder="01, 10…"
                 required
               />
+              <small className={s.help}>Es un string (tipo código). Ej: 01, 10.</small>
             </div>
           )}
 
-          {/* Carreras: escolaridadId siempre */}
-          {showEscolaridadId && (
+          {showEscolaridadSelect && (
             <div className={s.field}>
-              <label>Escolaridad ID</label>
+              <label>Escolaridad</label>
+              <select
+                value={String(form.escolaridadId)}
+                onChange={(e) => set('escolaridadId', Number(e.target.value))}
+                required
+                disabled={!escolaridadesSorted.length}
+              >
+                {!escolaridadesSorted.length ? (
+                  <option value="0">Cargando escolaridades…</option>
+                ) : (
+                  escolaridadesSorted.map((esc) => (
+                    <option key={esc.id} value={esc.id}>
+                      {esc.nombre} ({esc.codigo})
+                    </option>
+                  ))
+                )}
+              </select>
+              <small className={s.help}>
+                Se muestra el nombre, pero se envía el <b>ID</b>.
+              </small>
+            </div>
+          )}
+
+          {/* ESTATUS RECIBO */}
+          {catalog === 'estatusRecibo' && mode === 'create' && (
+            <div className={s.field}>
+              <label>Código</label>
               <input
-                type="number"
-                value={form.escolaridadId}
-                onChange={(e) => set('escolaridadId', e.target.value)}
+                value={form.codigo}
+                onChange={(e) => set('codigo', e.target.value)}
+                placeholder="EMITIDO, PAGADO…"
                 required
               />
             </div>
           )}
 
-          {/* Nombre (todos) */}
+          {/* NOMBRE (común) */}
           <div className={s.field}>
             <label>Nombre</label>
-            <input
-              value={form.nombre}
-              onChange={(e) => set('nombre', e.target.value)}
-              required
-            />
+            <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} required />
           </div>
 
-          {/* Extras de carreras */}
-          {showCarreraExtras && (
+          {/* CAMPOS SOLO CARRERAS */}
+          {catalog === 'carreras' && (
             <div className={s.grid2}>
               <div className={s.field}>
                 <label>Monto mensual</label>
@@ -243,7 +261,7 @@ export default function CatalogModal({
             </div>
           )}
 
-          {/* ✅ Activo solo para escolaridades/carreras */}
+          {/* ACTIVO solo en escolaridades/carreras */}
           {showActivo && (
             <label className={s.check}>
               <input
@@ -256,12 +274,7 @@ export default function CatalogModal({
           )}
 
           <div className={s.footer}>
-            <button
-              type="button"
-              className={s.secondary}
-              onClick={onClose}
-              disabled={isSaving}
-            >
+            <button type="button" className={s.secondary} onClick={onClose} disabled={isSaving}>
               Cancelar
             </button>
             <button type="submit" className={s.primary} disabled={isSaving}>
