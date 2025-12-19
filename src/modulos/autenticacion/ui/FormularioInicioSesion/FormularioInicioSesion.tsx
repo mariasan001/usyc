@@ -18,6 +18,21 @@ import s from './FormularioInicioSesion.module.css';
 import { AutenticacionServicio } from '../../servicios/autenticacion.servicio';
 import type { CredencialesInicioSesion } from '../../tipos/autenticacion.tipos';
 
+// ✅ Helper seguro: convierte unknown -> string sin usar any
+function obtenerMensajeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+
+  // Por si algún servicio lanza { message: "..." }
+  if (typeof err === 'object' && err !== null) {
+    const maybe = err as { message?: unknown };
+    if (typeof maybe.message === 'string') return maybe.message;
+  }
+
+  if (typeof err === 'string') return err;
+
+  return 'Ocurrió un error al iniciar sesión';
+}
+
 export default function FormularioInicioSesion() {
   const router = useRouter();
 
@@ -44,8 +59,8 @@ export default function FormularioInicioSesion() {
       console.log('Sesión iniciada:', res);
 
       router.push('/'); // luego lo cambiamos a redirect por rol
-    } catch (err: any) {
-      setError(err?.message ?? 'Ocurrió un error al iniciar sesión');
+    } catch (err: unknown) {
+      setError(obtenerMensajeError(err));
     } finally {
       setCargando(false);
     }
@@ -60,7 +75,7 @@ export default function FormularioInicioSesion() {
               <div className={s.logo} aria-hidden />
               <div className={s.brandText}>
                 <h1 className={s.title}>Iniciar sesión</h1>
-                <p className={s.subtitle}>Control escolar · Caja · Comprobantes</p>
+                <p className={s.subtitle}>Control escolar</p>
               </div>
             </div>
 
@@ -81,7 +96,6 @@ export default function FormularioInicioSesion() {
           ) : null}
 
           <form className={s.form} onSubmit={onSubmit}>
-            {/* Usuario */}
             <label className={s.label}>
               Usuario
               <div className={s.field}>
@@ -99,7 +113,6 @@ export default function FormularioInicioSesion() {
               </div>
             </label>
 
-            {/* Contraseña */}
             <label className={s.label}>
               Contraseña
               <div className={s.field}>
@@ -128,7 +141,6 @@ export default function FormularioInicioSesion() {
               </div>
             </label>
 
-            {/* Acciones */}
             <button className={s.boton} disabled={deshabilitado}>
               {cargando ? (
                 <>
@@ -151,15 +163,14 @@ export default function FormularioInicioSesion() {
         </div>
 
         <footer className={s.footer}>
-  <div className={s.footerLine}>
-    © {new Date().getFullYear()} USYC · Todos los derechos reservados.
-  </div>
+          <div className={s.footerLine}>
+            © {new Date().getFullYear()} USYC · Todos los derechos reservados.
+          </div>
 
-  <div className={s.footerLine}>
-    Desarrollado por <span className={s.sintropia}>Sintropía</span>
-  </div>
-</footer>
-
+          <div className={s.footerLine}>
+            Desarrollado por <span className={s.sintropia}>Sintropía</span>
+          </div>
+        </footer>
       </div>
     </div>
   );

@@ -24,3 +24,4 @@ export function limpiarSesion() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(KEY);
 }
+

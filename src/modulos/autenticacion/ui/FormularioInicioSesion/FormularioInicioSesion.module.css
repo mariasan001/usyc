@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 28px;
+  padding: 18px;
   background: var(--bg);
   position: relative;
   overflow: hidden;
