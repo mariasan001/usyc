@@ -12,8 +12,8 @@
   gap: 10px;
 
   /* Tipografía general del sidebar */
-  font-size: 13px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1;
 
   /* ✅ Animación sutil */
   transition: width .24s ease;
@@ -75,7 +75,7 @@
   margin-top: 2px;
   font-weight: 700;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 9px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -136,8 +136,8 @@
   border-radius: 14px;
   color: rgba(11,18,32,.84);
   text-decoration: none;
-  font-weight: 800;
-  font-size: 13px;
+  font-weight: 600;
+  font-size: 12px;
   border: 1px solid transparent;
   transition: background .15s ease, border-color .15s ease, transform .15s ease;
 }
@@ -340,4 +340,15 @@
 .collapsed .profileRow{
   justify-content: center;
   padding: 10px 8px;
+}
+.logout{
+  background: transparent;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.groupBottom{
+  margin-top: 8px;
 }
