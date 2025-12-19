@@ -1,0 +1,29 @@
+/* src/app/alumnos/alumnos.page.module.css */
+
+.page{
+  padding: 16px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: 400px 1fr;
+  gap: 14px;
+  align-items: stretch;                /* ✅ importante */
+
+  /* ✅ altura base pantalla (ajusta 120 si tu header es más alto/bajo) */
+  min-height: calc(100vh - 120px);
+}
+
+.left,
+.right{
+  min-width: 0;
+  min-height: 0;                        /* ✅ clave para que el scroll interno funcione */
+}
+
+/* responsive */
+@media (max-width: 1024px){
+  .grid{
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}

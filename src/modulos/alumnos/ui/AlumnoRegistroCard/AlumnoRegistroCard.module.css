@@ -1,0 +1,235 @@
+/* src/modulos/alumnos/ui/AlumnoRegistroCard/AlumnoRegistroCard.module.css */
+
+.card{
+  border: 1px solid #e7ebf3;
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(20, 30, 60, .06);
+  min-width: 0;
+}
+
+.header{
+  display:flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.headText{ min-width: 0; }
+
+.title{
+  font-size: 15px;
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: -0.2px;
+}
+
+.subtitle{
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.35;
+}
+
+.kpi{
+  border: 1px solid #eef1f7;
+  background: #f7f9fd;
+  padding: 9px 10px;
+  border-radius: 14px;
+  text-align: right;
+  min-width: 150px;
+}
+
+.kpiLabel{
+  font-size: 11px;
+  color:#6b7280;
+  display:block;
+}
+
+.kpiValue{
+  font-weight: 900;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.alertError{
+  border: 1px solid #ffd1d1;
+  background: #fff2f2;
+  color: #8a1f1f;
+  padding: 9px 10px;
+  border-radius: 14px;
+  margin: 10px 0;
+  font-size: 12px;
+}
+
+.alertOk{
+  border: 1px solid #c8f0d2;
+  background: #effaf2;
+  color: #1f6b2d;
+  padding: 9px 10px;
+  border-radius: 14px;
+  margin: 10px 0;
+  font-size: 12px;
+}
+
+/* ✅ GRID simétrico */
+.grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ✅ para que Escolaridad y Plantel ocupen todo el ancho */
+.full{
+  grid-column: 1 / -1;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label{
+  font-size: 12px;
+  color:#374151;
+  font-weight: 800;
+}
+
+.req{
+  color:#b91c1c;
+  font-weight: 900;
+  margin-left: 4px;
+}
+
+.input,
+.select{
+  height: 38px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+  padding: 0 12px;
+  outline: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: #111827;
+  min-width: 0;
+}
+
+.input::placeholder{
+  color:#9ca3af;
+}
+
+/* ✅ Select moderno */
+.select{
+  cursor: pointer;
+  padding-right: 34px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6b7280 50%),
+    linear-gradient(135deg, #6b7280 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 16px,
+    calc(100% - 13px) 16px,
+    0 0;
+  background-size:
+    5px 5px,
+    5px 5px,
+    100% 100%;
+  background-repeat: no-repeat;
+}
+
+.select:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.input:focus,
+.select:focus{
+  border-color: #cfd7ea;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, .06);
+}
+
+/* ✅ Preview (duración / término) */
+.preview{
+  display:flex;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px dashed #e7ebf3;
+  background: #fbfcff;
+}
+
+.previewItem{
+  display:flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.previewLabel{
+  font-size: 11px;
+  color:#6b7280;
+  font-weight: 800;
+}
+
+.previewValue{
+  font-size: 12.5px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer{
+  margin-top: 12px;
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.primaryBtn{
+  height: 42px;
+  border-radius: 14px;
+  border: 0;
+  background: #111827;
+  color: #fff;
+  font-weight: 900;
+  cursor:pointer;
+  font-size: 13px;
+  letter-spacing: .2px;
+}
+
+.primaryBtn:hover{
+  filter: brightness(1.02);
+}
+
+.primaryBtn:disabled{
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.hint{
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ✅ Responsive */
+@media (max-width: 520px){
+  .grid{
+    grid-template-columns: 1fr;
+  }
+  .full{
+    grid-column: auto;
+  }
+  .kpi{
+    min-width: 0;
+  }
+  .preview{
+    flex-direction: column;
+  }
+}
