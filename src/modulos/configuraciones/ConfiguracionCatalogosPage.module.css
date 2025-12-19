@@ -1,0 +1,10 @@
+/* src/modules/configuraciones/catalogos/page/ConfiguracionCatalogosPage.module.css */
+.page{ display:flex; flex-direction:column; gap:14px; }
+.header{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.titleBlock{ display:flex; flex-direction:column; gap:4px; }
+.h1{ font-size:22px; margin:0; }
+.subtitle{ margin:0; opacity:.75; }
+.actions{ display:flex; align-items:center; gap:10px; }
+.toggle{ display:flex; align-items:center; gap:8px; font-size:14px; opacity:.9; }
+.primary{ height:40px; padding:0 14px; border-radius:12px; border:1px solid #ddd; background:#111; color:#fff; }
+.content{ display:flex; flex-direction:column; }

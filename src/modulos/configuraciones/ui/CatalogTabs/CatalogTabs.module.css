@@ -1,0 +1,4 @@
+/* src/modules/configuraciones/catalogos/ui/CatalogTabs/CatalogTabs.module.css */
+.tabs{ display:flex; gap:8px; flex-wrap:wrap; }
+.tab{ height:38px; padding:0 12px; border-radius:12px; border:1px solid #ddd; background:#fff; }
+.active{ background:#111; color:#fff; border-color:#111; }
