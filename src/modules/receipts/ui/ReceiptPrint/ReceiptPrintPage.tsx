@@ -9,34 +9,82 @@ import Button from '@/shared/ui/Button/Button';
 import Card from '@/shared/ui/Card/Card';
 import Badge from '@/shared/ui/Badge/Badge';
 
-import { createReceiptService } from '@/modules/receipts/services/receipt.service';
 import type { Receipt } from '@/modules/receipts/types/receipt.types';
 import ReceiptDocument from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
-
 import { loadReceiptSettings } from '@/modules/receipts/utils/receipt-template.settings';
+
 import s from './ReceiptPrintPage.module.css';
+
+/** ====== misma key que usas en PaymentsIssuePage ====== */
+type IssuedItem = {
+  id: string; // `${studentKey}__${periodoKey}`
+  studentKey: string;
+  periodoKey: string; // YYYY-MM
+  folio: string;
+  fechaEmision: string; // YYYY-MM-DD
+  concepto: string;
+  monto: number;
+};
+
+const ISSUED_KEY = 'payments:issued:v1';
+
+function loadIssued(): IssuedItem[] {
+  try {
+    const raw = localStorage.getItem(ISSUED_KEY);
+    const parsed = raw ? (JSON.parse(raw) as IssuedItem[]) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 function parseFolios(sp: URLSearchParams) {
   const one = sp.get('folio');
   const many = sp.get('folios');
 
-  if (one) return [one];
-  if (many) return many.split(',').map((x) => x.trim()).filter(Boolean);
+  if (one?.trim()) return [one.trim()];
+  if (many?.trim())
+    return many
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
+
   return [];
+}
+
+/** demo súper simple */
+function toReceiptDemo(it: IssuedItem): Receipt {
+  const alumnoNombre = it.studentKey.includes('-') ? it.studentKey : it.studentKey; // studentKey = matricula o nombre, según tu lógica
+  const isMatricula = /[A-Z]{2,}-\d+|\d{3,}/i.test(it.studentKey);
+
+  return {
+    folio: it.folio,
+    alumno: {
+      nombre: isMatricula ? 'ALUMNO DEMO' : alumnoNombre,
+      matricula: isMatricula ? it.studentKey : undefined,
+      carrera: '—',
+      duracionMeses: 6,
+      fechaInicio: undefined,
+    },
+    concepto: it.concepto ?? 'Colegiatura',
+    monto: it.monto ?? 0,
+    montoLetras: '—', // luego lo conectas a tu helper real
+    fechaPago: it.fechaEmision, // en emisión usamos fechaEmision como fecha del doc
+    status: 'VALID',
+    createdAt: it.fechaEmision,
+    updatedAt: it.fechaEmision,
+  };
 }
 
 export default function ReceiptPrintPage() {
   const sp = useSearchParams();
-  const api = useMemo(() => createReceiptService(), []);
+  const settings = useMemo(() => loadReceiptSettings(), []);
+  const folios = useMemo(() => parseFolios(sp), [sp]);
 
   const [items, setItems] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState<string[]>([]);
   const didAutoPrint = useRef(false);
-
-  const settings = useMemo(() => loadReceiptSettings(), []);
-
-  const folios = useMemo(() => parseFolios(sp), [sp]);
 
   useEffect(() => {
     let alive = true;
@@ -44,20 +92,19 @@ export default function ReceiptPrintPage() {
     (async () => {
       setLoading(true);
       try {
+        const issued = loadIssued();
         const found: Receipt[] = [];
         const notFound: string[] = [];
 
         for (const f of folios) {
-          const r = await api.getByFolio(f);
-          if (r) found.push(r);
+          const hit = issued.find((x) => x.folio === f);
+          if (hit) found.push(toReceiptDemo(hit));
           else notFound.push(f);
         }
 
-        // orden estable por folio
         found.sort((a, b) => a.folio.localeCompare(b.folio));
 
         if (!alive) return;
-
         setItems(found);
         setMissing(notFound);
       } finally {
@@ -68,9 +115,8 @@ export default function ReceiptPrintPage() {
     return () => {
       alive = false;
     };
-  }, [api, folios]);
+  }, [folios]);
 
-  // Auto print una vez (si hay algo)
   useEffect(() => {
     if (loading) return;
     if (items.length === 0) return;
@@ -78,7 +124,6 @@ export default function ReceiptPrintPage() {
 
     didAutoPrint.current = true;
 
-    // mini delay para que renderice
     const t = setTimeout(() => {
       window.print();
     }, 450);
@@ -88,16 +133,13 @@ export default function ReceiptPrintPage() {
 
   return (
     <div className={s.wrap}>
-      {/* Controls (no se imprimen) */}
       <div className={s.controls}>
-        <Link className={s.back} href="/recibos">
-          <ArrowLeft size={16} /> Volver a recibos
+        <Link className={s.back} href="/pagos/emision">
+          <ArrowLeft size={16} /> Volver a emisión
         </Link>
 
         <div className={s.right}>
-          <Badge tone="info">
-            {folios.length || 0} seleccionados
-          </Badge>
+          <Badge tone="info">{folios.length || 0} seleccionados</Badge>
 
           <Button
             onClick={() => window.print()}
@@ -112,8 +154,12 @@ export default function ReceiptPrintPage() {
       {missing.length ? (
         <Card
           title="Algunos folios no se encontraron"
-          subtitle="No se imprimirán porque no existen en el sistema."
-          right={<Badge tone="warn"><AlertTriangle size={14} /> Aviso</Badge>}
+          subtitle="No se imprimirán porque no existen en el storage local."
+          right={
+            <Badge tone="warn">
+              <AlertTriangle size={14} /> Aviso
+            </Badge>
+          }
         >
           <div className={s.missing}>{missing.join(', ')}</div>
         </Card>
@@ -125,7 +171,6 @@ export default function ReceiptPrintPage() {
         <div className={s.loading}>No hay recibos para imprimir.</div>
       ) : null}
 
-      {/* Pages */}
       <div className={s.pages}>
         {items.map((r) => (
           <div key={r.folio} className={s.printPage}>

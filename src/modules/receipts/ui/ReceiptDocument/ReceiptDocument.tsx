@@ -19,10 +19,20 @@ function pad(n: string, size = 5) {
 }
 
 function splitFolio(folio: string) {
-  // Soporta "USYC-000001" o "000001"
-  const parts = folio.split('-');
+  // Soporta "USYC-000001" o "000001" o "FOL-202601-0007"
+  const parts = (folio ?? '').split('-');
   const raw = parts.length > 1 ? parts[parts.length - 1] : folio;
   return pad(raw.replace(/\D/g, '') || raw);
+}
+
+function safeDate(v?: string) {
+  // Si viene vacío, no rompas el layout
+  return v?.trim() ? v : '—';
+}
+
+function safeText(v?: string | null, fallback = '—') {
+  const t = (v ?? '').toString().trim();
+  return t ? t : fallback;
 }
 
 function QrImg({ value }: { value: string }) {
@@ -51,7 +61,6 @@ function QrImg({ value }: { value: string }) {
 
   if (!src) return <div className={s.qrFallback}>QR</div>;
 
-  // next/image con dataURL es OK
   return <Image alt="QR" src={src} width={120} height={120} className={s.qrImg} />;
 }
 
@@ -67,6 +76,12 @@ export default function ReceiptDocument({
 
   const cancelled = receipt.status === 'CANCELLED';
 
+  // ✅ con tu type actual, concepto es opcional
+  const concepto = safeText(receipt.concepto, 'Colegiatura');
+
+  // ✅ en emisión/pago real, fechaPago puede ser hoy o lo que decidas
+  const fecha = safeDate(receipt.fechaPago);
+
   return (
     <div className={s.page}>
       <div className={s.sheet}>
@@ -77,7 +92,6 @@ export default function ReceiptDocument({
         <div className={s.top}>
           <div className={s.logoBox}>
             {settings.logoDataUrl ? (
-              // Logo desde settings
               <Image
                 alt="Logo"
                 src={settings.logoDataUrl}
@@ -125,7 +139,7 @@ export default function ReceiptDocument({
           <div className={s.row2}>
             <div className={s.field}>
               <div className={s.fieldLabel}>NOMBRE :</div>
-              <div className={s.fieldLine}>{receipt.alumno.nombre}</div>
+              <div className={s.fieldLine}>{safeText(receipt.alumno?.nombre)}</div>
             </div>
 
             <div className={s.fieldRight}>
@@ -137,28 +151,28 @@ export default function ReceiptDocument({
           <div className={s.row1}>
             <div className={s.field}>
               <div className={s.fieldLabel}>CANTIDAD EN LETRAS :</div>
-              <div className={s.fieldLine}>{receipt.montoLetras}</div>
+              <div className={s.fieldLine}>{safeText(receipt.montoLetras)}</div>
             </div>
           </div>
 
           <div className={s.row1}>
             <div className={s.field}>
               <div className={s.fieldLabel}>CONCEPTO :</div>
-              <div className={s.fieldLine}>{receipt.concepto}</div>
+              <div className={s.fieldLine}>{concepto}</div>
             </div>
           </div>
 
           <div className={s.row1}>
             <div className={s.fieldDate}>
               <div className={s.fieldLabel}>FECHA:</div>
-              <div className={s.dateValue}>{receipt.fechaPago}</div>
+              <div className={s.dateValue}>{fecha}</div>
             </div>
           </div>
 
           {cancelled ? (
             <div className={s.cancelBox}>
               <div className={s.cancelTitle}>Motivo de cancelación</div>
-              <div className={s.cancelReason}>{receipt.cancelReason ?? '—'}</div>
+              <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
             </div>
           ) : null}
         </div>

@@ -23,6 +23,56 @@ import {
 } from '@/modules/receipts/utils/student-ledger.utils';
 
 /** =========================
+ *  MOCKS (solo UI demo)
+ *  ========================= */
+type StudentMock = StudentRef & { carrera?: string; mensualidad: number };
+
+const MOCK_STUDENTS: StudentMock[] = [
+  { nombre: 'Diana Pérez', matricula: 'LEN-24-01', carrera: 'Enfermería', mensualidad: 330 },
+  { nombre: 'Juan Pérez', matricula: 'LWD-2345', carrera: 'Sistemas', mensualidad: 450 },
+  { nombre: 'María Sandoval', matricula: '13224', carrera: 'Derecho', mensualidad: 390 },
+  { nombre: 'María López', matricula: 'A002', carrera: 'Psicología', mensualidad: 300 },
+  { nombre: 'Pedro Ramírez', matricula: 'A003', carrera: 'Arquitectura', mensualidad: 520 },
+  { nombre: 'Luis Hernández', matricula: 'A004', carrera: 'Contabilidad', mensualidad: 410 },
+  { nombre: 'Ana Torres', matricula: 'A005', carrera: 'Nutrición', mensualidad: 380 },
+  { nombre: 'Carlos Vega', matricula: 'A006', carrera: 'Administración', mensualidad: 360 },
+  { nombre: 'Sofía García', matricula: 'A007', carrera: 'Criminología', mensualidad: 410 },
+  { nombre: 'Diego Cruz', matricula: 'A008', carrera: 'Diseño', mensualidad: 340 },
+];
+
+// Algunos pagos reales (para que veas "PAGADO" en meses pasados/actual)
+const MOCK_RECEIPTS: Receipt[] = [
+  {
+    id: 'r1',
+    alumno: { nombre: 'Diana Pérez', matricula: 'LEN-24-01' },
+    monto: 330,
+    fechaPago: '2025-12-18',
+    concepto: 'Colegiatura',
+  } as any,
+  {
+    id: 'r2',
+    alumno: { nombre: 'Juan Pérez', matricula: 'LWD-2345' },
+    monto: 450,
+    fechaPago: '2025-11-10',
+    concepto: 'Colegiatura',
+  } as any,
+  {
+    id: 'r3',
+    alumno: { nombre: 'Juan Pérez', matricula: 'LWD-2345' },
+    monto: 450,
+    fechaPago: '2025-12-10',
+    concepto: 'Colegiatura',
+  } as any,
+  {
+    id: 'r4',
+    alumno: { nombre: 'María López', matricula: 'A002' },
+    monto: 300,
+    fechaPago: '2025-12-05',
+    concepto: 'Colegiatura',
+  } as any,
+];
+
+/** =========================
  *  Helpers (periodo / folio)
  *  ========================= */
 function yyyymm(d: Date) {
@@ -31,19 +81,17 @@ function yyyymm(d: Date) {
   return `${y}-${m}`;
 }
 
-function nextMonthKey() {
-  const d = new Date();
-  d.setMonth(d.getMonth() + 1);
+function addMonthsKey(base: Date, delta: number) {
+  const d = new Date(base);
   d.setDate(1);
+  d.setMonth(d.getMonth() + delta);
   return yyyymm(d);
 }
 
 function monthLabelFromKey(key: string) {
   const [y, m] = key.split('-').map((x) => Number(x));
   const d = new Date(y, (m || 1) - 1, 1);
-  return d
-    .toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })
-    .toUpperCase();
+  return d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' }).toUpperCase();
 }
 
 function fmtMoney(n: number) {
@@ -55,7 +103,6 @@ function todayISO() {
 }
 
 function makeFolio(periodoKey: string, n: number) {
-  // FOL-202601-0007
   const compact = periodoKey.replace('-', '');
   return `FOL-${compact}-${String(n).padStart(4, '0')}`;
 }
@@ -101,6 +148,8 @@ function saveIssued(items: IssuedItem[]) {
 /** =========================
  *  Types UI
  *  ========================= */
+type EstadoUI = 'SIN_EMISION' | 'EMITIDO' | 'PAGADO' | 'ADEUDO';
+
 type IssueRow = {
   id: string; // `${studentKey}__${periodoKey}`
   studentKey: string;
@@ -112,21 +161,37 @@ type IssueRow = {
   periodoKey: string;
   periodoLabel: string;
 
-  concepto: string; // Colegiatura
+  concepto: string;
   monto: number;
 
-  estado: 'SIN_EMISION' | 'EMITIDO' | 'PAGADO';
+  estado: EstadoUI;
   folio?: string;
   fechaEmision?: string;
 };
 
 export default function PaymentsIssuePage() {
-  const periodoKey = useMemo(() => nextMonthKey(), []);
+  const currentMonthKey = useMemo(() => yyyymm(new Date()), []);
+
+  // ✅ Periodo filtrable: anterior / actual / próximo (default = próximo)
+  const [periodoKey, setPeriodoKey] = useState<string>(() => addMonthsKey(new Date(), +1));
   const periodoLabel = useMemo(() => monthLabelFromKey(periodoKey), [periodoKey]);
 
-  // ⚠️ Sustituye por tus hooks reales (API)
-  const [allReceipts] = useState<Receipt[]>([]);
-  const [students] = useState<StudentRef[]>([]);
+  const periodOptions = useMemo(() => {
+    const base = new Date();
+    const prev = addMonthsKey(base, -1);
+    const now = addMonthsKey(base, 0);
+    const next = addMonthsKey(base, +1);
+
+    return [
+      { key: prev, label: `MES ANTERIOR • ${monthLabelFromKey(prev)}` },
+      { key: now, label: `MES ACTUAL • ${monthLabelFromKey(now)}` },
+      { key: next, label: `PRÓXIMO MES • ${monthLabelFromKey(next)}` },
+    ];
+  }, []);
+
+  // ✅ DEMO
+  const [allReceipts] = useState<Receipt[]>(MOCK_RECEIPTS);
+  const [students] = useState<StudentMock[]>(MOCK_STUDENTS);
 
   const [issued, setIssued] = useState<IssuedItem[]>([]);
   useEffect(() => {
@@ -158,43 +223,45 @@ export default function PaymentsIssuePage() {
       if (!studentKey) continue;
 
       const receipts = receiptsByStudent.get(studentKey.toLowerCase()) ?? [];
+
+      const inferred = inferMonthlyAmount(receipts, 0);
       const fallbackCfg: PlanConfig = {
         startDate: inferStartDate(receipts),
         durationMonths: 6,
-        monthlyAmount: inferMonthlyAmount(receipts, 0),
+        monthlyAmount: inferred && inferred > 0 ? inferred : st.mensualidad,
       };
 
       const cfg = loadStudentPlan(studentKey, fallbackCfg);
-      const plan = applyReceiptsToPlan(buildPlan(cfg), receipts);
+      const monthly = cfg.monthlyAmount && cfg.monthlyAmount > 0 ? cfg.monthlyAmount : st.mensualidad;
 
+      const plan = applyReceiptsToPlan(buildPlan({ ...cfg, monthlyAmount: monthly }), receipts);
       const planRow = plan.find((x) => x.key === periodoKey);
-      if (!planRow) continue;
 
-      const isPaid = planRow.estado === 'PAGADO';
+      const concepto = planRow?.concepto ?? 'Colegiatura';
+      const monto = (planRow?.montoEsperado ?? monthly) || st.mensualidad;
 
-      const issuedItem = issued.find(
-        (it) => it.studentKey === studentKey && it.periodoKey === periodoKey
-      );
+      const isPaid = planRow?.estado === 'PAGADO';
 
-      const estado: IssueRow['estado'] = isPaid
-        ? 'PAGADO'
-        : issuedItem
-          ? 'EMITIDO'
-          : 'SIN_EMISION';
+      const issuedItem = issued.find((it) => it.studentKey === studentKey && it.periodoKey === periodoKey);
+
+      const isPast = periodoKey < currentMonthKey;
+
+      let estado: EstadoUI;
+      if (isPaid) estado = 'PAGADO';
+      else if (issuedItem) estado = 'EMITIDO';
+      else if (isPast) estado = 'ADEUDO';
+      else estado = 'SIN_EMISION';
 
       out.push({
         id: `${studentKey}__${periodoKey}`,
         studentKey,
         alumno: st.nombre,
         matricula: st.matricula ?? null,
-        carrera: (st as any).carrera ?? null,
-
+        carrera: st.carrera ?? null,
         periodoKey,
-        periodoLabel: planRow.periodoLabel ?? periodoLabel,
-
-        concepto: planRow.concepto ?? 'Colegiatura',
-        monto: planRow.montoEsperado ?? cfg.monthlyAmount,
-
+        periodoLabel: planRow?.periodoLabel ?? periodoLabel,
+        concepto,
+        monto,
         estado,
         folio: issuedItem?.folio,
         fechaEmision: issuedItem?.fechaEmision,
@@ -202,7 +269,7 @@ export default function PaymentsIssuePage() {
     }
 
     return out;
-  }, [students, receiptsByStudent, issued, periodoKey, periodoLabel]);
+  }, [students, receiptsByStudent, issued, periodoKey, periodoLabel, currentMonthKey]);
 
   const filtered = useMemo(() => {
     const needle = normalizeKey(q);
@@ -225,7 +292,7 @@ export default function PaymentsIssuePage() {
   const canPrint = useMemo(() => {
     if (selected.length === 0) return false;
     const selRows = filtered.filter((r) => selected.includes(r.id));
-    return selRows.some((r) => r.estado === 'EMITIDO');
+    return selRows.some((r) => r.estado === 'EMITIDO' && r.folio);
   }, [selected, filtered]);
 
   function toggle(id: string) {
@@ -233,7 +300,23 @@ export default function PaymentsIssuePage() {
   }
 
   function selectAllVisible() {
+    // Selecciona todo menos pagado
     setSelected(filtered.filter((r) => r.estado !== 'PAGADO').map((x) => x.id));
+  }
+
+  /** =========================
+   *  ✅ CONEXIÓN A /recibos/print
+   *  ========================= */
+  function goPrintOneByFolio(folio?: string) {
+    if (!folio) return;
+    window.location.href = `/recibos/print?folio=${encodeURIComponent(folio)}`;
+  }
+
+  function goPrintBatchByFolios(folios: string[]) {
+    const list = folios.filter(Boolean);
+    if (list.length === 0) return;
+    const qs = list.map((f) => f.trim()).join(',');
+    window.location.href = `/recibos/print?folios=${encodeURIComponent(qs)}`;
   }
 
   function issueSelected() {
@@ -262,38 +345,38 @@ export default function PaymentsIssuePage() {
       const next = [...issued, ...created];
       setIssued(next);
       saveIssued(next);
+
+      // refresca UI: seleccionados siguen igual, pero ahora ya tendrán folio/emitido
+      // opcional: setSelected([]); // si quieres limpiar selección al emitir
     } finally {
       setIssuing(false);
     }
   }
 
   function printSelected() {
-    // Solo imprime los emitidos
-    const ids = filtered
-      .filter((r) => selected.includes(r.id) && r.estado === 'EMITIDO')
-      .map((r) => r.id);
-
-    if (ids.length === 0) return;
-
+    // Solo imprime los EMITIDOS con folio
     setPrinting(true);
     try {
-      // Aquí conectas tu endpoint:
-      // POST /api/payments/print { ids }
-      console.log('PRINT', ids);
+      const selRows = filtered.filter((r) => selected.includes(r.id));
+      const folios = selRows
+        .filter((r) => r.estado === 'EMITIDO' && r.folio)
+        .map((r) => r.folio!) ;
+
+      goPrintBatchByFolios(folios);
     } finally {
       setPrinting(false);
     }
   }
 
-  function printOne(id: string) {
-    // POST /api/payments/print { ids:[id] }
-    console.log('PRINT ONE', id);
+  function printOne(row: IssueRow) {
+    if (row.estado !== 'EMITIDO') return;
+    goPrintOneByFolio(row.folio);
   }
 
   return (
     <Card
       title="Emisión de comprobantes"
-      subtitle={`Genera folios del periodo: ${periodoLabel}. Selecciona uno o varios y emite.`}
+      subtitle={`Periodo seleccionado: ${periodoLabel}. Filtra por mes y emite folios.`}
       right={
         <div className={s.headerActions}>
           <Badge tone="info">{selected.length} seleccionados</Badge>
@@ -317,6 +400,24 @@ export default function PaymentsIssuePage() {
     >
       <div className={s.wrap}>
         <div className={s.toolbar}>
+          {/* Periodo */}
+          <select
+            className={s.select}
+            value={periodoKey}
+            onChange={(e) => {
+              setPeriodoKey(e.target.value);
+              setSelected([]);
+            }}
+            title="Periodo"
+          >
+            {periodOptions.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Buscar alumno/matrícula */}
           <div className={s.search}>
             <Input
               label=""
@@ -352,7 +453,7 @@ export default function PaymentsIssuePage() {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={10} className={s.muted}>
-                    No hay alumnos para emitir en este periodo (o tu filtro está muy ninja).
+                    No hay resultados para este periodo/filtro.
                   </td>
                 </tr>
               ) : (
@@ -364,7 +465,13 @@ export default function PaymentsIssuePage() {
                     <tr
                       key={r.id}
                       className={
-                        r.estado === 'EMITIDO' ? s.rowIssued : r.estado === 'PAGADO' ? s.rowPaid : undefined
+                        r.estado === 'EMITIDO'
+                          ? s.rowIssued
+                          : r.estado === 'PAGADO'
+                            ? s.rowPaid
+                            : r.estado === 'ADEUDO'
+                              ? s.rowDebt
+                              : undefined
                       }
                     >
                       <td>
@@ -378,11 +485,19 @@ export default function PaymentsIssuePage() {
                       </td>
 
                       <td className={s.mono}>{r.folio ?? '—'}</td>
-                      <td className={s.ellipsis} title={r.alumno}>{r.alumno}</td>
+                      <td className={s.ellipsis} title={r.alumno}>
+                        {r.alumno}
+                      </td>
                       <td className={s.mono}>{r.matricula ?? '—'}</td>
-                      <td className={s.ellipsis} title={r.carrera ?? ''}>{r.carrera ?? '—'}</td>
-                      <td className={s.ellipsis} title={r.periodoLabel}>{r.periodoLabel}</td>
-                      <td className={s.ellipsis} title={r.concepto}>{r.concepto}</td>
+                      <td className={s.ellipsis} title={r.carrera ?? ''}>
+                        {r.carrera ?? '—'}
+                      </td>
+                      <td className={s.ellipsis} title={r.periodoLabel}>
+                        {r.periodoLabel}
+                      </td>
+                      <td className={s.ellipsis} title={r.concepto}>
+                        {r.concepto}
+                      </td>
                       <td className={s.mono}>{fmtMoney(r.monto)}</td>
 
                       <td>
@@ -390,6 +505,8 @@ export default function PaymentsIssuePage() {
                           <span className={s.badgePending}>Sin emisión</span>
                         ) : r.estado === 'EMITIDO' ? (
                           <span className={s.badgeIssued}>Emitido</span>
+                        ) : r.estado === 'ADEUDO' ? (
+                          <span className={s.badgeDebt}>Adeudo</span>
                         ) : (
                           <span className={s.badgePaid}>Pagado</span>
                         )}
@@ -400,7 +517,7 @@ export default function PaymentsIssuePage() {
                           variant="secondary"
                           leftIcon={<Printer size={16} />}
                           disabled={r.estado !== 'EMITIDO'}
-                          onClick={() => printOne(r.id)}
+                          onClick={() => printOne(r)}
                         >
                           Imprimir
                         </Button>
