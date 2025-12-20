@@ -11,6 +11,7 @@ import CatalogModal from '@/modulos/configuraciones/ui/CatalogModal/CatalogModal
 import { useCarreras, useEscolaridades } from '@/modulos/configuraciones/hooks';
 import { useEstatusRecibo } from '@/modulos/configuraciones/hooks/useEstatusRecibo';
 import { useConceptosPago } from '@/modulos/configuraciones/hooks/useConceptosPago';
+import { useTiposPago } from '@/modulos/configuraciones/hooks/useTiposPago'; // ✅ NUEVO
 
 import type {
   Escolaridad,
@@ -18,7 +19,11 @@ import type {
   EscolaridadUpdate,
 } from '@/modulos/configuraciones/types/escolaridades.types';
 
-import type { Carrera, CarreraCreate, CarreraUpdate } from '@/modulos/configuraciones/types/carreras.types';
+import type {
+  Carrera,
+  CarreraCreate,
+  CarreraUpdate,
+} from '@/modulos/configuraciones/types/carreras.types';
 
 import type {
   EstatusRecibo,
@@ -32,6 +37,12 @@ import type {
   ConceptoPagoUpdate,
 } from '@/modulos/configuraciones/types/conceptosPago.types';
 
+import type {
+  TipoPago,
+  TipoPagoCreate,
+  TipoPagoUpdate,
+} from '@/modulos/configuraciones/types/tiposPago.types'; // ✅ NUEVO (ajusta path si difiere)
+
 type ModalState =
   | { open: false }
   | { open: true; mode: 'create' | 'edit'; catalog: CatalogKey; item?: unknown };
@@ -44,6 +55,7 @@ export default function ConfiguracionCatalogosPage() {
   const carreras = useCarreras({ soloActivos });
   const estatus = useEstatusRecibo({ soloActivos });
   const conceptos = useConceptosPago({ soloActivos });
+  const tiposPago = useTiposPago({ soloActivos }); // ✅ NUEVO
 
   const [modal, setModal] = useState<ModalState>({ open: false });
 
@@ -93,6 +105,22 @@ export default function ConfiguracionCatalogosPage() {
       };
     }
 
+    // ✅ NUEVO: TIPOS PAGO
+    if (tab === 'tiposPago') {
+      return {
+        title: 'Tipos de pago',
+        items: tiposPago.items,
+        isLoading: tiposPago.isLoading,
+        isSaving: tiposPago.isSaving,
+        error: tiposPago.error,
+        onReload: tiposPago.reload,
+        onCreate: () => setModal({ open: true, mode: 'create', catalog: tab }),
+        onEdit: (item: TipoPago) => setModal({ open: true, mode: 'edit', catalog: tab, item }),
+        onToggleActive: (item: TipoPago) =>
+          item.active ? tiposPago.desactivar(item.id) : tiposPago.activar(item.id),
+      };
+    }
+
     return {
       title: 'Estatus de Recibo',
       items: estatus.items,
@@ -105,7 +133,7 @@ export default function ConfiguracionCatalogosPage() {
       onToggleActive: (item: EstatusRecibo) =>
         item.activo ? estatus.desactivar(item.id) : estatus.activar(item.id),
     };
-  }, [tab, escolaridades, carreras, estatus, conceptos]);
+  }, [tab, escolaridades, carreras, estatus, conceptos, tiposPago]);
 
   async function handleSave(payload: unknown) {
     if (!modal.open) return;
@@ -130,7 +158,19 @@ export default function ConfiguracionCatalogosPage() {
       if (modal.mode === 'create') {
         await conceptos.create(payload as ConceptoPagoCreate);
       } else {
-        await conceptos.update((modal.item as ConceptoPago).conceptoId, payload as ConceptoPagoUpdate);
+        await conceptos.update(
+          (modal.item as ConceptoPago).conceptoId,
+          payload as ConceptoPagoUpdate,
+        );
+      }
+    }
+
+    // ✅ NUEVO
+    if (modal.catalog === 'tiposPago') {
+      if (modal.mode === 'create') {
+        await tiposPago.create(payload as TipoPagoCreate);
+      } else {
+        await tiposPago.update((modal.item as TipoPago).id, payload as TipoPagoUpdate);
       }
     }
 
@@ -150,7 +190,9 @@ export default function ConfiguracionCatalogosPage() {
       <header className={s.header}>
         <div className={s.titleBlock}>
           <h1 className={s.h1}>Configuración · Catálogos</h1>
-          <p className={s.subtitle}>Administra escolaridades, carreras, estatus y conceptos de pago.</p>
+          <p className={s.subtitle}>
+            Administra escolaridades, carreras, estatus, conceptos y tipos de pago.
+          </p>
         </div>
 
         <div className={s.actions}>
@@ -197,7 +239,9 @@ export default function ConfiguracionCatalogosPage() {
                 ? carreras.isSaving
                 : modal.catalog === 'conceptosPago'
                   ? conceptos.isSaving
-                  : estatus.isSaving
+                  : modal.catalog === 'tiposPago'
+                    ? tiposPago.isSaving
+                    : estatus.isSaving
           }
           onClose={() => setModal({ open: false })}
           onSave={handleSave}

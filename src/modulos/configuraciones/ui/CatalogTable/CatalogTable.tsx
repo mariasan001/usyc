@@ -4,15 +4,32 @@ import s from './CatalogTable.module.css';
 
 type CatalogRowLike = Record<string, unknown> & {
   id?: number | string;
+
+  // español (lo que ya tienes en escolaridades/estatus/conceptos)
   codigo?: string;
-  carreraId?: string;
-  conceptoId?: number;
+  nombre?: string;
   activo?: boolean;
+
+  // carreras
+  carreraId?: string;
+
+  // conceptos pago (tú usas conceptoId para detectarlo)
+  conceptoId?: number;
+
+  // ✅ tipos de pago (swagger)
+  code?: string;
+  name?: string;
+  active?: boolean;
 };
 
 function guessColumns(item: CatalogRowLike) {
-  // Escolaridades / Estatus / Conceptos suelen traer codigo+nombre
+  // ✅ TIPOS DE PAGO (swagger trae code/name/active)
+  if ('code' in item) return ['code', 'name', 'active'];
+
+  // CONCEPTOS PAGO
   if ('conceptoId' in item) return ['codigo', 'nombre', 'tipoMonto', 'activo'];
+
+  // Escolaridades / Estatus suelen traer codigo+nombre
   if ('codigo' in item) return ['codigo', 'nombre', 'activo'];
 
   // Carreras (tu shape actual)
@@ -33,7 +50,8 @@ function guessColumns(item: CatalogRowLike) {
 }
 
 function rowKey(it: CatalogRowLike): string {
-  const k = it.id ?? it.conceptoId ?? it.codigo ?? it.carreraId;
+  // ✅ prioridad: id -> conceptoId -> code -> codigo -> carreraId
+  const k = it.id ?? it.conceptoId ?? it.code ?? it.codigo ?? it.carreraId;
   return String(k ?? crypto.randomUUID());
 }
 
@@ -120,13 +138,17 @@ export default function CatalogTable({
                     <button className={s.link} onClick={() => onEdit(it)} disabled={isSaving}>
                       Editar
                     </button>
+
+                    {/* ✅ Para tipos-pago, el boolean se llama active, no activo */}
                     <button
                       className={s.linkDanger}
                       onClick={() => onToggleActive(it)}
                       disabled={isSaving}
-                      title={it.activo ? 'Desactivar' : 'Activar'}
+                      title={
+                        (it.active ?? it.activo) ? 'Desactivar' : 'Activar'
+                      }
                     >
-                      {it.activo ? 'Desactivar' : 'Activar'}
+                      {(it.active ?? it.activo) ? 'Desactivar' : 'Activar'}
                     </button>
                   </td>
                 </tr>

@@ -45,7 +45,9 @@ export default function CatalogModal({
           ? 'Carrera'
           : catalog === 'conceptosPago'
             ? 'Concepto de Pago'
-            : 'Estatus Recibo';
+            : catalog === 'tiposPago'
+              ? 'Tipo de pago'
+              : 'Estatus Recibo';
 
     return mode === 'create' ? `Crear ${name}` : `Editar ${name}`;
   }, [catalog, mode]);
@@ -96,6 +98,15 @@ export default function CatalogModal({
       };
     }
 
+    // ✅ TIPOS DE PAGO
+    if (catalog === 'tiposPago') {
+      return {
+        code: init.code ?? '', // swagger: code
+        name: init.name ?? '',
+        active: init.active ?? true,
+      };
+    }
+
     // ESTATUS RECIBO
     return {
       codigo: init.codigo ?? '',
@@ -107,7 +118,9 @@ export default function CatalogModal({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // visibilidad de campos
   const showActivo = catalog !== 'estatusRecibo';
+
   const showCarreraId = catalog === 'carreras' && mode === 'create';
   const showEscolaridadSelect = catalog === 'carreras';
 
@@ -115,10 +128,13 @@ export default function CatalogModal({
   const showConceptoDescripcion = catalog === 'conceptosPago';
   const showConceptoTipoMonto = catalog === 'conceptosPago';
 
+  const showTipoPagoCode = catalog === 'tiposPago' && mode === 'create';
+
   const showCodigo =
     (catalog === 'escolaridades' && mode === 'create') ||
     (catalog === 'estatusRecibo' && mode === 'create') ||
-    showConceptoCodigo;
+    showConceptoCodigo ||
+    showTipoPagoCode;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -191,6 +207,24 @@ export default function CatalogModal({
       return;
     }
 
+    // ✅ TIPOS PAGO (swagger: code, name, active)
+    if (catalog === 'tiposPago') {
+      const payload =
+        mode === 'create'
+          ? {
+              code: String(form.code ?? '').trim(),
+              name: String(form.name ?? '').trim(),
+              active: !!form.active,
+            }
+          : {
+              name: String(form.name ?? '').trim(),
+              active: !!form.active,
+            };
+
+      await onSave(payload);
+      return;
+    }
+
     // ESTATUS RECIBO
     if (mode === 'create') {
       await onSave({
@@ -204,6 +238,10 @@ export default function CatalogModal({
     }
   }
 
+  const isTiposPago = catalog === 'tiposPago';
+  const nameKey = isTiposPago ? 'name' : 'nombre';
+  const activeKey = isTiposPago ? 'active' : 'activo';
+
   return (
     <div className={s.backdrop} role="dialog" aria-modal="true">
       <div className={s.modal}>
@@ -215,22 +253,35 @@ export default function CatalogModal({
         </div>
 
         <form className={s.form} onSubmit={submit}>
-          {/* CODIGO (según catálogo+modo) */}
+          {/* CÓDIGO (según catálogo+modo) */}
           {showCodigo && (
             <div className={s.field}>
               <label>Código</label>
               <input
-                value={String(form.codigo ?? '')}
-                onChange={(e) => set('codigo', e.target.value)}
+                value={
+                  isTiposPago
+                    ? String(form.code ?? '')
+                    : String(form.codigo ?? '')
+                }
+                onChange={(e) =>
+                  set(isTiposPago ? 'code' : 'codigo', e.target.value)
+                }
                 placeholder={
                   catalog === 'conceptosPago'
                     ? 'INSCRIPCION, MENSUALIDAD...'
                     : catalog === 'estatusRecibo'
                       ? 'EMITIDO, PAGADO...'
-                      : 'SEC, LIC...'
+                      : catalog === 'tiposPago'
+                        ? 'EFECTIVO, TARJETA...'
+                        : 'SEC, LIC...'
                 }
                 required
               />
+              {catalog === 'tiposPago' ? (
+                <small className={s.help}>
+                  Recomendado: MAYÚSCULAS y sin espacios.
+                </small>
+              ) : null}
             </div>
           )}
 
@@ -278,8 +329,8 @@ export default function CatalogModal({
           <div className={s.field}>
             <label>Nombre</label>
             <input
-              value={String(form.nombre ?? '')}
-              onChange={(e) => set('nombre', e.target.value)}
+              value={String(form[nameKey] ?? '')}
+              onChange={(e) => set(nameKey, e.target.value)}
               required
             />
           </div>
@@ -360,8 +411,8 @@ export default function CatalogModal({
             <label className={s.check}>
               <input
                 type="checkbox"
-                checked={!!form.activo}
-                onChange={(e) => set('activo', e.target.checked)}
+                checked={!!form[activeKey]}
+                onChange={(e) => set(activeKey, e.target.checked)}
               />
               Activo
             </label>

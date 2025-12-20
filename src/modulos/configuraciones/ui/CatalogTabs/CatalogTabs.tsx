@@ -6,7 +6,8 @@ export type CatalogKey =
   | 'escolaridades'
   | 'carreras'
   | 'estatusRecibo'
-  | 'conceptosPago';
+  | 'conceptosPago'
+  | 'tiposPago'; // ✅ NUEVO
 
 type Props = {
   value: CatalogKey;
@@ -18,6 +19,7 @@ const TABS: Array<{ key: CatalogKey; label: string }> = [
   { key: 'carreras', label: 'Carreras' },
   { key: 'estatusRecibo', label: 'Estatus Recibo' },
   { key: 'conceptosPago', label: 'Conceptos de Pago' },
+  { key: 'tiposPago', label: 'Tipos de pago' }, // ✅ NUEVO
 ];
 
 export default function CatalogTabs({ value, onChange }: Props) {

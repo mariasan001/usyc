@@ -1,181 +1,181 @@
 .backdrop{
   position: fixed;
   inset: 0;
-  background: rgba(17, 24, 39, .35);
-  backdrop-filter: blur(2px);
-  display: grid;
-  place-items: center;
-  z-index: 9999;
+  background: rgba(10, 10, 10, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 18px;
+  z-index: 9999;
 }
 
 .modal{
   width: min(860px, 100%);
-  background: #fff;
-  border: 1px solid #e9edf5;
+  background: #ffffff;
   border-radius: 18px;
-  box-shadow: 0 30px 70px rgba(0,0,0,.25);
+  border: 1px solid #e9eef7;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.18);
   overflow: hidden;
 }
 
 .header{
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 16px 10px;
-  border-bottom: 1px solid #eef2f7;
+  padding: 18px 18px 14px 18px;
+  border-bottom: 1px solid #eef2fb;
 }
 
 .title{
-  font-weight: 850;
-  font-size: 16px;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.2px;
+  color: #0b1220;
 }
 
 .subtitle{
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #5b667a;
 }
 
-.closeBtn{
+.iconBtn{
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  border: 1px solid #eef2f7;
+  border: 1px solid #e9eef7;
   background: #fff;
   cursor: pointer;
-  font-size: 18px;
-  line-height: 0;
 }
 
-.closeBtn:disabled{
-  opacity: .55;
-  cursor: not-allowed;
+.iconBtn:hover{
+  background: #f7f9fd;
 }
 
 .body{
-  padding: 14px 16px 10px;
-}
-
-.alertError{
-  border: 1px solid #fecaca;
-  background: #fff1f2;
-  color: #991b1b;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  margin-bottom: 12px;
+  padding: 16px 18px 18px 18px;
 }
 
 .grid{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 14px 14px;
 }
 
-.formRow{
+.field{
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
-.formRowFull{
+.fieldWide{
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .label{
   font-size: 12px;
-  font-weight: 750;
-  color: #111827;
+  font-weight: 700;
+  color: #0b1220;
 }
 
 .input,
 .select{
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid #e5e7eb;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
   background: #fff;
   padding: 0 12px;
   outline: none;
   font: inherit;
 }
 
-.input[readonly]{
-  background: #f9fafb;
-  color: #111827;
+.input:focus,
+.select:focus{
+  border-color: #cfd8ee;
+  box-shadow: 0 0 0 3px rgba(207, 216, 238, 0.45);
 }
 
 .textarea{
-  min-height: 88px;
-  resize: vertical;
-  border-radius: 14px;
-  border: 1px solid #e5e7eb;
+  min-height: 110px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
   background: #fff;
   padding: 10px 12px;
   outline: none;
   font: inherit;
+  resize: none;
+}
+
+.textarea:focus{
+  border-color: #cfd8ee;
+  box-shadow: 0 0 0 3px rgba(207, 216, 238, 0.45);
 }
 
 .hint{
   font-size: 12px;
-  color: #6b7280;
-  margin-top: -2px;
+  color: #6b7587;
 }
 
-.previewRow{
+.totalRow{
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px dashed #e9eef7;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed #e5e7eb;
+  justify-content: space-between;
 }
 
-.previewLabel{
+.totalLabel{
   font-size: 12px;
-  color: #6b7280;
+  font-weight: 700;
+  color: #5b667a;
 }
 
-.previewValue{
-  font-size: 14px;
-  color: #111827;
+.totalValue{
+  font-weight: 900;
+  letter-spacing: -0.2px;
+  color: #0b1220;
 }
 
 .footer{
+  padding: 14px 18px 18px 18px;
+  border-top: 1px solid #eef2fb;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 12px 16px 16px;
-  border-top: 1px solid #eef2f7;
 }
 
 .ghostBtn{
-  height: 38px;
+  height: 40px;
   padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
   background: #fff;
-  font-weight: 750;
   cursor: pointer;
+}
+
+.ghostBtn:hover{
+  background: #f7f9fd;
 }
 
 .primaryBtn{
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid #111827;
-  background: #111827;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 0;
+  background: #0b1220;
   color: #fff;
-  font-weight: 850;
+  font-weight: 800;
   cursor: pointer;
 }
 
-.ghostBtn:disabled,
 .primaryBtn:disabled{
-  opacity: .6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

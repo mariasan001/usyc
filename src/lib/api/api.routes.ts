@@ -13,6 +13,10 @@ export const API = {
       `/api/catalogos/conceptos-pago/${conceptoId}/activar`,
     conceptoPagoDesactivar: (conceptoId: number) =>
       `/api/catalogos/conceptos-pago/${conceptoId}/desactivar`,
+
+    // ✅ NUEVO: TIPOS DE PAGO
+    tiposPago: '/api/catalogos/tipos-pago',
+    tipoPagoById: (id: number) => `/api/catalogos/tipos-pago/${id}`,
   },
 
   alumnos: {
@@ -20,12 +24,5 @@ export const API = {
     byId: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}`,
     pagosResumen: (alumnoId: string) =>
       `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
-  },
-
-  // ✅ NUEVO
-  recibos: {
-    base: '/api/recibos', // POST registrar pago / emitir recibo
-    byId: (reciboId: number) => `/api/recibos/${reciboId}`, // por si luego existe GET
-    cancelar: (reciboId: number) => `/api/recibos/${reciboId}/cancelar`, // futuro
   },
 } as const;

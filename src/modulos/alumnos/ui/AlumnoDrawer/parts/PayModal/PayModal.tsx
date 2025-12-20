@@ -1,18 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+
 import s from './PayModal.module.css';
-
-import type { ProjectionRow, PaymentMethod } from '../../types/alumno-drawer.types';
-
-type PayPayload = {
-  alumnoId: string;
-  concepto: string;
-  montoManual?: number;
-  fechaPago: string; // YYYY-MM-DD
-  comentario?: string;
-  // metodo?: PaymentMethod; // listo para futuro (cuando el back lo acepte)
-};
+import type { ProjectionRow } from '../../types/alumno-drawer.types';
+import type { ReciboCreateDTO } from '../../types/recibos.types';
+import type { PaymentMethod } from '../../types/alumno-drawer.types';
 
 function todayISO() {
   const d = new Date();
@@ -20,154 +14,122 @@ function todayISO() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function toNumberSafe(v: string): number | null {
-  const x = Number(String(v).replace(',', '.'));
-  if (!Number.isFinite(x)) return null;
-  return x;
+function isManualRequired(conceptCode: string) {
+  // según swagger: si concepto es OTRO => montoManual requerido
+  return conceptCode === 'OTRO';
 }
 
 export default function PayModal({
   open,
   row,
   alumnoId,
-  saving,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   row: ProjectionRow | null;
   alumnoId: string;
-  saving?: boolean;
   onClose: () => void;
-  onSubmit: (payload: PayPayload) => Promise<void>;
+  onSubmit: (payload: ReciboCreateDTO) => Promise<void>;
 }) {
-  // si no está abierto o no hay fila, no renderizamos nada (modal real)
-  const visible = open && !!row;
+  const [mounted, setMounted] = useState(false);
+
   const conceptCode = row?.conceptCode ?? '';
-  const amount = row?.amount ?? 0;
+  const amountFromProjection = row?.amount ?? 0;
 
-  // state del formulario
-  const [fechaPago, setFechaPago] = useState(todayISO());
-  const [metodo, setMetodo] = useState<PaymentMethod>('EFECTIVO');
+  // UI state
+  const [dateISO, setDateISO] = useState<string>(todayISO());
+  const [method, setMethod] = useState<PaymentMethod>('EFECTIVO');
   const [comentario, setComentario] = useState('');
-  const [montoManual, setMontoManual] = useState<string>(''); // solo si en futuro aplica
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [montoManual, setMontoManual] = useState<string>('');
 
-  // si cambia la fila (clic en otra mensualidad), reseteamos valores coherentes
+  // Reset cada vez que se abre/cambia row
   useEffect(() => {
-    if (!visible) return;
-    setFechaPago(todayISO());
-    setMetodo('EFECTIVO');
+    if (!open) return;
+    setDateISO(todayISO());
+    setMethod('EFECTIVO');
     setComentario('');
     setMontoManual('');
-    setLocalError(null);
-  }, [visible, row?.idx, row?.periodo, row?.dueDate, row?.conceptCode]);
+  }, [open, row?.idx]);
 
-  // Reglas UX (según swagger que mostraste):
-  // - Si concepto es INSCRIPCION o MENSUALIDAD, el monto lo toma de carrera -> no requiere montoManual
-  // - Si es OTRO, pedir montoManual (lo dejamos listo aunque hoy no se use)
-  const requiresManualAmount = useMemo(() => {
-    const c = conceptCode?.toUpperCase().trim();
-    return c !== 'INSCRIPCION' && c !== 'MENSUALIDAD';
+  useEffect(() => setMounted(true), []);
+
+  const helpText = useMemo(() => {
+    if (!conceptCode) return '';
+    return isManualRequired(conceptCode)
+      ? 'Este concepto requiere un monto manual.'
+      : 'Este concepto toma el monto desde la carrera.';
   }, [conceptCode]);
 
-  // Nota: en tu captura, igual se ve monto fijo siempre; aquí lo dejamos editable solo si OTRO.
-  const shownAmount = requiresManualAmount
-    ? (toNumberSafe(montoManual) ?? 0)
-    : amount;
+  const totalPreview = useMemo(() => {
+    if (!conceptCode) return 0;
+    if (isManualRequired(conceptCode)) {
+      const n = Number(montoManual || 0);
+      return Number.isFinite(n) ? n : 0;
+    }
+    return amountFromProjection;
+  }, [conceptCode, amountFromProjection, montoManual]);
 
-  if (!visible) return null;
+  if (!open) return null;
+  if (!mounted) return null;
+
+  const canSubmit = !!alumnoId && !!conceptCode && !!dateISO && totalPreview > 0;
 
   async function handleSave() {
-    setLocalError(null);
+    if (!row) return;
 
-    if (!alumnoId) {
-      setLocalError('Falta alumnoId.');
-      return;
-    }
-    if (!conceptCode) {
-      setLocalError('Falta concepto.');
-      return;
-    }
-    if (!fechaPago) {
-      setLocalError('Selecciona fecha de pago.');
-      return;
-    }
-
-    if (requiresManualAmount) {
-      const n = toNumberSafe(montoManual);
-      if (n === null || n <= 0) {
-        setLocalError('Captura un monto válido (mayor a 0).');
-        return;
-      }
-    }
-
-    const payload: PayPayload = {
+    const payload: ReciboCreateDTO = {
       alumnoId,
-      concepto: conceptCode,
-      fechaPago,
-      comentario: comentario?.trim() || undefined,
-      ...(requiresManualAmount
-        ? { montoManual: toNumberSafe(montoManual) ?? undefined }
-        : {}),
-      // metodo, // 🔜 futuro
+      concepto: row.conceptCode,
+      fechaPago: dateISO,
+      comentario: comentario.trim() ? comentario.trim() : undefined,
     };
+
+    // ✅ regla swagger: montoManual solo si OTRO
+    if (isManualRequired(row.conceptCode)) {
+      payload.montoManual = Number(montoManual || 0);
+    }
+
+    // method se queda listo para futuro (no se manda aún)
+    // payload.metodo = method;
+
+    // 🔎 para debug rápido sin molestar al back:
+    console.log('[PayModal] payload /api/recibos =>', payload);
 
     await onSubmit(payload);
   }
 
-  return (
-    <div
-      className={s.backdrop}
-      onMouseDown={() => {
-        if (saving) return;
-        onClose();
-      }}
-      role="presentation"
-    >
+  return createPortal(
+    <div className={s.backdrop} role="presentation" onMouseDown={onClose}>
       <div
         className={s.modal}
-        onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Registrar pago"
+        onMouseDown={(e) => e.stopPropagation()}
       >
-        <header className={s.header}>
+        <div className={s.header}>
           <div>
             <div className={s.title}>Registrar pago</div>
             <div className={s.subtitle}>Se generará un recibo y quedará en historial.</div>
           </div>
 
-          <button
-            className={s.closeBtn}
-            type="button"
-            onClick={onClose}
-            disabled={!!saving}
-            aria-label="Cerrar"
-            title="Cerrar"
-          >
-            ×
+          <button className={s.iconBtn} onClick={onClose} type="button" aria-label="Cerrar">
+            ✕
           </button>
-        </header>
+        </div>
 
         <div className={s.body}>
-          {localError ? <div className={s.alertError}>{localError}</div> : null}
-
           <div className={s.grid}>
-            <div className={s.formRow}>
+            <div className={s.field}>
               <label className={s.label}>Concepto</label>
               <input className={s.input} value={conceptCode} readOnly />
-              <div className={s.hint}>
-                {requiresManualAmount
-                  ? 'Este concepto requiere monto manual.'
-                  : 'Este concepto toma el monto desde la carrera.'}
-              </div>
+              <div className={s.hint}>{helpText}</div>
             </div>
 
-            <div className={s.formRow}>
+            <div className={s.field}>
               <label className={s.label}>Monto</label>
 
-              {requiresManualAmount ? (
+              {isManualRequired(conceptCode) ? (
                 <input
                   className={s.input}
                   value={montoManual}
@@ -176,74 +138,70 @@ export default function PayModal({
                   placeholder="0.00"
                 />
               ) : (
-                <input className={s.input} value={amount.toFixed(2)} readOnly />
+                <input className={s.input} value={amountFromProjection.toFixed(2)} readOnly />
               )}
             </div>
 
-            <div className={s.formRow}>
+            <div className={s.field}>
               <label className={s.label}>Fecha</label>
+              {/* IMPORTANTE: type="date" => YYYY-MM-DD */}
               <input
                 className={s.input}
                 type="date"
-                value={fechaPago}
-                onChange={(e) => setFechaPago(e.target.value)}
+                value={dateISO}
+                onChange={(e) => setDateISO(e.target.value)}
               />
             </div>
 
-            <div className={s.formRow}>
+            <div className={s.field}>
               <label className={s.label}>Método</label>
               <select
                 className={s.select}
-                value={metodo}
-                onChange={(e) => setMetodo(e.target.value as PaymentMethod)}
+                value={method}
+                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
               >
                 <option value="EFECTIVO">Efectivo</option>
                 <option value="TARJETA">Tarjeta</option>
                 <option value="TRANSFERENCIA">Transferencia</option>
               </select>
-
               <div className={s.hint}>
                 Aún no se envía al API (lo dejamos listo para cuando lo agreguen).
               </div>
             </div>
 
-            <div className={s.formRowFull}>
+            <div className={s.fieldWide}>
               <label className={s.label}>Comentario</label>
               <textarea
                 className={s.textarea}
                 value={comentario}
                 onChange={(e) => setComentario(e.target.value)}
-                placeholder="Opcional…"
+                placeholder="Opcional"
               />
             </div>
-          </div>
 
-          <div className={s.previewRow}>
-            <span className={s.previewLabel}>Total a registrar</span>
-            <b className={s.previewValue}>${shownAmount.toFixed(2)}</b>
+            <div className={s.totalRow}>
+              <div className={s.totalLabel}>Total a registrar</div>
+              <div className={s.totalValue}>${totalPreview.toFixed(2)}</div>
+            </div>
           </div>
         </div>
 
-        <footer className={s.footer}>
-          <button
-            className={s.ghostBtn}
-            type="button"
-            onClick={onClose}
-            disabled={!!saving}
-          >
+        <div className={s.footer}>
+          <button className={s.ghostBtn} onClick={onClose} type="button">
             Cancelar
           </button>
 
           <button
             className={s.primaryBtn}
-            type="button"
             onClick={handleSave}
-            disabled={!!saving}
+            type="button"
+            disabled={!canSubmit}
           >
-            {saving ? 'Guardando…' : 'Guardar'}
+            Guardar
           </button>
-        </footer>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
