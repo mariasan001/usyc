@@ -1,7 +1,23 @@
+// src/modulos/alumnos/ui/AlumnoDrawer/parts/ProyeccionPanel/ProyeccionPanel.tsx
 'use client';
 
 import s from './ProyeccionPanel.module.css';
 import type { ProjectionRow } from '../../types/alumno-drawer.types';
+
+function isRowPaid(r: ProjectionRow) {
+  const estado = String((r as any).estado ?? '').toUpperCase();
+  const estatusCodigo = String((r as any).estatusCodigo ?? '').toUpperCase();
+
+  return (
+    // 1) bandera “correcta”
+    !!(r as any).isPaid ||
+    // 2) cuando solo viene texto
+    estado === 'PAGADO' ||
+    estatusCodigo === 'PAGADO' ||
+    // 3) si ya hay reciboId, ya está pagado sí o sí
+    typeof (r as any).reciboId === 'number'
+  );
+}
 
 export default function ProyeccionPanel({
   rows,
@@ -10,8 +26,6 @@ export default function ProyeccionPanel({
 }: {
   rows: ProjectionRow[];
   onPay: (row: ProjectionRow) => void;
-
-  // ✅ abre pantalla de impresión
   onReceipt: (reciboId: number) => void;
 }) {
   return (
@@ -39,8 +53,10 @@ export default function ProyeccionPanel({
 
           {rows.map((r) => {
             const key = `${r.periodo}_${r.idx}`;
-            const isPaid = !!r.isPaid;
-            const hasReciboId = typeof r.reciboId === 'number';
+            const paid = isRowPaid(r);
+
+            // ✅ Si el back ya lo manda, úsalo
+            const reciboId = (r as any).reciboId as number | undefined;
 
             return (
               <div className={s.tr} key={key}>
@@ -50,17 +66,29 @@ export default function ProyeccionPanel({
                 <div>{r.conceptCode}</div>
                 <div className={`${s.mono} ${s.right}`}>${r.amount.toFixed(2)}</div>
 
-                <div className={isPaid ? s.paid : s.pending}>
-                  {isPaid ? 'Pagado' : r.estado}
+                <div className={paid ? s.paid : s.pending}>
+                  {paid ? 'Pagado' : (r as any).estado}
                 </div>
 
                 <div className={s.right}>
-                  {isPaid && hasReciboId ? (
+                  {paid ? (
                     <button
                       className={s.linkBtn}
                       type="button"
-                      onClick={() => onReceipt(r.reciboId!)}
-                      title={`Imprimir comprobante #${r.reciboId}`}
+                      onClick={() => {
+                        if (typeof reciboId !== 'number') {
+                          // si llega aquí sin reciboId, es un bug de mapeo (del hook)
+                          console.warn('[ProyeccionPanel] Pagado sin reciboId:', r);
+                          return;
+                        }
+                        onReceipt(reciboId);
+                      }}
+                      disabled={typeof reciboId !== 'number'}
+                      title={
+                        typeof reciboId === 'number'
+                          ? `Imprimir comprobante #${reciboId}`
+                          : 'Falta reciboId (mapeo del back)'
+                      }
                     >
                       Imprimir comprobante
                     </button>

@@ -68,37 +68,44 @@ const { data, loading, error, reload } = useAlumnoPagosResumen(alumnoId);
       }));
   }, [data]);
 
-  // Proyección -> UI
-  const projection: ProjectionRow[] = useMemo(() => {
-    const list = data?.proyeccion ?? [];
+// Proyección -> UI
+const projection: ProjectionRow[] = useMemo(() => {
+  const list = data?.proyeccion ?? [];
 
-    // pagos válidos (no cancelados) para marcar filas como pagadas si aplica
-    const pagosValidos = (data?.pagosReales ?? []).filter((p) => !p.cancelado);
+  // pagos válidos (no cancelados)
+  const pagosValidos = (data?.pagosReales ?? []).filter((p) => !p.cancelado);
 
-    // Estrategia simple de match:
-    // si hay un pago real con fechaPago igual a fechaVencimiento, lo marcamos pagado.
-    // (si tu back trae "periodo" o folio que permita match exacto, lo cambiamos después)
-    const paidByDueDate = new Map<string, number>(); // dueDate -> reciboId
-    for (const p of pagosValidos) {
-      paidByDueDate.set(p.fechaPago, p.reciboId);
-    }
+  // ✅ match por (concepto + periodo)
+  // periodo lo sacamos de fechaPago: "YYYY-MM-DD" -> "YYYY-MM"
+  const paidByConceptAndPeriod = new Map<string, number>(); // key -> reciboId
 
-    return list.map((x, i) => {
-      const reciboId = paidByDueDate.get(x.fechaVencimiento);
-      const isPaid = typeof reciboId === 'number';
+  for (const p of pagosValidos) {
+    const periodoPago = String(p.fechaPago || '').slice(0, 7);
+    const key = `${p.concepto}__${periodoPago}`;
+    paidByConceptAndPeriod.set(key, p.reciboId);
+  }
 
-      return {
-        idx: i + 1,
-        periodo: x.periodo,
-        dueDate: x.fechaVencimiento,
-        conceptCode: x.conceptoCodigo,
-        amount: x.monto,
-        estado: x.estado,
-        isPaid,
-        reciboId,
-      };
-    });
-  }, [data]);
+  return list.map((x, i) => {
+    const key = `${x.conceptoCodigo}__${x.periodo}`;
+
+    const reciboId = paidByConceptAndPeriod.get(key);
+
+    // ✅ si el back ya te dice PAGADO, le creemos
+    // pero igual intentamos colgarle reciboId por el índice
+    const isPaid = x.estado === 'PAGADO' || typeof reciboId === 'number';
+
+    return {
+      idx: i + 1,
+      periodo: x.periodo,
+      dueDate: x.fechaVencimiento,
+      conceptCode: x.conceptoCodigo,
+      amount: x.monto,
+      estado: x.estado,
+      isPaid,
+      reciboId, // <- aquí ya debe venir el id para imprimir
+    };
+  });
+}, [data]);
 
   // Totales
   const totals: Totals = useMemo(() => {
