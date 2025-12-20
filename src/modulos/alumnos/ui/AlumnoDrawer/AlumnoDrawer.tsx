@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import s from './AlumnoDrawer.module.css';
 import type { Alumno } from '../../types/alumno.types';
 
@@ -10,10 +12,15 @@ import DrawerTabs from './parts/DrawerTabs/DrawerTabs';
 
 import ResumenPanel from './parts/panels/ResumenPanel';
 import ProyeccionPanel from './parts/ProyeccionPanel/ProyeccionPanel';
-import PagosPanel from './parts/PagosPanel/PagosPanel';
+import PagosPanel from './parts/PagosPanel/PagosPanel'; // ✅ ESTE FALTABA
 import ExtrasPanel from './parts/ExtrasPanel/ExtrasPanel';
 
+import PayModal from './parts/PayModal/PayModal';
+
 import { useAlumnoDrawerData } from './hooks/useAlumnoDrawerData';
+import type { ProjectionRow } from './types/alumno-drawer.types';
+
+import { RecibosService } from '../../services/recibos.service';
 
 export default function AlumnoDrawer({
   open,
@@ -49,6 +56,10 @@ export default function AlumnoDrawer({
 function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const d = useAlumnoDrawerData({ alumno });
 
+  const [payOpen, setPayOpen] = useState(false);
+  const [payRow, setPayRow] = useState<ProjectionRow | null>(null);
+  const [paySaving, setPaySaving] = useState(false);
+
   return (
     <div className={s.content}>
       <IdentityPill
@@ -58,13 +69,10 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
       />
 
       <StickySummary totals={d.totals} />
-
       <DrawerTabs tab={d.tab} onChange={d.setTab} />
 
       {d.loading ? <div className={s.mutedBox}>Cargando…</div> : null}
-      {d.error ? (
-        <div className={s.errorBox}>{String(d.error)}</div>
-      ) : null}
+      {d.error ? <div className={s.errorBox}>{String(d.error)}</div> : null}
 
       {d.tab === 'RESUMEN' ? (
         <ResumenPanel
@@ -80,22 +88,59 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         />
       ) : null}
 
-      {d.tab === 'PROYECCION' ? (
-        <ProyeccionPanel
-          rows={d.projection}
-          onPay={(row) => {
-            // por ahora solo cambia de tab, cuando exista POST pago ya usas row.periodo
-            d.setTab('PAGOS');
-          }}
-          onReceipt={(reciboId) => {
-            alert(`(Mock) Abrir recibo: ${reciboId}`);
-          }}
-        />
-      ) : null}
+    {d.tab === 'PROYECCION' ? (
+  <ProyeccionPanel
+    rows={d.projection}
+    onPay={(row) => { setPayRow(row); setPayOpen(true); }}
+    onReceipt={(reciboId) => alert(`(Mock) Abrir recibo: ${reciboId}`)}
+  />
+) : null}
+
 
       {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
 
-      {d.tab === 'EXTRAS' ? <ExtrasPanel /> : null}
+      {d.tab === 'EXTRAS' ? (
+        <ExtrasPanel
+          extraConcept=""
+          setExtraConcept={() => {}}
+          extraAmount=""
+          setExtraAmount={() => {}}
+          extraDate=""
+          setExtraDate={() => {}}
+          extraMethod="EFECTIVO"
+          setExtraMethod={() => {}}
+          onAddExtra={() => alert('(Mock) Extra guardado')}
+        />
+      ) : null}
+
+      <PayModal
+        open={payOpen}
+        row={payRow}
+        alumnoId={d.alumnoId}
+        onClose={() => {
+          if (paySaving) return;
+          setPayOpen(false);
+          setPayRow(null);
+        }}
+        onSubmit={async (payload) => {
+          setPaySaving(true);
+          try {
+            await RecibosService.create(payload);
+
+            // ✅ refresca proyección/pagos/totales
+            await d.reload();
+
+            setPayOpen(false);
+            setPayRow(null);
+
+            // opcional: brinca a Pagos
+            d.setTab('PAGOS');
+          } finally {
+            setPaySaving(false);
+          }
+        }}
+        saving={paySaving}
+      />
     </div>
   );
 }

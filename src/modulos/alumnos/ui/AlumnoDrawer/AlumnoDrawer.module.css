@@ -13,7 +13,7 @@
 }
 
 .drawer{
-  width: min(520px, 100%);
+  width: min(920px, 100%);
   height: 100vh;
   background: #ffffff;
   border-left: 1px solid #e7ebf3;

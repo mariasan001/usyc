@@ -4,9 +4,9 @@ export const API = {
     escolaridades: '/api/catalogos/escolaridades',
     estatusRecibo: '/api/catalogos/estatus-recibo',
 
-    // ✅ NUEVO
     conceptosPago: '/api/catalogos/conceptos-pago',
-    conceptoPagoById: (conceptoId: number) => `/api/catalogos/conceptos-pago/${conceptoId}`,
+    conceptoPagoById: (conceptoId: number) =>
+      `/api/catalogos/conceptos-pago/${conceptoId}`,
     conceptoPagoByCodigo: (codigo: string) =>
       `/api/catalogos/conceptos-pago/por-codigo/${encodeURIComponent(codigo)}`,
     conceptoPagoActivar: (conceptoId: number) =>
@@ -20,5 +20,12 @@ export const API = {
     byId: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}`,
     pagosResumen: (alumnoId: string) =>
       `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
+  },
+
+  // ✅ NUEVO
+  recibos: {
+    base: '/api/recibos', // POST registrar pago / emitir recibo
+    byId: (reciboId: number) => `/api/recibos/${reciboId}`, // por si luego existe GET
+    cancelar: (reciboId: number) => `/api/recibos/${reciboId}/cancelar`, // futuro
   },
 } as const;

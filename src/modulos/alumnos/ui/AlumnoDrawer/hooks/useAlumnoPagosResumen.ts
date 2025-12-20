@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { AlumnoPagosResumenDTO } from '../types/alumno-pagos-resumen.types';
 import { AlumnosPagosService } from '@/modulos/alumnos/services/alumnos-pagos.service';
 
@@ -11,36 +11,26 @@ type State = {
 };
 
 export function useAlumnoPagosResumen(alumnoId: string | null) {
-  const [st, setSt] = useState<State>({
-    data: null,
-    loading: false,
-    error: null,
-  });
+  const [st, setSt] = useState<State>({ data: null, loading: false, error: null });
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!alumnoId) {
       setSt({ data: null, loading: false, error: null });
       return;
     }
 
-    let alive = true;
-
     setSt((p) => ({ ...p, loading: true, error: null }));
-
-    AlumnosPagosService.getResumen(alumnoId)
-      .then((data) => {
-        if (!alive) return;
-        setSt({ data, loading: false, error: null });
-      })
-      .catch((err) => {
-        if (!alive) return;
-        setSt({ data: null, loading: false, error: err });
-      });
-
-    return () => {
-      alive = false;
-    };
+    try {
+      const data = await AlumnosPagosService.getResumen(alumnoId);
+      setSt({ data, loading: false, error: null });
+    } catch (err) {
+      setSt({ data: null, loading: false, error: err });
+    }
   }, [alumnoId]);
 
-  return st;
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { ...st, reload: load };
 }

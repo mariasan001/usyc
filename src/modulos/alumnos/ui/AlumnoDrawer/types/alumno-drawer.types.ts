@@ -1,28 +1,14 @@
 export type DrawerTab = 'RESUMEN' | 'PROYECCION' | 'PAGOS' | 'EXTRAS';
 
-export type Totals = {
-  totalPlan: number;       // totalProyectado
-  totalPagado: number;     // totalPagado
-  saldo: number;           // saldoPendiente
-  totalInscripcion: number;
-
-  pagados: number;
-  pendientes: number;
-  vencidos: number;
-
-  nextDue: ProjectionRow | null;
-};
+export type PaymentMethod = 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA';
 
 export type ProjectionRow = {
-  idx: number; // 1..N
-  periodo: string;
-
-  dueDate: string; // YYYY-MM-DD
-  conceptCode: string;
-
+  idx: number;
+  periodo: string;        // "2025-12"
+  dueDate: string;        // "2025-12-01"
+  conceptCode: string;    // "INSCRIPCION" | "MENSUALIDAD" | "OTRO" ...
   amount: number;
-  estado: string;
-
+  estado: string;         // texto que venga del back
   isPaid: boolean;
   reciboId?: number;
 };
@@ -30,10 +16,25 @@ export type ProjectionRow = {
 export type PagoRealRow = {
   reciboId: number;
   folio: string;
-  fechaPago: string;
-  concepto: string;
+  fechaPago: string;      // ISO
+  concepto: string;       // concepto/codigo/label
   monto: number;
-  moneda: string;
-  estatusNombre: string;
+  moneda: string;         // "MXN"
+  estatusCodigo?: string; // por si llega código
+  estatusNombre?: string; // por si llega label
   cancelado: boolean;
+};
+
+export type Totals = {
+  totalPlan: number;
+  totalPagado: number;
+  saldo: number;
+
+  totalInscripcion: number;
+
+  pagados: number;
+  pendientes: number;
+  vencidos: number;
+
+  nextDue: ProjectionRow | null;
 };

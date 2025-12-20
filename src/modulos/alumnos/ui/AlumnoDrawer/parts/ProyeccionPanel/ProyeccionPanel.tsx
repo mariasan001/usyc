@@ -30,7 +30,7 @@ export default function ProyeccionPanel({
             <div>Periodo</div>
             <div>Vence</div>
             <div>Concepto</div>
-            <div>Monto</div>
+            <div className={s.right}>Monto</div>
             <div>Estado</div>
             <div className={s.right}>Acción</div>
           </div>
@@ -41,16 +41,27 @@ export default function ProyeccionPanel({
               <div className={s.mono}>{r.periodo}</div>
               <div className={s.mono}>{r.dueDate}</div>
               <div>{r.conceptCode}</div>
-              <div className={s.mono}>${r.amount.toFixed(2)}</div>
-              <div>{r.isPaid ? 'Pagado' : r.estado}</div>
+              <div className={`${s.mono} ${s.right}`}>${r.amount.toFixed(2)}</div>
+
+              <div className={r.isPaid ? s.paid : s.pending}>
+                {r.isPaid ? 'Pagado' : r.estado}
+              </div>
 
               <div className={s.right}>
                 {r.isPaid && typeof r.reciboId === 'number' ? (
-                  <button className={s.linkBtn} onClick={() => onReceipt(r.reciboId!)}>
+                  <button
+                    className={s.linkBtn}
+                    type="button"
+                    onClick={() => onReceipt(r.reciboId!)}
+                  >
                     Recibo
                   </button>
                 ) : (
-                  <button className={s.primaryBtn} onClick={() => onPay(r)}>
+                  <button
+                    className={s.primaryBtn}
+                    type="button"
+                    onClick={() => onPay(r)}
+                  >
                     Pagar
                   </button>
                 )}

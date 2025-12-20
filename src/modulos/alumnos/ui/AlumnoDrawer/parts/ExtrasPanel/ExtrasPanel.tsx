@@ -1,7 +1,27 @@
 'use client';
 
-import { PaymentMethod } from '../../types/alumno-drawer.types';
+import { useMemo } from 'react';
+import type { PaymentMethod } from '../../types/alumno-drawer.types';
 import s from './ExtrasPanel.module.css';
+
+function todayISO() {
+  const d = new Date();
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function normalizeMoneyInput(v: string) {
+  // deja solo números y punto, y evita múltiples puntos
+  const cleaned = v.replace(/[^\d.]/g, '');
+  const parts = cleaned.split('.');
+  if (parts.length <= 1) return cleaned;
+  return `${parts[0]}.${parts.slice(1).join('')}`;
+}
+
+function toNumber(v: string) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+}
 
 export default function ExtrasPanel({
   extraConcept,
@@ -28,6 +48,13 @@ export default function ExtrasPanel({
 
   onAddExtra: () => void;
 }) {
+  const amountNum = useMemo(() => toNumber(extraAmount), [extraAmount]);
+
+  const conceptOk = extraConcept.trim().length >= 3;
+  const amountOk = Number.isFinite(amountNum) && amountNum > 0;
+  const dateOk = !!extraDate;
+  const canSubmit = conceptOk && amountOk && dateOk;
+
   return (
     <section className={s.panel}>
       <div className={s.panelTitleRow}>
@@ -39,22 +66,29 @@ export default function ExtrasPanel({
         <div className={s.formRow}>
           <label className={s.label}>Concepto</label>
           <input
-            className={s.input}
+            className={`${s.input} ${!conceptOk && extraConcept ? s.inputInvalid : ''}`}
             value={extraConcept}
             onChange={(e) => setExtraConcept(e.target.value)}
             placeholder="Ej. Curso de verano"
+            maxLength={80}
           />
+          {!conceptOk && extraConcept ? (
+            <div className={s.fieldHint}>Escribe un concepto más claro (mín. 3 letras).</div>
+          ) : null}
         </div>
 
         <div className={s.formRow}>
           <label className={s.label}>Monto</label>
           <input
-            className={s.input}
+            className={`${s.input} ${!amountOk && extraAmount ? s.inputInvalid : ''}`}
             value={extraAmount}
-            onChange={(e) => setExtraAmount(e.target.value)}
+            onChange={(e) => setExtraAmount(normalizeMoneyInput(e.target.value))}
             inputMode="decimal"
-            placeholder="0"
+            placeholder="0.00"
           />
+          {!amountOk && extraAmount ? (
+            <div className={s.fieldHint}>Ingresa un monto mayor a 0.</div>
+          ) : null}
         </div>
 
         <div className={s.formRow}>
@@ -64,7 +98,11 @@ export default function ExtrasPanel({
             type="date"
             value={extraDate}
             onChange={(e) => setExtraDate(e.target.value)}
+            max={todayISO()}
           />
+          {!dateOk ? (
+            <div className={s.fieldHint}>Selecciona la fecha del pago.</div>
+          ) : null}
         </div>
 
         <div className={s.formRow}>
@@ -81,7 +119,13 @@ export default function ExtrasPanel({
         </div>
       </div>
 
-      <button className={s.primaryBtn} onClick={onAddExtra} type="button">
+      <button
+        className={s.primaryBtn}
+        onClick={onAddExtra}
+        type="button"
+        disabled={!canSubmit}
+        aria-disabled={!canSubmit}
+      >
         Agregar pago extra
       </button>
 

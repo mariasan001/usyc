@@ -31,7 +31,7 @@ export function useAlumnoDrawerData({ alumno }: Args) {
   const [tab, setTab] = useState<DrawerTab>('RESUMEN');
 
   const alumnoId = alumno.alumnoId;
-  const { data, loading, error } = useAlumnoPagosResumen(alumnoId);
+const { data, loading, error, reload } = useAlumnoPagosResumen(alumnoId);
 
   // Identidad
   const nombreCompleto = alumno.nombreCompleto ?? '—';
