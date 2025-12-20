@@ -5,8 +5,7 @@ export const API = {
     estatusRecibo: '/api/catalogos/estatus-recibo',
 
     conceptosPago: '/api/catalogos/conceptos-pago',
-    conceptoPagoById: (conceptoId: number) =>
-      `/api/catalogos/conceptos-pago/${conceptoId}`,
+    conceptoPagoById: (conceptoId: number) => `/api/catalogos/conceptos-pago/${conceptoId}`,
     conceptoPagoByCodigo: (codigo: string) =>
       `/api/catalogos/conceptos-pago/por-codigo/${encodeURIComponent(codigo)}`,
     conceptoPagoActivar: (conceptoId: number) =>
@@ -14,7 +13,7 @@ export const API = {
     conceptoPagoDesactivar: (conceptoId: number) =>
       `/api/catalogos/conceptos-pago/${conceptoId}/desactivar`,
 
-    // ✅ NUEVO: TIPOS DE PAGO
+    // ✅ NUEVO: Tipos de pago
     tiposPago: '/api/catalogos/tipos-pago',
     tipoPagoById: (id: number) => `/api/catalogos/tipos-pago/${id}`,
   },
@@ -24,5 +23,9 @@ export const API = {
     byId: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}`,
     pagosResumen: (alumnoId: string) =>
       `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
+  },
+
+  recibos: {
+    base: '/api/recibos', // POST
   },
 } as const;

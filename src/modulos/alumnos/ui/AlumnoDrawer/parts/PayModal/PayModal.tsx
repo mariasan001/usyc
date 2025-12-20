@@ -6,7 +6,9 @@ import { createPortal } from 'react-dom';
 import s from './PayModal.module.css';
 import type { ProjectionRow } from '../../types/alumno-drawer.types';
 import type { ReciboCreateDTO } from '../../types/recibos.types';
-import type { PaymentMethod } from '../../types/alumno-drawer.types';
+
+import { useTiposPago } from '@/modulos/configuraciones/hooks/useTiposPago';
+import type { TipoPago } from '@/modulos/configuraciones/types/tiposPago.types';
 
 function todayISO() {
   const d = new Date();
@@ -14,9 +16,14 @@ function todayISO() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function isManualRequired(conceptCode: string) {
-  // según swagger: si concepto es OTRO => montoManual requerido
+function isManualConcept(conceptCode: string) {
   return conceptCode === 'OTRO';
+}
+
+function toMoneyNumber(v: string) {
+  const cleaned = String(v ?? '').replace(/,/g, '').trim();
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export default function PayModal({
@@ -32,48 +39,71 @@ export default function PayModal({
   onClose: () => void;
   onSubmit: (payload: ReciboCreateDTO) => Promise<void>;
 }) {
+  // ✅ Hooks SIEMPRE, sin returns antes
   const [mounted, setMounted] = useState(false);
+
+  const tiposPago = useTiposPago({ soloActivos: true });
 
   const conceptCode = row?.conceptCode ?? '';
   const amountFromProjection = row?.amount ?? 0;
 
-  // UI state
   const [dateISO, setDateISO] = useState<string>(todayISO());
-  const [method, setMethod] = useState<PaymentMethod>('EFECTIVO');
   const [comentario, setComentario] = useState('');
   const [montoManual, setMontoManual] = useState<string>('');
-
-  // Reset cada vez que se abre/cambia row
-  useEffect(() => {
-    if (!open) return;
-    setDateISO(todayISO());
-    setMethod('EFECTIVO');
-    setComentario('');
-    setMontoManual('');
-  }, [open, row?.idx]);
+  const [tipoPagoId, setTipoPagoId] = useState<number>(0);
 
   useEffect(() => setMounted(true), []);
 
+  useEffect(() => {
+    if (!open) return;
+
+    setDateISO(todayISO());
+    setComentario('');
+    setMontoManual('');
+
+    const first = tiposPago.items?.[0];
+    setTipoPagoId(typeof first?.id === 'number' ? first.id : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, row?.idx]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (tipoPagoId) return;
+
+    const first = tiposPago.items?.[0];
+    if (typeof first?.id === 'number') setTipoPagoId(first.id);
+  }, [open, tipoPagoId, tiposPago.items]);
+
   const helpText = useMemo(() => {
     if (!conceptCode) return '';
-    return isManualRequired(conceptCode)
-      ? 'Este concepto requiere un monto manual.'
-      : 'Este concepto toma el monto desde la carrera.';
+    return isManualConcept(conceptCode)
+      ? 'Este concepto requiere que captures el monto.'
+      : 'Este concepto ya tiene monto establecido (no editable).';
   }, [conceptCode]);
 
   const totalPreview = useMemo(() => {
     if (!conceptCode) return 0;
-    if (isManualRequired(conceptCode)) {
-      const n = Number(montoManual || 0);
-      return Number.isFinite(n) ? n : 0;
-    }
-    return amountFromProjection;
+    if (isManualConcept(conceptCode)) return toMoneyNumber(montoManual);
+    return Number.isFinite(amountFromProjection) ? amountFromProjection : 0;
   }, [conceptCode, amountFromProjection, montoManual]);
 
+  // ✅ ESTE useMemo DEBE IR ANTES DE LOS RETURNS
+  const tipoPagoLabel = useMemo(() => {
+    const found = (tiposPago.items ?? []).find((x: TipoPago) => x.id === tipoPagoId);
+    return found ? `${found.name} (${found.code})` : '';
+  }, [tiposPago.items, tipoPagoId]);
+
+  // ✅ AHORA SÍ: returns al final (ya no rompe el orden)
   if (!open) return null;
   if (!mounted) return null;
 
-  const canSubmit = !!alumnoId && !!conceptCode && !!dateISO && totalPreview > 0;
+  const canSubmit =
+    !!alumnoId &&
+    !!conceptCode &&
+    !!dateISO &&
+    totalPreview > 0 &&
+    tipoPagoId > 0 &&
+    !tiposPago.isLoading;
 
   async function handleSave() {
     if (!row) return;
@@ -81,21 +111,13 @@ export default function PayModal({
     const payload: ReciboCreateDTO = {
       alumnoId,
       concepto: row.conceptCode,
+      montoManual: totalPreview, // ✅ siempre > 0
       fechaPago: dateISO,
+      tipoPagoId,
       comentario: comentario.trim() ? comentario.trim() : undefined,
     };
 
-    // ✅ regla swagger: montoManual solo si OTRO
-    if (isManualRequired(row.conceptCode)) {
-      payload.montoManual = Number(montoManual || 0);
-    }
-
-    // method se queda listo para futuro (no se manda aún)
-    // payload.metodo = method;
-
-    // 🔎 para debug rápido sin molestar al back:
     console.log('[PayModal] payload /api/recibos =>', payload);
-
     await onSubmit(payload);
   }
 
@@ -128,8 +150,7 @@ export default function PayModal({
 
             <div className={s.field}>
               <label className={s.label}>Monto</label>
-
-              {isManualRequired(conceptCode) ? (
+              {isManualConcept(conceptCode) ? (
                 <input
                   className={s.input}
                   value={montoManual}
@@ -144,7 +165,6 @@ export default function PayModal({
 
             <div className={s.field}>
               <label className={s.label}>Fecha</label>
-              {/* IMPORTANTE: type="date" => YYYY-MM-DD */}
               <input
                 className={s.input}
                 type="date"
@@ -154,19 +174,27 @@ export default function PayModal({
             </div>
 
             <div className={s.field}>
-              <label className={s.label}>Método</label>
+              <label className={s.label}>Tipo de pago</label>
               <select
                 className={s.select}
-                value={method}
-                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+                value={String(tipoPagoId)}
+                onChange={(e) => setTipoPagoId(Number(e.target.value))}
+                disabled={tiposPago.isLoading || (tiposPago.items?.length ?? 0) === 0}
               >
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="TARJETA">Tarjeta</option>
-                <option value="TRANSFERENCIA">Transferencia</option>
+                {tiposPago.isLoading ? (
+                  <option value="0">Cargando tipos de pago…</option>
+                ) : (tiposPago.items?.length ?? 0) === 0 ? (
+                  <option value="0">No hay tipos de pago activos</option>
+                ) : (
+                  (tiposPago.items ?? []).map((tp) => (
+                    <option key={tp.id} value={tp.id}>
+                      {tp.name} ({tp.code})
+                    </option>
+                  ))
+                )}
               </select>
-              <div className={s.hint}>
-                Aún no se envía al API (lo dejamos listo para cuando lo agreguen).
-              </div>
+
+              {tipoPagoLabel ? <div className={s.hint}>Seleccionado: {tipoPagoLabel}</div> : null}
             </div>
 
             <div className={s.fieldWide}>
@@ -191,12 +219,7 @@ export default function PayModal({
             Cancelar
           </button>
 
-          <button
-            className={s.primaryBtn}
-            onClick={handleSave}
-            type="button"
-            disabled={!canSubmit}
-          >
+          <button className={s.primaryBtn} onClick={handleSave} type="button" disabled={!canSubmit}>
             Guardar
           </button>
         </div>
