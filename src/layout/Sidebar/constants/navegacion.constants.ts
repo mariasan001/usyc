@@ -11,7 +11,7 @@ import {
 import type { ItemNavegacion } from '../types/navegacion.types';
 
 export const ITEMS_NAVEGACION: ItemNavegacion[] = [
-  //{ href: '/panel', label: 'Inicio', icon: LayoutDashboard, grupo: 'GENERAL', roles: ['ADMIN'] },
+//  { href: '/panel', label: 'Inicio', icon: LayoutDashboard, grupo: 'GENERAL', roles: ['ADMIN'] },
 
   { href: '/alumnos', label: 'Alumnos', icon: Users, grupo: 'GESTIÓN', roles: ['ADMIN','CAJA'] },
 

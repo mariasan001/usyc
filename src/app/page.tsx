@@ -27,7 +27,7 @@ export default function HomePage() {
     }
 
     if (rol === 'CAJA') {
-      router.replace('/recibos'); // o /caja/historial-pagos
+      router.replace('/alumnos'); // o /caja/historial-pagos
       return;
     }
 

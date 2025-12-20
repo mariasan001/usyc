@@ -15,7 +15,6 @@ import type { Receipt } from '@/modules/receipts/types/receipt.types';
 
 
 import s from './DashboardPage.module.css';
-import { encodeReceiptQr } from '@/qr/utils/qr.codec';
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
