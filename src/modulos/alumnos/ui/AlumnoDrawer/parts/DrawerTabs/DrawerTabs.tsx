@@ -1,7 +1,25 @@
 'use client';
 
-import { DrawerTab } from '../../types/alumno-drawer.types';
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Receipt,
+  PlusCircle,
+} from 'lucide-react';
+
+import type { DrawerTab } from '../../types/alumno-drawer.types';
 import s from './DrawerTabs.module.css';
+
+const TABS: {
+  key: DrawerTab;
+  label: string;
+  Icon: React.ComponentType<{ size?: number; className?: string }>;
+}[] = [
+  { key: 'RESUMEN', label: 'Resumen', Icon: LayoutDashboard },
+  { key: 'PROYECCION', label: 'Proyección', Icon: TrendingUp },
+  { key: 'PAGOS', label: 'Pagos', Icon: Receipt },
+  { key: 'EXTRAS', label: 'Extras', Icon: PlusCircle },
+];
 
 export default function DrawerTabs({
   tab,
@@ -11,34 +29,30 @@ export default function DrawerTabs({
   onChange: (t: DrawerTab) => void;
 }) {
   return (
-    <div className={s.tabs}>
-      <button
-        className={`${s.tab} ${tab === 'RESUMEN' ? s.active : ''}`}
-        onClick={() => onChange('RESUMEN')}
-      >
-        Resumen
-      </button>
+    <nav className={s.wrap} aria-label="Secciones del alumno">
+      <div className={s.tabs} role="tablist" aria-orientation="horizontal">
+        {TABS.map(({ key, label, Icon }) => {
+          const active = tab === key;
 
-      <button
-        className={`${s.tab} ${tab === 'PROYECCION' ? s.active : ''}`}
-        onClick={() => onChange('PROYECCION')}
-      >
-        Proyección
-      </button>
-
-      <button
-        className={`${s.tab} ${tab === 'PAGOS' ? s.active : ''}`}
-        onClick={() => onChange('PAGOS')}
-      >
-        Pagos
-      </button>
-
-      <button
-        className={`${s.tab} ${tab === 'EXTRAS' ? s.active : ''}`}
-        onClick={() => onChange('EXTRAS')}
-      >
-        Extras
-      </button>
-    </div>
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-current={active ? 'page' : undefined}
+              className={`${s.tab} ${active ? s.active : ''}`}
+              onClick={() => onChange(key)}
+              title={label}
+            >
+              <span className={s.iconWrap} aria-hidden="true">
+                <Icon size={16} className={s.icon} />
+              </span>
+              <span className={s.label}>{label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

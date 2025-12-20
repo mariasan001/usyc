@@ -89,20 +89,15 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const [extraSaving, setExtraSaving] = useState(false);
   const [extraError, setExtraError] = useState<string | null>(null);
 
-  /**
-   * ✅ Guarda el ReciboDTO COMPLETO para que /recibos/print
-   * pinte datos reales SIN depender de GET /api/recibos/{id}.
-   */
+  // =========================
+  // PRINT CACHE
+  // =========================
   function cacheReciboForPrint(dto: ReciboDTO) {
     try {
       sessionStorage.setItem(`recibo:${dto.reciboId}`, JSON.stringify(dto));
     } catch {}
   }
 
-  /**
-   * ✅ Si vienes desde proyección (solo traes reciboId),
-   * intentamos reconstruirlo desde pagosReales y cachearlo.
-   */
   function cacheFromPagosReales(reciboId: number) {
     try {
       const p = d.pagosReales.find((x) => x.reciboId === reciboId);
@@ -132,10 +127,21 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
     router.push(`/recibos/print?reciboId=${reciboId}`);
   }
 
+  /**
+   * ✅ Unificado: siempre cachea primero y luego navega.
+   * Lo usas desde PROYECCIÓN y desde PAGOS.
+   */
+  function openReceipt(reciboId: number) {
+    // Si aún está cargando o no hay pagos, evita mandar al print vacío:
+    if (d.loading) return;
+
+    cacheFromPagosReales(reciboId);
+    openPrint(reciboId);
+  }
+
   async function onAddExtra() {
     setExtraError(null);
 
-    // ✅ validaciones mínimas (las más importantes aquí, el UI ya bloquea)
     const conceptOk = extraConcept.trim().length >= 3;
     const amountNum = toMoneyNumber(extraAmount);
     const amountOk = Number.isFinite(amountNum) && amountNum > 0;
@@ -150,8 +156,6 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
 
     setExtraSaving(true);
     try {
-      // ✅ EXTRAS se registran como concepto OTRO
-      // y el “concepto humano” va en comentario.
       const payload = {
         alumnoId: d.alumnoId,
         concepto: 'OTRO',
@@ -163,22 +167,15 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
 
       const created = await RecibosService.create(payload);
 
-      // ✅ cacheo para print (contiene qrPayload si el backend lo manda)
       cacheReciboForPrint(created);
-
-      // ✅ refresca data del drawer (historial, totales, etc.)
       await d.reload();
 
-      // ✅ reset form
       setExtraConcept('');
       setExtraAmount('');
       setExtraDate(todayISO());
       setExtraError(null);
 
-      // ✅ manda al usuario a historial
       d.setTab('PAGOS');
-
-      // ✅ (opcional) abrir print inmediato
       // openPrint(created.reciboId);
     } catch (e: any) {
       setExtraError(e?.message ?? 'No se pudo registrar el pago extra.');
@@ -224,9 +221,8 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
             setPayOpen(true);
           }}
           onReceipt={(reciboId) => {
-            // ✅ cachear antes de navegar
-            cacheFromPagosReales(reciboId);
-            openPrint(reciboId);
+            // ✅ ahora usa el unificado
+            openReceipt(reciboId);
           }}
         />
       ) : null}
@@ -234,9 +230,7 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
       {d.tab === 'PAGOS' ? (
         <PagosPanel
           pagos={d.pagosReales}
-          // ⚡️ si tu PagosPanel ya tiene botón imprimir,
-          // aquí le pasas onPrint(reciboId)
-          // onPrint={(reciboId) => { cacheFromPagosReales(reciboId); openPrint(reciboId); }}
+          onPrint={(reciboId) => openReceipt(reciboId)} // ✅ FIX: ahora también cachea
         />
       ) : null}
 
@@ -273,16 +267,13 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
           try {
             const created = await RecibosService.create(payload);
 
-            // ✅ guarda el DTO real del POST (aquí SI viene alumnoNombre/folio/etc.)
             cacheReciboForPrint(created);
-
             await d.reload();
 
             setPayOpen(false);
             setPayRow(null);
             d.setTab('PAGOS');
 
-            // si quieres imprimir al pagar:
             // openPrint(created.reciboId);
           } finally {
             setPaySaving(false);

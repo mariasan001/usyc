@@ -71,7 +71,7 @@ export default function ProyeccionPanel({
                       onClick={() => onReceipt(r.reciboId!)}
                       title={`Imprimir comprobante #${r.reciboId}`}
                     >
-                      Imprimir comprobante
+                      Imprimir
                     </button>
                   ) : (
                     <button
@@ -80,7 +80,7 @@ export default function ProyeccionPanel({
                       disabled
                       title="Pagado, pero falta reciboId para imprimir"
                     >
-                      Imprimir comprobante
+                      Imprimir 
                     </button>
                   )}
                 </div>
