@@ -1,8 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
-import type { PaymentMethod } from '../../types/alumno-drawer.types';
+import { useEffect, useMemo } from 'react';
+
 import s from './ExtrasPanel.module.css';
+
+import { useTiposPago } from '@/modulos/configuraciones/hooks/useTiposPago';
+import type { TipoPago } from '@/modulos/configuraciones/types/tiposPago.types';
 
 function todayISO() {
   const d = new Date();
@@ -11,7 +14,6 @@ function todayISO() {
 }
 
 function normalizeMoneyInput(v: string) {
-  // deja solo números y punto, y evita múltiples puntos
   const cleaned = v.replace(/[^\d.]/g, '');
   const parts = cleaned.split('.');
   if (parts.length <= 1) return cleaned;
@@ -19,20 +21,26 @@ function normalizeMoneyInput(v: string) {
 }
 
 function toNumber(v: string) {
-  const n = Number(v);
+  const cleaned = String(v ?? '').replace(/,/g, '').trim();
+  const n = Number(cleaned);
   return Number.isFinite(n) ? n : NaN;
 }
 
 export default function ExtrasPanel({
   extraConcept,
   setExtraConcept,
+
   extraAmount,
   setExtraAmount,
+
   extraDate,
   setExtraDate,
-  extraMethod,
-  setExtraMethod,
+
+  extraTipoPagoId,
+  setExtraTipoPagoId,
+
   onAddExtra,
+  submitting,
 }: {
   extraConcept: string;
   setExtraConcept: (v: string) => void;
@@ -43,23 +51,47 @@ export default function ExtrasPanel({
   extraDate: string;
   setExtraDate: (v: string) => void;
 
-  extraMethod: PaymentMethod;
-  setExtraMethod: (v: PaymentMethod) => void;
+  extraTipoPagoId: number;
+  setExtraTipoPagoId: (v: number) => void;
 
   onAddExtra: () => void;
+
+  submitting?: boolean;
 }) {
+  const tiposPago = useTiposPago({ soloActivos: true });
+
+  // ✅ default tipoPagoId: primer activo
+  useEffect(() => {
+    if (extraTipoPagoId > 0) return;
+    const first = tiposPago.items?.[0];
+    if (typeof first?.id === 'number') setExtraTipoPagoId(first.id);
+  }, [extraTipoPagoId, tiposPago.items, setExtraTipoPagoId]);
+
   const amountNum = useMemo(() => toNumber(extraAmount), [extraAmount]);
 
   const conceptOk = extraConcept.trim().length >= 3;
   const amountOk = Number.isFinite(amountNum) && amountNum > 0;
   const dateOk = !!extraDate;
-  const canSubmit = conceptOk && amountOk && dateOk;
+  const tipoOk = extraTipoPagoId > 0;
+
+  const canSubmit =
+    conceptOk &&
+    amountOk &&
+    dateOk &&
+    tipoOk &&
+    !tiposPago.isLoading &&
+    !submitting;
+
+  const tipoPagoLabel = useMemo(() => {
+    const found = (tiposPago.items ?? []).find((x: TipoPago) => x.id === extraTipoPagoId);
+    return found ? `${found.name} (${found.code})` : '';
+  }, [tiposPago.items, extraTipoPagoId]);
 
   return (
     <section className={s.panel}>
       <div className={s.panelTitleRow}>
         <div className={s.panelTitle}>Pagos extra</div>
-        <div className={s.panelHint}>Cursos, conferencias, materiales, etc.</div>
+        <div className={s.panelHint}>Cursos, constancias, materiales, etc.</div>
       </div>
 
       <div className={s.grid}>
@@ -100,22 +132,36 @@ export default function ExtrasPanel({
             onChange={(e) => setExtraDate(e.target.value)}
             max={todayISO()}
           />
-          {!dateOk ? (
-            <div className={s.fieldHint}>Selecciona la fecha del pago.</div>
-          ) : null}
+          {!dateOk ? <div className={s.fieldHint}>Selecciona la fecha del pago.</div> : null}
         </div>
 
         <div className={s.formRow}>
-          <label className={s.label}>Método</label>
+          <label className={s.label}>Tipo de pago</label>
           <select
-            className={s.select}
-            value={extraMethod}
-            onChange={(e) => setExtraMethod(e.target.value as PaymentMethod)}
+            className={`${s.select} ${!tipoOk ? s.inputInvalid : ''}`}
+            value={String(extraTipoPagoId || 0)}
+            onChange={(e) => setExtraTipoPagoId(Number(e.target.value))}
+            disabled={tiposPago.isLoading || (tiposPago.items?.length ?? 0) === 0}
           >
-            <option value="EFECTIVO">Efectivo</option>
-            <option value="TARJETA">Tarjeta</option>
-            <option value="TRANSFERENCIA">Transferencia</option>
+            {tiposPago.isLoading ? (
+              <option value="0">Cargando tipos de pago…</option>
+            ) : (tiposPago.items?.length ?? 0) === 0 ? (
+              <option value="0">No hay tipos de pago activos</option>
+            ) : (
+              <>
+                <option value="0">Selecciona…</option>
+                {(tiposPago.items ?? []).map((tp) => (
+                  <option key={tp.id} value={tp.id}>
+                    {tp.name} ({tp.code})
+                  </option>
+                ))}
+              </>
+            )}
           </select>
+
+          {tipoPagoLabel ? (
+            <div className={s.fieldHint}>Seleccionado: {tipoPagoLabel}</div>
+          ) : null}
         </div>
       </div>
 
@@ -126,11 +172,11 @@ export default function ExtrasPanel({
         disabled={!canSubmit}
         aria-disabled={!canSubmit}
       >
-        Agregar pago extra
+        {submitting ? 'Registrando…' : 'Agregar pago extra'}
       </button>
 
       <div className={s.smallHint}>
-        Los extras se suman al total del plan y afectan el saldo automáticamente.
+        Los extras se suman al historial y generan recibo (con QR) como cualquier pago.
       </div>
     </section>
   );
