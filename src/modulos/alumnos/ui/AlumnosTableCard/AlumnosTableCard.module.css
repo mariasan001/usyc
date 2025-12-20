@@ -220,3 +220,76 @@
   .tableHead > :last-child{ position: static; box-shadow: none; }
   .body :global(.rowActions){ position: static; box-shadow: none; padding-right: 0; }
 }
+/* Loading / empty */
+.loading,
+.empty{
+  padding: 16px 12px;
+  font-size: 13px;
+  font-weight: 750;
+  color: rgba(15, 23, 42, 0.66);
+}
+
+.empty{
+  background: rgba(15, 23, 42, 0.02);
+}
+
+/* Spacer for last row shadow breathing room */
+.bottomPad{
+  height: 10px;
+}
+
+/* Pager */
+.pager{
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 10px 2px 0;
+  min-width: 0;
+}
+
+.pagerInfo{
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.70);
+  white-space: nowrap;
+}
+
+.pagerInfo b{
+  color: #0f172a;
+  font-weight: 950;
+}
+
+.pagerBtn{
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(15, 23, 42, 0.90);
+
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+
+  cursor: pointer;
+  transition: background .15s ease, box-shadow .15s ease, transform .08s ease;
+}
+
+.pagerBtn:hover{
+  background: rgba(15, 23, 42, 0.03);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
+}
+
+.pagerBtn:active{
+  transform: translateY(1px);
+}
+
+.pagerBtn:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
