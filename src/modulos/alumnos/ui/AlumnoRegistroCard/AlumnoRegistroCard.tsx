@@ -4,6 +4,10 @@
 import s from './AlumnoRegistroCard.module.css';
 import { useAlumnoForm } from '../../hooks/useAlumnoForm';
 
+function formatMXN(n: number) {
+  return new Intl.NumberFormat('es-MX').format(Number.isFinite(n) ? n : 0);
+}
+
 export default function AlumnoRegistroCard() {
   const f = useAlumnoForm();
 
@@ -12,14 +16,14 @@ export default function AlumnoRegistroCard() {
       <header className={s.header}>
         <div className={s.headText}>
           <h2 className={s.title}>Registro de alumno</h2>
-          <p className={s.subtitle}>Captura rápida + cálculo automático (término y precio).</p>
+          <p className={s.subtitle}>
+            Captura rápida + cálculo automático (término y precio).
+          </p>
         </div>
 
         <div className={s.kpi}>
           <span className={s.kpiLabel}>Precio mensual</span>
-          <span className={s.kpiValue}>
-            ${Number(f.precioMensual || 0).toLocaleString('es-MX')}
-          </span>
+          <span className={s.kpiValue}>${formatMXN(f.precioMensual || 0)}</span>
         </div>
       </header>
 
@@ -32,9 +36,10 @@ export default function AlumnoRegistroCard() {
           <label className={s.label}>Nombre</label>
           <input
             className={s.input}
-            value={f.nombre}
-            onChange={(e) => f.setNombre(e.target.value)}
+            value={f.nombreCompleto}
+            onChange={(e) => f.setNombreCompleto(e.target.value)}
             placeholder="Nombre completo"
+            autoComplete="name"
           />
         </div>
 
@@ -45,6 +50,7 @@ export default function AlumnoRegistroCard() {
             value={f.matricula}
             onChange={(e) => f.setMatricula(e.target.value)}
             placeholder="SYC-0003"
+            autoComplete="off"
           />
         </div>
 
@@ -54,15 +60,18 @@ export default function AlumnoRegistroCard() {
 
           <select
             className={s.select}
-            value={f.escolaridadId}
-            onChange={(e) => f.setEscolaridadId(e.target.value)}
+            value={f.escolaridadId ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              f.setEscolaridadId(v ? Number(v) : null);
+            }}
             disabled={f.escolaridadesLoading}
           >
             <option value="">
               {f.escolaridadesLoading ? 'Cargando…' : 'Selecciona…'}
             </option>
 
-            {(f.escolaridades ?? []).map((x: any) => (
+            {f.escolaridades.map((x) => (
               <option key={x.id} value={String(x.id)}>
                 {x.nombre}
               </option>
@@ -96,7 +105,7 @@ export default function AlumnoRegistroCard() {
                 : 'Selecciona…'}
             </option>
 
-            {(f.carreras ?? []).map((c: any) => (
+            {f.carrerasFiltradas.map((c) => (
               <option key={c.carreraId} value={String(c.carreraId)}>
                 {c.nombre}
               </option>
@@ -118,21 +127,7 @@ export default function AlumnoRegistroCard() {
           />
         </div>
 
-        {/* 4) Plantel FULL */}
-        <div className={`${s.field} ${s.full}`}>
-          <label className={s.label}>Plantel</label>
-          <select
-            className={s.select}
-            value={f.plantelId}
-            onChange={(e) => f.setPlantelId(e.target.value)}
-          >
-            {(f.planteles ?? []).map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Plantel: cuando compartas API/shape, lo agregamos aquí sin ensuciar. */}
       </div>
 
       <div className={s.preview}>
@@ -142,6 +137,7 @@ export default function AlumnoRegistroCard() {
             {f.carreraRequired ? `${f.duracionMeses} meses` : '—'}
           </span>
         </div>
+
         <div className={s.previewItem}>
           <span className={s.previewLabel}>Término</span>
           <span className={s.previewValue}>{f.fechaTermino}</span>
@@ -149,7 +145,12 @@ export default function AlumnoRegistroCard() {
       </div>
 
       <footer className={s.footer}>
-        <button className={s.primaryBtn} disabled={f.submitting} onClick={f.submit}>
+        <button
+          className={s.primaryBtn}
+          disabled={f.submitting}
+          onClick={f.submit}
+          type="button"
+        >
           {f.submitting ? 'Generando…' : 'Generar alumno'}
         </button>
       </footer>

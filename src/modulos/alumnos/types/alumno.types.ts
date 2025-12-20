@@ -1,4 +1,5 @@
 // src/modulos/alumnos/types/alumno.types.ts
+
 export type Alumno = {
   alumnoId: string;
 
@@ -8,11 +9,11 @@ export type Alumno = {
   escolaridadId: number;
   escolaridadNombre: string;
 
-  carreraId: string;
-  carreraNombre: string;
+  carreraId?: string | null;
+  carreraNombre?: string | null;
 
-  fechaIngreso: string;      // "YYYY-MM-DD"
-  fechaTermino?: string | null; // 👈 en listado viene null
+  fechaIngreso: string;            // YYYY-MM-DD
+  fechaTermino?: string | null;    // puede venir null
   activo: boolean;
 };
 
@@ -20,23 +21,18 @@ export type AlumnoCreate = {
   nombreCompleto: string;
   matricula: string;
   escolaridadId: number;
-  carreraId: string;
-  fechaIngreso: string; // "YYYY-MM-DD"
+  carreraId?: string;              // ✅ opcional
+  fechaIngreso: string;
 };
 
-/** Page tipo Spring (como tu response del GET paginado) */
 export type Page<T> = {
   content: T[];
-
   totalElements: number;
   totalPages: number;
-
-  number: number; // página actual (0-based)
+  number: number;
   size: number;
-
   first: boolean;
   last: boolean;
   empty: boolean;
-
   numberOfElements?: number;
 };
