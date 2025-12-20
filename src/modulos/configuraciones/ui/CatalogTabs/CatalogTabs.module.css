@@ -1,4 +1,95 @@
-/* src/modules/configuraciones/catalogos/ui/CatalogTabs/CatalogTabs.module.css */
-.tabs{ display:flex; gap:8px; flex-wrap:wrap; }
-.tab{ height:38px; padding:0 12px; border-radius:12px; border:1px solid #ddd; background:#fff; }
-.active{ background:#111; color:#fff; border-color:#111; }
+/* CatalogTabs.module.css */
+
+.wrap{
+  width: 100%;
+  min-width: 0;
+}
+
+/* Contenedor tipo “segmented / pills” */
+.tabs{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.04);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* oculta scrollbar fea sin romper scroll */
+.tabs::-webkit-scrollbar{
+  height: 8px;
+}
+.tabs::-webkit-scrollbar-thumb{
+  background: rgba(17, 24, 39, 0.10);
+  border-radius: 999px;
+}
+
+.tab{
+  position: relative;
+  flex: 0 0 auto;
+
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 14px;
+
+  border: 1px solid transparent;
+  background: #f7f9fd;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  color: #0a0a0a;
+  font-weight: 650;
+  font-size: 13px;
+  line-height: 1;
+
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.tab:hover{
+  background: #f2f6ff;
+  border-color: #e7ebf3;
+}
+
+.tab:active{
+  transform: translateY(1px);
+}
+
+.tab:focus-visible{
+  outline: 2px solid rgba(37, 99, 235, 0.20);
+  outline-offset: 2px;
+}
+
+.icon{
+  opacity: 0.72;
+}
+
+.label{
+  white-space: nowrap;
+}
+
+/* Activo: “pill” blanco, borde suave, texto fuerte */
+.active{
+  background: #ffffff;
+  border-color: #dbe3f2;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.06);
+}
+
+.active .icon{
+  opacity: 0.95;
+}
+
+/* Detalle mínimo para que se note el activo sin ser agresivo */
+.dot{
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.85);
+  margin-left: 2px;
+}

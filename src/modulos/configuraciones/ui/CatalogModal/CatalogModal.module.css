@@ -1,15 +1,259 @@
-/* src/modules/configuraciones/catalogos/ui/CatalogModal/CatalogModal.module.css */
-.backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; padding:16px; }
-.modal{ width:min(720px, 100%); background:#fff; border-radius:16px; border:1px solid #e6e6e6; overflow:hidden; }
-.head{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid #eee; }
-.h3{ margin:0; font-size:16px; }
-.close{ border:1px solid #ddd; background:#fff; border-radius:10px; height:34px; width:34px; }
-.form{ padding:14px; display:flex; flex-direction:column; gap:12px; }
-.field{ display:flex; flex-direction:column; gap:6px; }
-.field input{ height:42px; border-radius:12px; border:1px solid #ddd; padding:0 12px; }
-.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.check{ display:flex; align-items:center; gap:8px; }
-.footer{ display:flex; justify-content:flex-end; gap:10px; padding-top:4px; }
-.primary{ height:40px; padding:0 14px; border-radius:12px; border:1px solid #111; background:#111; color:#fff; }
-.secondary{ height:40px; padding:0 14px; border-radius:12px; border:1px solid #ddd; background:#fff; }
-@media (max-width:700px){ .grid2{ grid-template-columns:1fr; } }
+/* CatalogModal.module.css */
+
+.backdrop{
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(17, 24, 39, 0.42);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.modal{
+  width: min(680px, 100%);
+  background: #ffffff;
+  border: 1px solid #e7ebf3;
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(16, 24, 40, 0.22);
+  overflow: hidden;
+}
+
+.head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #eef2f7;
+  background: #fbfcfe;
+}
+
+.h3{
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 850;
+  color: #0a0a0a;
+}
+
+.close{
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  color: #0a0a0a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.close:hover{
+  background: #f7f9fd;
+  border-color: #dbe3f2;
+}
+
+.close:active{
+  transform: translateY(1px);
+}
+
+.close:disabled{
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* FORM */
+.form{
+  padding: 14px 16px 16px 16px;
+}
+
+.field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field label{
+  font-size: 12px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: 0.01em;
+}
+
+/* Inputs/Selects uniformes */
+.field input,
+.field select,
+.textarea{
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+  padding: 0 14px;
+  outline: none;
+  font: inherit;
+  font-size: 13px;
+  color: #0a0a0a;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.field select{
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(17, 24, 39, 0.55) 50%),
+    linear-gradient(135deg, rgba(17, 24, 39, 0.55) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 18px,
+    calc(100% - 12px) 18px;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+.textarea{
+  height: auto;
+  padding: 10px 14px;
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.35;
+}
+
+.field input::placeholder,
+.textarea::placeholder{
+  color: rgba(107, 114, 128, 0.85);
+}
+
+.field input:focus,
+.field select:focus,
+.textarea:focus{
+  background: #ffffff;
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+}
+
+.help{
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+/* Grid de 2 columnas para montos/duración */
+.grid2{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+/* Checkbox bonito (switch suave) */
+.check{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a0a0a;
+  user-select: none;
+}
+
+.check input{
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid #e7ebf3;
+  background: #f2f4f8;
+  appearance: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.check input::after{
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  transition: left 140ms ease;
+  box-shadow: 0 6px 14px rgba(16, 24, 40, 0.10);
+}
+
+.check input:checked{
+  background: rgba(17, 24, 39, 0.92);
+  border-color: rgba(17, 24, 39, 0.92);
+}
+
+.check input:checked::after{
+  left: 22px;
+}
+
+/* Footer fijo visual */
+.footer{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  margin-top: 10px;
+  border-top: 1px solid #eef2f7;
+}
+
+/* Botones */
+.secondary,
+.primary{
+  height: 42px;
+  border-radius: 14px;
+  padding: 0 14px;
+  font-weight: 750;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.secondary{
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+  color: #0a0a0a;
+}
+
+.secondary:hover{
+  background: #f7f9fd;
+  border-color: #dbe3f2;
+}
+
+.primary{
+  border: 1px solid #0b0f19;
+  background: #0b0f19;
+  color: #ffffff;
+}
+
+.primary:hover{
+  background: #0f172a;
+  border-color: #0f172a;
+}
+
+.secondary:active,
+.primary:active{
+  transform: translateY(1px);
+}
+
+.secondary:disabled,
+.primary:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { X, Save } from 'lucide-react';
 
 import type { CatalogKey } from '../CatalogTabs/CatalogTabs';
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
@@ -26,6 +27,81 @@ function asObj(v: unknown): Record<string, any> {
   return {};
 }
 
+/* ────────────────────────────────────────────────────────────
+   Dinero MXN (FIX REAL)
+   - mientras escribes: NO formatea (para poder teclear 408, 1200, etc.)
+   - al salir (blur): formatea (1,200.00)
+   - estado siempre guarda number real
+──────────────────────────────────────────────────────────── */
+
+function formatMXNInput(n: number) {
+  if (!Number.isFinite(n)) return '';
+  return new Intl.NumberFormat('es-MX', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+function parseMXNInput(raw: string) {
+  let s = raw.trim();
+  s = s.replace(/[^\d.,-]/g, '');
+
+  const hasDot = s.includes('.');
+  const hasComma = s.includes(',');
+
+  // 1,65 -> 1.65
+  if (hasComma && !hasDot) {
+    s = s.replace(',', '.');
+  } else {
+    // 1,234.56 -> 1234.56
+    s = s.replace(/,/g, '');
+  }
+
+  if (!s || s === '-') return 0;
+
+  const n = Number.parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function MoneyInput({
+  value,
+  onChange,
+  placeholder = '0.00',
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  placeholder?: string;
+}) {
+  const [draft, setDraft] = useState<string>('');
+
+  // sync al abrir/editar registro
+  useEffect(() => {
+    // si value viene como 0, dejamos vacío para poder teclear directo
+    setDraft(value ? String(value) : '');
+  }, [value]);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      placeholder={placeholder}
+      value={draft}
+      onChange={(e) => {
+        const next = e.target.value;
+        setDraft(next);
+        onChange(parseMXNInput(next)); // estado number real
+      }}
+      onBlur={() => {
+        const n = parseMXNInput(draft);
+        onChange(n);
+        setDraft(n ? formatMXNInput(n) : '');
+      }}
+    />
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+
 export default function CatalogModal({
   catalog,
   mode,
@@ -42,12 +118,12 @@ export default function CatalogModal({
       catalog === 'escolaridades'
         ? 'Escolaridad'
         : catalog === 'carreras'
-          ? 'Carrera'
-          : catalog === 'conceptosPago'
-            ? 'Concepto de Pago'
-            : catalog === 'tiposPago'
-              ? 'Tipo de pago'
-              : 'Estatus Recibo';
+        ? 'Carrera'
+        : catalog === 'conceptosPago'
+        ? 'Concepto de Pago'
+        : catalog === 'tiposPago'
+        ? 'Tipo de pago'
+        : 'Estatus Recibo';
 
     return mode === 'create' ? `Crear ${name}` : `Editar ${name}`;
   }, [catalog, mode]);
@@ -79,10 +155,10 @@ export default function CatalogModal({
         carreraId: init.carreraId ?? '',
         escolaridadId: fallbackEscolaridadId,
         nombre: init.nombre ?? '',
-        montoMensual: init.montoMensual ?? 0,
-        montoInscripcion: init.montoInscripcion ?? 0,
-        duracionAnios: init.duracionAnios ?? 0,
-        duracionMeses: init.duracionMeses ?? 0,
+        montoMensual: Number(init.montoMensual ?? 0),
+        montoInscripcion: Number(init.montoInscripcion ?? 0),
+        duracionAnios: Number(init.duracionAnios ?? 0),
+        duracionMeses: Number(init.duracionMeses ?? 0),
         activo: init.activo ?? true,
       };
     }
@@ -98,10 +174,10 @@ export default function CatalogModal({
       };
     }
 
-    // ✅ TIPOS DE PAGO
+    // TIPOS DE PAGO
     if (catalog === 'tiposPago') {
       return {
-        code: init.code ?? '', // swagger: code
+        code: init.code ?? '',
         name: init.name ?? '',
         active: init.active ?? true,
       };
@@ -207,7 +283,7 @@ export default function CatalogModal({
       return;
     }
 
-    // ✅ TIPOS PAGO (swagger: code, name, active)
+    // TIPOS PAGO
     if (catalog === 'tiposPago') {
       const payload =
         mode === 'create'
@@ -247,40 +323,38 @@ export default function CatalogModal({
       <div className={s.modal}>
         <div className={s.head}>
           <h3 className={s.h3}>{title}</h3>
-          <button className={s.close} onClick={onClose} disabled={isSaving} type="button">
-            ✕
+          <button
+            className={s.close}
+            onClick={onClose}
+            disabled={isSaving}
+            type="button"
+            aria-label="Cerrar"
+          >
+            <X size={18} />
           </button>
         </div>
 
         <form className={s.form} onSubmit={submit}>
-          {/* CÓDIGO (según catálogo+modo) */}
+          {/* CÓDIGO */}
           {showCodigo && (
             <div className={s.field}>
               <label>Código</label>
               <input
-                value={
-                  isTiposPago
-                    ? String(form.code ?? '')
-                    : String(form.codigo ?? '')
-                }
-                onChange={(e) =>
-                  set(isTiposPago ? 'code' : 'codigo', e.target.value)
-                }
+                value={isTiposPago ? String(form.code ?? '') : String(form.codigo ?? '')}
+                onChange={(e) => set(isTiposPago ? 'code' : 'codigo', e.target.value)}
                 placeholder={
                   catalog === 'conceptosPago'
                     ? 'INSCRIPCION, MENSUALIDAD...'
                     : catalog === 'estatusRecibo'
-                      ? 'EMITIDO, PAGADO...'
-                      : catalog === 'tiposPago'
-                        ? 'EFECTIVO, TARJETA...'
-                        : 'SEC, LIC...'
+                    ? 'EMITIDO, PAGADO...'
+                    : catalog === 'tiposPago'
+                    ? 'EFECTIVO, TARJETA...'
+                    : 'SEC, LIC...'
                 }
                 required
               />
               {catalog === 'tiposPago' ? (
-                <small className={s.help}>
-                  Recomendado: MAYÚSCULAS y sin espacios.
-                </small>
+                <small className={s.help}>Recomendado: MAYÚSCULAS y sin espacios.</small>
               ) : null}
             </div>
           )}
@@ -325,7 +399,7 @@ export default function CatalogModal({
             </div>
           )}
 
-          {/* NOMBRE (común) */}
+          {/* NOMBRE */}
           <div className={s.field}>
             <label>Nombre</label>
             <input
@@ -359,9 +433,6 @@ export default function CatalogModal({
                 placeholder="FIJO, VARIABLE, PORCENTAJE…"
                 required
               />
-              <small className={s.help}>
-                Si luego tenemos un catálogo cerrado, lo convertimos a select + union type.
-              </small>
             </div>
           )}
 
@@ -370,19 +441,17 @@ export default function CatalogModal({
             <div className={s.grid2}>
               <div className={s.field}>
                 <label>Monto mensual</label>
-                <input
-                  type="number"
-                  value={String(form.montoMensual ?? 0)}
-                  onChange={(e) => set('montoMensual', e.target.value)}
+                <MoneyInput
+                  value={Number(form.montoMensual ?? 0)}
+                  onChange={(n) => set('montoMensual', n)}
                 />
               </div>
 
               <div className={s.field}>
                 <label>Monto inscripción</label>
-                <input
-                  type="number"
-                  value={String(form.montoInscripcion ?? 0)}
-                  onChange={(e) => set('montoInscripcion', e.target.value)}
+                <MoneyInput
+                  value={Number(form.montoInscripcion ?? 0)}
+                  onChange={(n) => set('montoInscripcion', n)}
                 />
               </div>
 
@@ -390,8 +459,8 @@ export default function CatalogModal({
                 <label>Duración (años)</label>
                 <input
                   type="number"
-                  value={String(form.duracionAnios ?? 0)}
-                  onChange={(e) => set('duracionAnios', e.target.value)}
+                  value={Number(form.duracionAnios ?? 0)}
+                  onChange={(e) => set('duracionAnios', Number(e.target.value))}
                 />
               </div>
 
@@ -399,14 +468,14 @@ export default function CatalogModal({
                 <label>Duración (meses)</label>
                 <input
                   type="number"
-                  value={String(form.duracionMeses ?? 0)}
-                  onChange={(e) => set('duracionMeses', e.target.value)}
+                  value={Number(form.duracionMeses ?? 0)}
+                  onChange={(e) => set('duracionMeses', Number(e.target.value))}
                 />
               </div>
             </div>
           )}
 
-          {/* ACTIVO (todos menos estatusRecibo) */}
+          {/* ACTIVO */}
           {showActivo && (
             <label className={s.check}>
               <input
@@ -423,6 +492,7 @@ export default function CatalogModal({
               Cancelar
             </button>
             <button type="submit" className={s.primary} disabled={isSaving}>
+              <Save size={16} />
               {isSaving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
