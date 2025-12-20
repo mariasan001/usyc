@@ -56,22 +56,26 @@ export function useAlumnoDrawerData({ alumno }: Args) {
   const plaNombre = '—'; // cuando llegue plantelNombre real, lo conectas
 
   // Pagos reales -> UI (esto lo usa PagosPanel)
-  const pagosReales: PagoRealRow[] = useMemo(() => {
-    const list = data?.pagosReales ?? [];
-    return list
-      .slice()
-      .sort((a, b) => cmpISO(b.fechaPago, a.fechaPago))
-      .map((p) => ({
-        reciboId: p.reciboId,
-        folio: p.folio,
-        fechaPago: p.fechaPago,
-        concepto: p.concepto,
-        monto: p.monto,
-        moneda: p.moneda,
-        estatusNombre: p.estatusNombre,
-        cancelado: p.cancelado,
-      }));
-  }, [data]);
+const pagosReales: PagoRealRow[] = useMemo(() => {
+  const list = data?.pagosReales ?? [];
+  return list
+    .slice()
+    .sort((a, b) => cmpISO(b.fechaPago, a.fechaPago))
+    .map((p) => ({
+      reciboId: p.reciboId,
+      folio: p.folio,
+      fechaPago: p.fechaPago,
+      concepto: p.concepto,
+      monto: p.monto,
+      moneda: p.moneda,
+      estatusNombre: p.estatusNombre,
+      cancelado: p.cancelado,
+
+      // ✅ CLAVE:
+      alumnoNombre: p.alumnoNombre,
+    }));
+}, [data]);
+
 
   // Proyección -> UI (esto es lo que habilita el botón de imprimir)
   const projection: ProjectionRow[] = useMemo(() => {

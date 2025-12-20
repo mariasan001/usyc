@@ -23,6 +23,7 @@ export type PagoRealRow = {
   estatusCodigo?: string; // por si llega código
   estatusNombre?: string; // por si llega label
   cancelado: boolean;
+  alumnoNombre?: string;
 };
 
 export type Totals = {

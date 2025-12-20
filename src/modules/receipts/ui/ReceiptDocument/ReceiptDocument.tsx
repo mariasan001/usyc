@@ -4,11 +4,15 @@ import { useMemo } from 'react';
 import Image from 'next/image';
 
 import type { ReceiptTemplateSettings } from '@/modules/receipts/utils/receipt-template.settings';
+import { RecibosService } from '@/modulos/alumnos/services/recibos.service';
 
 import s from './ReceiptDocument.module.css';
+import type { Receipt } from '@/modules/receipts/types/receipt.types';
 
 function fmtMoney(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
+    Number.isFinite(n) ? n : 0,
+  );
 }
 
 function pad(n: string, size = 5) {
@@ -30,8 +34,116 @@ function safeText(v?: string | null, fallback = '—') {
   return t ? t : fallback;
 }
 
+/**
+ * Convierte número a letras en MXN (simple y suficiente para recibos).
+ * 1.20 -> "UN PESO 20/100 M.N."
+ * 0 -> "CERO PESOS 00/100 M.N."
+ *
+ * Si luego quieres “PESOS” vs “PESO” exacto, lo ajustamos (ya lo hace).
+ */
+function toMoneyWordsMXN(amount: number) {
+  const n = Number.isFinite(amount) ? amount : 0;
+
+  const entero = Math.floor(Math.abs(n));
+  const dec = Math.round((Math.abs(n) - entero) * 100);
+  const dec2 = String(dec).padStart(2, '0');
+
+  const letrasEntero = numberToSpanishWords(entero).toUpperCase();
+  const pesoWord = entero === 1 ? 'PESO' : 'PESOS';
+
+  return `${letrasEntero} ${pesoWord} ${dec2}/100 M.N.`;
+}
+
+// Conversor básico a letras ES (0..999,999).
+// Para tu sistema escolar es más que suficiente.
+// Si luego manejas millones, lo extendemos.
+function numberToSpanishWords(num: number): string {
+  if (num === 0) return 'cero';
+
+  const unidades = [
+    '',
+    'uno',
+    'dos',
+    'tres',
+    'cuatro',
+    'cinco',
+    'seis',
+    'siete',
+    'ocho',
+    'nueve',
+  ];
+  const especiales = [
+    'diez',
+    'once',
+    'doce',
+    'trece',
+    'catorce',
+    'quince',
+    'dieciséis',
+    'diecisiete',
+    'dieciocho',
+    'diecinueve',
+  ];
+  const decenas = [
+    '',
+    '',
+    'veinte',
+    'treinta',
+    'cuarenta',
+    'cincuenta',
+    'sesenta',
+    'setenta',
+    'ochenta',
+    'noventa',
+  ];
+  const centenas = [
+    '',
+    'ciento',
+    'doscientos',
+    'trescientos',
+    'cuatrocientos',
+    'quinientos',
+    'seiscientos',
+    'setecientos',
+    'ochocientos',
+    'novecientos',
+  ];
+
+  function twoDigits(n: number) {
+    if (n < 10) return unidades[n];
+    if (n >= 10 && n < 20) return especiales[n - 10];
+    if (n === 20) return 'veinte';
+    if (n > 20 && n < 30) return `veinti${unidades[n - 20]}`; // veintiuno, veintidós...
+    const d = Math.floor(n / 10);
+    const u = n % 10;
+    return u ? `${decenas[d]} y ${unidades[u]}` : decenas[d];
+  }
+
+  function threeDigits(n: number) {
+    if (n === 100) return 'cien';
+    if (n < 100) return twoDigits(n);
+    const c = Math.floor(n / 100);
+    const rest = n % 100;
+    return rest ? `${centenas[c]} ${twoDigits(rest)}` : centenas[c];
+  }
+
+  // miles
+  if (num < 1000) return threeDigits(num);
+
+  if (num < 1000000) {
+    const miles = Math.floor(num / 1000);
+    const rest = num % 1000;
+
+    const milesText = miles === 1 ? 'mil' : `${threeDigits(miles)} mil`;
+    const restText = rest ? ` ${threeDigits(rest)}` : '';
+    return `${milesText}${restText}`.trim();
+  }
+
+  // fallback simple (por si llega algo mayor)
+  return String(num);
+}
+
 function QrImgApi({ src }: { src: string }) {
-  // ✅ Con <img> evitamos configuración extra de next/image para dominios.
   return (
     <img
       src={src}
@@ -49,19 +161,20 @@ export default function ReceiptDocument({
 }: {
   receipt: Receipt;
   settings: ReceiptTemplateSettings;
-
-  // ✅ nuevo: lo necesitamos para el endpoint del QR
   reciboId: number;
 }) {
   const folioDisplay = useMemo(() => splitFolio(receipt.folio), [receipt.folio]);
 
-  const qrSrc = useMemo(() => {
-    return `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/recibos/${reciboId}/qr`;
-  }, [reciboId]);
+  // ✅ Solo el QR hace llamada (img src). Nada más.
+  const qrSrc = useMemo(() => RecibosService.qrUrl(reciboId), [reciboId]);
 
   const cancelled = receipt.status === 'CANCELLED';
   const concepto = safeText(receipt.concepto, 'Colegiatura');
   const fecha = safeDate(receipt.fechaPago);
+
+  // ✅ Nombre y letras desde front
+  const nombre = safeText(receipt.alumno?.nombre);
+  const montoLetras = useMemo(() => toMoneyWordsMXN(receipt.monto ?? 0), [receipt.monto]);
 
   return (
     <div className={s.page}>
@@ -70,11 +183,15 @@ export default function ReceiptDocument({
 
         <div className={s.top}>
           <div className={s.logoBox}>
-            {settings.logoDataUrl ? (
-              <Image alt="Logo" src={settings.logoDataUrl} width={120} height={120} className={s.logo} />
-            ) : (
-              <div className={s.logoPlaceholder}>LOGO</div>
-            )}
+            {/* ✅ Logo desde public/img/USYC-logo.png */}
+            <Image
+              alt="Logo"
+              src="/img/USYC-logo.png"
+              width={120}
+              height={120}
+              className={s.logo}
+              priority
+            />
           </div>
 
           <div className={s.topCenter}>
@@ -111,7 +228,7 @@ export default function ReceiptDocument({
           <div className={s.row2}>
             <div className={s.field}>
               <div className={s.fieldLabel}>NOMBRE :</div>
-              <div className={s.fieldLine}>{safeText(receipt.alumno?.nombre)}</div>
+              <div className={s.fieldLine}>{nombre}</div>
             </div>
 
             <div className={s.fieldRight}>
@@ -123,7 +240,8 @@ export default function ReceiptDocument({
           <div className={s.row1}>
             <div className={s.field}>
               <div className={s.fieldLabel}>CANTIDAD EN LETRAS :</div>
-              <div className={s.fieldLine}>{safeText(receipt.montoLetras)}</div>
+              {/* ✅ Ya no depende de receipt.montoLetras (lo generamos) */}
+              <div className={s.fieldLine}>{montoLetras}</div>
             </div>
           </div>
 

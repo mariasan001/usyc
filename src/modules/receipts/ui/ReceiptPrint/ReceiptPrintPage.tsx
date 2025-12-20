@@ -12,21 +12,33 @@ import Badge from '@/shared/ui/Badge/Badge';
 import ReceiptDocument from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
 import { loadReceiptSettings } from '@/modules/receipts/utils/receipt-template.settings';
 
+import type { Receipt } from '@/modules/receipts/types/receipt.types';
 import type { ReciboDTO } from '@/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types';
 
 import s from './ReceiptPrintPage.module.css';
 
 function parseReciboId(sp: URLSearchParams): number | null {
   const v = sp.get('reciboId');
+  if (!v) return null;
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function readReciboFromSession(reciboId: number): ReciboDTO | null {
+  try {
+    const raw = sessionStorage.getItem(`recibo:${reciboId}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as ReciboDTO;
+  } catch {
+    return null;
+  }
 }
 
 function mapReciboToReceipt(dto: ReciboDTO): Receipt {
   return {
     folio: dto.folio,
     alumno: {
-      nombre: dto.alumnoNombre ?? '—',
+      nombre: dto.alumnoNombre ?? '—', // ✅ AQUÍ debe venir
       matricula: dto.alumnoId ?? undefined,
       carrera: '—',
       duracionMeses: undefined,
@@ -34,7 +46,7 @@ function mapReciboToReceipt(dto: ReciboDTO): Receipt {
     },
     concepto: dto.concepto,
     monto: dto.monto ?? 0,
-    montoLetras: '—', // luego lo convertimos a letras si quieres
+    montoLetras: '—', // lo conviertes en ReceiptDocument o aquí
     fechaPago: dto.fechaPago,
     status: dto.cancelado ? 'CANCELLED' : 'VALID',
     cancelReason: undefined,
@@ -49,40 +61,44 @@ export default function ReceiptPrintPage() {
   const reciboId = useMemo(() => parseReciboId(sp), [sp]);
 
   const [item, setItem] = useState<Receipt | null>(null);
+  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>('');
+
   const didAutoPrint = useRef(false);
 
   useEffect(() => {
+    setLoading(true);
+    setErr('');
+    setItem(null);
+
     if (!reciboId) {
+      setLoading(false);
       setErr('Falta reciboId en la URL.');
       return;
     }
 
-    // ✅ leemos del storage (no hacemos GET /api/recibos/{id})
-    const raw = sessionStorage.getItem(`recibo:${reciboId}`);
-    if (!raw) {
-      setErr('No se encontró el recibo en memoria. Vuelve a pagar o abre desde Pagos.');
-      setItem(null);
+    const dto = readReciboFromSession(reciboId);
+    if (!dto) {
+      setLoading(false);
+      setErr(
+        `No se encontró el recibo en sesión (recibo:${reciboId}). Vuelve al drawer y usa “Imprimir comprobante” para cachearlo.`,
+      );
       return;
     }
 
-    try {
-      const dto = JSON.parse(raw) as ReciboDTO;
-      setItem(mapReciboToReceipt(dto));
-      setErr('');
-    } catch {
-      setErr('Recibo corrupto en memoria.');
-      setItem(null);
-    }
+    setItem(mapReciboToReceipt(dto));
+    setLoading(false);
   }, [reciboId]);
 
   useEffect(() => {
+    if (loading) return;
     if (!item) return;
     if (didAutoPrint.current) return;
+
     didAutoPrint.current = true;
     const t = setTimeout(() => window.print(), 450);
     return () => clearTimeout(t);
-  }, [item]);
+  }, [loading, item]);
 
   return (
     <div className={s.wrap}>
@@ -94,7 +110,11 @@ export default function ReceiptPrintPage() {
         <div className={s.right}>
           <Badge tone="info">{reciboId ? `Recibo #${reciboId}` : '—'}</Badge>
 
-          <Button onClick={() => window.print()} leftIcon={<Printer size={16} />} disabled={!item}>
+          <Button
+            onClick={() => window.print()}
+            leftIcon={<Printer size={16} />}
+            disabled={!item}
+          >
             Imprimir
           </Button>
         </div>
@@ -103,7 +123,7 @@ export default function ReceiptPrintPage() {
       {err ? (
         <Card
           title="No se pudo cargar el comprobante"
-          subtitle="En este flujo el recibo se arma con la respuesta del POST."
+          subtitle="Este print page solo usa sessionStorage (no llama GET /recibos/{id})."
           right={
             <Badge tone="warn">
               <AlertTriangle size={14} /> Aviso
@@ -113,6 +133,9 @@ export default function ReceiptPrintPage() {
           <div className={s.missing}>{err}</div>
         </Card>
       ) : null}
+
+      {loading ? <div className={s.loading}>Cargando recibo…</div> : null}
+      {!loading && !item ? <div className={s.loading}>No hay recibo para imprimir.</div> : null}
 
       <div className={s.pages}>
         {item && reciboId ? (

@@ -64,23 +64,44 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const [paySaving, setPaySaving] = useState(false);
 
   /**
-   * ✅ Guardar el ReciboDTO COMPLETO para que /recibos/print
+   * ✅ Guarda el ReciboDTO COMPLETO para que /recibos/print
    * pinte datos reales SIN depender de GET /api/recibos/{id}.
    */
   function cacheReciboForPrint(dto: ReciboDTO) {
     try {
       sessionStorage.setItem(`recibo:${dto.reciboId}`, JSON.stringify(dto));
-    } catch {
-      // si storage falla, no tronamos la UX
-    }
+    } catch {}
   }
 
   /**
-   * ✅ Intentar abrir impresión desde historial/proyección
-   * - Si tenemos un cache previo, perfecto.
-   * - Si NO, igual navegamos, pero el print page te mostrará un aviso
-   *   (porque sin GET /recibos/{id} no podemos reconstruir el recibo).
+   * ✅ Si vienes desde proyección (solo traes reciboId),
+   * intentamos reconstruirlo desde pagosReales y cachearlo.
    */
+  function cacheFromPagosReales(reciboId: number) {
+    try {
+      const p = d.pagosReales.find((x) => x.reciboId === reciboId);
+      if (!p) return;
+
+      const dto: ReciboDTO = {
+        reciboId: p.reciboId,
+        folio: p.folio,
+        fechaEmision: p.fechaPago, // fallback
+        fechaPago: p.fechaPago,
+        alumnoId: d.alumnoId,
+        alumnoNombre: d.nombreCompleto, // ✅ aquí va el nombre
+        concepto: p.concepto,
+        monto: p.monto,
+        moneda: p.moneda ?? 'MXN',
+        estatusCodigo: p.cancelado ? 'CANCELADO' : 'PAGADO',
+        estatusNombre: p.cancelado ? 'Cancelado' : 'Pagado',
+        cancelado: !!p.cancelado,
+        qrPayload: undefined,
+      };
+
+      cacheReciboForPrint(dto);
+    } catch {}
+  }
+
   function openPrint(reciboId: number) {
     router.push(`/recibos/print?reciboId=${reciboId}`);
   }
@@ -121,21 +142,14 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
             setPayOpen(true);
           }}
           onReceipt={(reciboId) => {
-            // ✅ aquí NO intentamos “inventar” un DTO desde pagosReales UI,
-            // porque normalmente no trae folio/alumnoNombre/fechaEmision/etc.
-            // Si ya lo guardaste antes (por haber pagado), print lo lee del storage.
+            // ✅ MUY IMPORTANTE: cachear antes de navegar
+            cacheFromPagosReales(reciboId);
             openPrint(reciboId);
           }}
         />
       ) : null}
 
-      {d.tab === 'PAGOS' ? (
-        <PagosPanel
-          pagos={d.pagosReales}
-          // si tu PagosPanel tiene botón de recibo, aquí igual:
-          // onReceipt={(reciboId) => openPrint(reciboId)}
-        />
-      ) : null}
+      {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
 
       {d.tab === 'EXTRAS' ? (
         <ExtrasPanel
@@ -163,22 +177,18 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         onSubmit={async (payload) => {
           setPaySaving(true);
           try {
-            // ✅ POST /api/recibos -> devuelve ReciboDTO completo
             const created = await RecibosService.create(payload);
 
-            // ✅ guardamos el DTO completo para impresión
+            // ✅ guarda el DTO real del POST (aquí SI viene alumnoNombre/folio/etc.)
             cacheReciboForPrint(created);
 
-            // ✅ refresca proyección/pagos/totales (para que la fila cambie a pagado)
             await d.reload();
 
             setPayOpen(false);
             setPayRow(null);
-
-            // opcional: brinca a Pagos
             d.setTab('PAGOS');
 
-            // ✅ (modo pro) imprimir al instante al pagar:
+            // si quieres imprimir al pagar:
             // openPrint(created.reciboId);
           } finally {
             setPaySaving(false);
