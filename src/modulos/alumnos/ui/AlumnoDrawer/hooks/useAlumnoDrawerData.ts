@@ -3,271 +3,142 @@
 import { useMemo, useState } from 'react';
 import type { Alumno } from '../../../types/alumno.types';
 
+
 import type {
   DrawerTab,
-  PaymentItem,
-  PaymentMethod,
-  ProjectionItem,
+  ProjectionRow,
+  PagoRealRow,
   Totals,
 } from '../types/alumno-drawer.types';
-
-/** ===== Utils mini (mock / sin AppISP) ===== */
-function pad2(n: number) {
-  return String(n).padStart(2, '0');
-}
-
-function toISODate(d: Date) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-
-function todayISO() {
-  return toISODate(new Date());
-}
-
-function daysInMonth(year: number, monthIndex0: number) {
-  return new Date(year, monthIndex0 + 1, 0).getDate();
-}
-
-// suma meses a YYYY-MM-DD y normaliza overflow (31/feb)
-function addMonthsISO(iso: string, monthsToAdd: number) {
-  const [y, m, d] = iso.split('-').map((x) => Number(x));
-  const base = new Date(y, (m - 1) + monthsToAdd, d);
-  const safe = new Date(
-    base.getFullYear(),
-    base.getMonth(),
-    Math.min(d, daysInMonth(base.getFullYear(), base.getMonth())),
-  );
-  return toISODate(safe);
-}
+import { useAlumnoPagosResumen } from './useAlumnoPagosResumen';
 
 function cmpISO(a: string, b: string) {
   if (a === b) return 0;
   return a < b ? -1 : 1;
 }
 
-function uid(prefix = 'p') {
-  return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+function todayISO() {
+  const d = new Date();
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-/**
- * 💡 Fallback UI:
- * Si back manda fechaTermino null, nosotros la calculamos con:
- * fechaIngreso + duracionMeses
- */
-function terminoUI(alumno: Alumno, duracionMeses: number) {
-  const termino = alumno.fechaTermino;
-  if (termino) return termino;
+type Args = {
+  alumno: Alumno;
+};
 
-  const ingreso = alumno.fechaIngreso;
-  if (!ingreso || !duracionMeses) return '—';
-
-  return addMonthsISO(ingreso, duracionMeses);
-}
-
-/** ===== Hook ===== */
-export function useAlumnoDrawerData({ alumno }: { alumno: Alumno | null }) {
-  /**
-   * ✅ IMPORTANTE:
-   * No hay useEffect de “reset”.
-   * El reset lo hace React remonteando el componente por `key` en AlumnoDrawerInner.
-   */
-
+export function useAlumnoDrawerData({ alumno }: Args) {
   const [tab, setTab] = useState<DrawerTab>('RESUMEN');
 
-  /** Pagos mock local */
-  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const alumnoId = alumno.alumnoId;
+  const { data, loading, error } = useAlumnoPagosResumen(alumnoId);
 
-  /** Form: mensualidad */
-  const [payDate, setPayDate] = useState<string>(todayISO());
-  const [payMethod, setPayMethod] = useState<PaymentMethod>('EFECTIVO');
+  // Identidad
+  const nombreCompleto = alumno.nombreCompleto ?? '—';
+  const matricula = alumno.matricula ?? '—';
+  const activo = !!alumno.activo;
 
-  /** Form: extras */
-  const [extraConcept, setExtraConcept] = useState('Curso / Conferencia');
-  const [extraAmount, setExtraAmount] = useState('0');
-  const [extraDate, setExtraDate] = useState<string>(todayISO());
-  const [extraMethod, setExtraMethod] =
-    useState<PaymentMethod>('TRANSFERENCIA');
+  // Plan (preferimos lo del endpoint pagos-resumen)
+  const ingresoISO = data?.fechaIngreso ?? alumno.fechaIngreso ?? '—';
+  const terminoISO = data?.fechaTermino ?? alumno.fechaTermino ?? '—';
 
-  /** Identidad */
-  const alumnoId = alumno?.alumnoId ?? '';
-  const nombreCompleto = alumno?.nombreCompleto ?? '—';
-  const matricula = alumno?.matricula ?? '—';
-  const activo = !!alumno?.activo;
+  const precioMensual = data?.montoMensual ?? 0;
+  const montoInscripcion = data?.montoInscripcion ?? 0;
 
-  /** Datos del plan (por ahora fallback si no vienen del back) */
-  const precioMensual = Number((alumno as unknown as { precioMensual?: number })?.precioMensual ?? 0);
-  const duracionMeses = Number((alumno as unknown as { duracionMeses?: number })?.duracionMeses ?? 0);
+  // Catálogos (del alumno básico)
+  const escNombre = alumno.escolaridadNombre ?? '—';
+  const carNombre = data?.carreraNombre ?? alumno.carreraNombre ?? '—';
+  const plaNombre = '—'; // cuando llegue plantelNombre real, lo conectas
 
-  const ingresoISO = alumno?.fechaIngreso ?? '—';
-  const terminoISO = alumno ? terminoUI(alumno, duracionMeses) : '—';
+  // Pagos reales -> UI
+  const pagosReales: PagoRealRow[] = useMemo(() => {
+    const list = data?.pagosReales ?? [];
+    return list
+      .slice()
+      .sort((a, b) => cmpISO(b.fechaPago, a.fechaPago))
+      .map((p) => ({
+        reciboId: p.reciboId,
+        folio: p.folio,
+        fechaPago: p.fechaPago,
+        concepto: p.concepto,
+        monto: p.monto,
+        moneda: p.moneda,
+        estatusNombre: p.estatusNombre,
+        cancelado: p.cancelado,
+      }));
+  }, [data]);
 
-  /** Catálogos placeholders (sin AppISP) */
-  const escNombre = (alumno as unknown as { escolaridadNombre?: string })?.escolaridadNombre ?? '—';
-  const carNombre = (alumno as unknown as { carreraNombre?: string })?.carreraNombre ?? '—';
-  const plaNombre = (alumno as unknown as { plantelNombre?: string })?.plantelNombre ?? '—';
+  // Proyección -> UI
+  const projection: ProjectionRow[] = useMemo(() => {
+    const list = data?.proyeccion ?? [];
 
-  /** Pagos del alumno */
-  const alumnoPayments = useMemo(() => {
-    if (!alumnoId) return [];
-    return payments
-      .filter((p) => p.alumnoId === alumnoId)
-      .sort((a, b) => cmpISO(b.date, a.date));
-  }, [payments, alumnoId]);
+    // pagos válidos (no cancelados) para marcar filas como pagadas si aplica
+    const pagosValidos = (data?.pagosReales ?? []).filter((p) => !p.cancelado);
 
-  /** Proyección (mock) */
-  const projection = useMemo<ProjectionItem[]>(() => {
-    if (!alumnoId || !alumno) return [];
-    if (!ingresoISO || !duracionMeses || !precioMensual) return [];
-
-    const mensualidades = alumnoPayments.filter(
-      (p) => p.type === 'MENSUALIDAD',
-    );
-
-    const paidByDate = new Map<string, PaymentItem>();
-    for (const p of mensualidades) {
-      const prev = paidByDate.get(p.date);
-      if (!prev) paidByDate.set(p.date, p);
-      else if (prev.createdAt < p.createdAt) paidByDate.set(p.date, p);
+    // Estrategia simple de match:
+    // si hay un pago real con fechaPago igual a fechaVencimiento, lo marcamos pagado.
+    // (si tu back trae "periodo" o folio que permita match exacto, lo cambiamos después)
+    const paidByDueDate = new Map<string, number>(); // dueDate -> reciboId
+    for (const p of pagosValidos) {
+      paidByDueDate.set(p.fechaPago, p.reciboId);
     }
 
-    const out: ProjectionItem[] = [];
-    for (let i = 0; i < duracionMeses; i++) {
-      const due = addMonthsISO(ingresoISO, i);
-      const pay = paidByDate.get(due);
+    return list.map((x, i) => {
+      const reciboId = paidByDueDate.get(x.fechaVencimiento);
+      const isPaid = typeof reciboId === 'number';
 
-      out.push({
-        idx: i + 1,
-        dueDate: due,
-        concept: `Mensualidad ${i + 1}`,
-        amount: precioMensual,
-        status: pay ? 'PAGADO' : 'PENDIENTE',
-        method: pay?.method,
-        paidAt: pay?.date,
-        paymentId: pay?.id,
-      });
-    }
-
-    return out;
-  }, [alumno, alumnoId, alumnoPayments, ingresoISO, duracionMeses, precioMensual]);
-
-  /** Totales (mock) */
-  const totals = useMemo<Totals>(() => {
-    if (!alumnoId || !alumno) {
       return {
-        totalPlan: 0,
-        totalExtras: 0,
-        totalPagado: 0,
-        saldo: 0,
-        pagados: 0,
-        pendientes: 0,
-        vencidos: 0,
-        nextDue: null,
+        idx: i + 1,
+        periodo: x.periodo,
+        dueDate: x.fechaVencimiento,
+        conceptCode: x.conceptoCodigo,
+        amount: x.monto,
+        estado: x.estado,
+        isPaid,
+        reciboId,
       };
-    }
+    });
+  }, [data]);
 
-    const totalPlan = precioMensual * duracionMeses;
+  // Totales
+  const totals: Totals = useMemo(() => {
+    const totalPlan = data?.totalProyectado ?? 0;
+    const totalPagado = data?.totalPagado ?? 0;
+    const saldo = data?.saldoPendiente ?? 0;
 
-    const extras = alumnoPayments.filter((p) => p.type === 'EXTRA');
-    const totalExtras = extras.reduce((acc, p) => acc + p.amount, 0);
-
-    const pagosPagados = alumnoPayments.filter((p) => p.status === 'PAGADO');
-    const totalPagado = pagosPagados.reduce((acc, p) => acc + p.amount, 0);
-
-    const saldo = Math.max(0, totalPlan + totalExtras - totalPagado);
-
-    const pagados = projection.filter((x) => x.status === 'PAGADO').length;
-    const pendientes = projection.filter((x) => x.status === 'PENDIENTE').length;
+    const pagados = projection.filter((x) => x.isPaid).length;
+    const pendientes = projection.length - pagados;
 
     const t = todayISO();
     const vencidos = projection.filter(
-      (x) => x.status === 'PENDIENTE' && cmpISO(x.dueDate, t) < 0,
+      (x) => !x.isPaid && cmpISO(x.dueDate, t) < 0,
     ).length;
 
-    const nextDue = projection.find((x) => x.status === 'PENDIENTE') ?? null;
+    const nextDue =
+      projection.find((x) => !x.isPaid && cmpISO(x.dueDate, t) >= 0) ??
+      projection.find((x) => !x.isPaid) ??
+      null;
 
     return {
       totalPlan,
-      totalExtras,
       totalPagado,
       saldo,
+      totalInscripcion: montoInscripcion,
       pagados,
       pendientes,
       vencidos,
       nextDue,
     };
-  }, [alumno, alumnoId, alumnoPayments, projection, precioMensual, duracionMeses]);
-
-  /** ===== Handlers pagos (mock) ===== */
-  function addMensualidadPayment() {
-    if (!alumnoId) return;
-
-    const exists = alumnoPayments.some(
-      (p) =>
-        p.type === 'MENSUALIDAD' && p.date === payDate && p.status === 'PAGADO',
-    );
-    if (exists) return;
-
-    const item: PaymentItem = {
-      id: uid('pay'),
-      alumnoId,
-      type: 'MENSUALIDAD',
-      concept: 'Mensualidad',
-      amount: precioMensual,
-      date: payDate,
-      method: payMethod,
-      status: 'PAGADO',
-      createdAt: new Date().toISOString(),
-    };
-
-    setPayments((prev) => [item, ...prev]);
-  }
-
-  function addExtraPayment() {
-    if (!alumnoId) return;
-
-    const amt = Number(extraAmount);
-    if (!Number.isFinite(amt) || amt <= 0) return;
-
-    const item: PaymentItem = {
-      id: uid('extra'),
-      alumnoId,
-      type: 'EXTRA',
-      concept: extraConcept.trim() || 'Pago extra',
-      amount: amt,
-      date: extraDate,
-      method: extraMethod,
-      status: 'PAGADO',
-      createdAt: new Date().toISOString(),
-    };
-
-    setPayments((prev) => [item, ...prev]);
-    setExtraAmount('0');
-  }
-
-  function togglePaymentStatus(paymentId: string) {
-    setPayments((prev) =>
-      prev.map((p) =>
-        p.id === paymentId
-          ? { ...p, status: p.status === 'PAGADO' ? 'PENDIENTE' : 'PAGADO' }
-          : p,
-      ),
-    );
-  }
-
-  function removePayment(paymentId: string) {
-    setPayments((prev) => prev.filter((p) => p.id !== paymentId));
-  }
-
-  function printReceipt(paymentId: string) {
-    // mock
-    // eslint-disable-next-line no-alert
-    alert(`(Mock) Generar comprobante para: ${paymentId}`);
-  }
+  }, [data, projection, montoInscripcion]);
 
   return {
     // ui
     tab,
     setTab,
+
+    // request state
+    loading,
+    error,
 
     // identity
     alumnoId,
@@ -276,41 +147,19 @@ export function useAlumnoDrawerData({ alumno }: { alumno: Alumno | null }) {
     activo,
 
     // plan
-    precioMensual,
-    duracionMeses,
     ingresoISO,
     terminoISO,
+    precioMensual,
+    montoInscripcion,
 
-    // catalogs placeholders
+    // catalogs
     escNombre,
     carNombre,
     plaNombre,
 
-    // forms
-    payDate,
-    setPayDate,
-    payMethod,
-    setPayMethod,
-
-    extraConcept,
-    setExtraConcept,
-    extraAmount,
-    setExtraAmount,
-    extraDate,
-    setExtraDate,
-    extraMethod,
-    setExtraMethod,
-
     // data
-    alumnoPayments,
     projection,
+    pagosReales,
     totals,
-
-    // actions
-    addMensualidadPayment,
-    addExtraPayment,
-    togglePaymentStatus,
-    removePayment,
-    printReceipt,
   };
 }

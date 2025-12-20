@@ -1,32 +1,24 @@
 'use client';
 
-import { Totals } from '../../types/alumno-drawer.types';
 import s from './ResumenPanel.module.css';
-
-function formatMXN(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
-    Number.isFinite(n) ? n : 0,
-  );
-}
+import type { Totals } from '../../types/alumno-drawer.types';
 
 export default function ResumenPanel({
   totals,
   ingresoISO,
   terminoISO,
-  duracionMeses,
   precioMensual,
+  montoInscripcion,
   escNombre,
   carNombre,
   plaNombre,
   matricula,
 }: {
   totals: Totals;
-
-  ingresoISO: string;      // alumno.fechaIngreso
-  terminoISO: string;      // alumno.fechaTermino ?? calculado UI
-  duracionMeses: number;
+  ingresoISO: string;
+  terminoISO: string;
   precioMensual: number;
-
+  montoInscripcion: number;
   escNombre: string;
   carNombre: string;
   plaNombre: string;
@@ -34,49 +26,33 @@ export default function ResumenPanel({
 }) {
   return (
     <section className={s.panel}>
-      <div className={s.panelTitleRow}>
-        <div className={s.panelTitle}>Resumen</div>
-        <div className={s.panelHint}>Total, pagado y saldo pendiente.</div>
+      <div className={s.titleRow}>
+        <div className={s.title}>Resumen</div>
+        <div className={s.hint}>Plan, academia y totales.</div>
       </div>
 
       <div className={s.grid}>
         <div className={s.card}>
-          <div className={s.label}>Próximo por pagar</div>
-
-          {totals.nextDue ? (
-            <div className={s.nextPay}>
-              <div className={s.nextLeft}>
-                <span className={s.mono}>{totals.nextDue.dueDate}</span>
-                <span className={s.dot}>•</span>
-                <b>{totals.nextDue.concept}</b>
-              </div>
-              <div className={s.nextRight}>
-                <b>{formatMXN(totals.nextDue.amount)}</b>
-              </div>
-            </div>
-          ) : (
-            <div className={s.muted}>Todo el plan está pagado ✅</div>
-          )}
+          <div className={s.cardTitle}>Plan</div>
+          <div className={s.kv}><span>Ingreso</span><b className={s.mono}>{ingresoISO}</b></div>
+          <div className={s.kv}><span>Término</span><b className={s.mono}>{terminoISO}</b></div>
+          <div className={s.kv}><span>Mensualidad</span><b className={s.mono}>${precioMensual.toFixed(2)}</b></div>
+          <div className={s.kv}><span>Inscripción</span><b className={s.mono}>${montoInscripcion.toFixed(2)}</b></div>
         </div>
 
         <div className={s.card}>
-          <div className={s.label}>Plan</div>
-          <div className={s.kvGrid}>
-            <div className={s.kv}><span>Ingreso</span><b className={s.mono}>{ingresoISO || '—'}</b></div>
-            <div className={s.kv}><span>Término</span><b className={s.mono}>{terminoISO || '—'}</b></div>
-            <div className={s.kv}><span>Duración</span><b>{Number.isFinite(duracionMeses) ? `${duracionMeses} meses` : '—'}</b></div>
-            <div className={s.kv}><span>Precio mensual</span><b>{formatMXN(precioMensual)}</b></div>
-          </div>
+          <div className={s.cardTitle}>Totales</div>
+          <div className={s.kv}><span>Total proyectado</span><b className={s.mono}>${totals.totalPlan.toFixed(2)}</b></div>
+          <div className={s.kv}><span>Pagado</span><b className={s.mono}>${totals.totalPagado.toFixed(2)}</b></div>
+          <div className={s.kv}><span>Saldo</span><b className={s.mono}>${totals.saldo.toFixed(2)}</b></div>
         </div>
 
         <div className={s.card}>
-          <div className={s.label}>Academia</div>
-          <div className={s.kvGrid}>
-            <div className={s.kv}><span>Escolaridad</span><b>{escNombre || '—'}</b></div>
-            <div className={s.kv}><span>Carrera</span><b title={carNombre}>{carNombre || '—'}</b></div>
-            <div className={s.kv}><span>Plantel</span><b>{plaNombre || '—'}</b></div>
-            <div className={s.kv}><span>Matrícula</span><b className={s.mono}>{matricula || '—'}</b></div>
-          </div>
+          <div className={s.cardTitle}>Academia</div>
+          <div className={s.kv}><span>Escolaridad</span><b>{escNombre}</b></div>
+          <div className={s.kv}><span>Carrera</span><b title={carNombre}>{carNombre}</b></div>
+          <div className={s.kv}><span>Plantel</span><b>{plaNombre}</b></div>
+          <div className={s.kv}><span>Matrícula</span><b className={s.mono}>{matricula}</b></div>
         </div>
       </div>
     </section>

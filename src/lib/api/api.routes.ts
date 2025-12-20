@@ -7,6 +7,8 @@ export const API = {
 
   alumnos: {
     base: '/api/alumnos',
-    pagosResumen: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
+    byId: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}`,
+    pagosResumen: (alumnoId: string) =>
+      `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
   },
 } as const;

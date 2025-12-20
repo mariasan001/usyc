@@ -1,39 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { AlumnoPagosResumen } from '../types/alumno-pagos-resumen.types';
+import type { AlumnoPagosResumenDTO } from '../types/alumno-pagos-resumen.types';
 import { AlumnosPagosService } from '@/modulos/alumnos/services/alumnos-pagos.service';
 
-export function useAlumnoPagosResumen(alumnoId?: string) {
-  const [data, setData] = useState<AlumnoPagosResumen | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type State = {
+  data: AlumnoPagosResumenDTO | null;
+  loading: boolean;
+  error: unknown;
+};
+
+export function useAlumnoPagosResumen(alumnoId: string | null) {
+  const [st, setSt] = useState<State>({
+    data: null,
+    loading: false,
+    error: null,
+  });
 
   useEffect(() => {
     if (!alumnoId) {
-      setData(null);
-      setLoading(false);
-      setError(null);
+      setSt({ data: null, loading: false, error: null });
       return;
     }
 
     let alive = true;
-    setLoading(true);
-    setError(null);
 
-    AlumnosPagosService.getPagosResumen(alumnoId)
-      .then((res) => {
+    setSt((p) => ({ ...p, loading: true, error: null }));
+
+    AlumnosPagosService.getResumen(alumnoId)
+      .then((data) => {
         if (!alive) return;
-        setData(res);
+        setSt({ data, loading: false, error: null });
       })
-      .catch((e: unknown) => {
+      .catch((err) => {
         if (!alive) return;
-        setError(e instanceof Error ? e.message : 'Error al cargar pagos-resumen');
-        setData(null);
-      })
-      .finally(() => {
-        if (!alive) return;
-        setLoading(false);
+        setSt({ data: null, loading: false, error: err });
       });
 
     return () => {
@@ -41,5 +42,5 @@ export function useAlumnoPagosResumen(alumnoId?: string) {
     };
   }, [alumnoId]);
 
-  return { data, loading, error };
+  return st;
 }

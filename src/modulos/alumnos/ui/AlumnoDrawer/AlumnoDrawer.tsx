@@ -26,9 +26,6 @@ export default function AlumnoDrawer({
 }) {
   if (!open) return null;
 
-  // ✅ key: cuando cambia alumno, React “remonta” el inner => reset automático
-  const innerKey = alumno?.alumnoId ?? 'no-alumno';
-
   return (
     <div className={s.backdrop} onMouseDown={onClose} role="presentation">
       <aside
@@ -37,95 +34,68 @@ export default function AlumnoDrawer({
         role="dialog"
         aria-modal="true"
       >
-        <AlumnoDrawerInner key={innerKey} alumno={alumno} onClose={onClose} />
+        <DrawerHeader onClose={onClose} />
+
+        {!alumno ? (
+          <div className={s.empty}>Sin selección.</div>
+        ) : (
+          <AlumnoDrawerInner key={alumno.alumnoId} alumno={alumno} />
+        )}
       </aside>
     </div>
   );
 }
 
-function AlumnoDrawerInner({
-  alumno,
-  onClose,
-}: {
-  alumno: Alumno | null;
-  onClose: () => void;
-}) {
-  // ✅ el hook ya NO recibe `open` y ya NO hace reset con useEffect
+function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const d = useAlumnoDrawerData({ alumno });
 
   return (
-    <>
-      <DrawerHeader onClose={onClose} />
+    <div className={s.content}>
+      <IdentityPill
+        nombreCompleto={d.nombreCompleto}
+        matricula={d.matricula}
+        activo={d.activo}
+      />
 
-      {!alumno ? (
-        <div className={s.empty}>Sin selección.</div>
-      ) : (
-        <div className={s.content}>
-          <IdentityPill
-            nombreCompleto={d.nombreCompleto}
-            matricula={d.matricula}
-            activo={d.activo}
-          />
+      <StickySummary totals={d.totals} />
 
-          <StickySummary totals={d.totals} />
+      <DrawerTabs tab={d.tab} onChange={d.setTab} />
 
-          <DrawerTabs tab={d.tab} onChange={d.setTab} />
+      {d.loading ? <div className={s.mutedBox}>Cargando…</div> : null}
+      {d.error ? (
+        <div className={s.errorBox}>{String(d.error)}</div>
+      ) : null}
 
-          {d.tab === 'RESUMEN' ? (
-            <ResumenPanel
-              totals={d.totals}
-              ingresoISO={d.ingresoISO}
-              terminoISO={d.terminoISO}
-              duracionMeses={d.duracionMeses}
-              precioMensual={d.precioMensual}
-              escNombre={d.escNombre}
-              carNombre={d.carNombre}
-              plaNombre={d.plaNombre}
-              matricula={d.matricula}
-            />
-          ) : null}
+      {d.tab === 'RESUMEN' ? (
+        <ResumenPanel
+          totals={d.totals}
+          ingresoISO={d.ingresoISO}
+          terminoISO={d.terminoISO}
+          precioMensual={d.precioMensual}
+          montoInscripcion={d.montoInscripcion}
+          escNombre={d.escNombre}
+          carNombre={d.carNombre}
+          plaNombre={d.plaNombre}
+          matricula={d.matricula}
+        />
+      ) : null}
 
-          {d.tab === 'PROYECCION' ? (
-            <ProyeccionPanel
-              projection={d.projection}
-              onPay={(dueDate) => {
-                d.setTab('PAGOS');
-                d.setPayDate(dueDate);
-              }}
-              onReceipt={(paymentId) => d.printReceipt(paymentId)}
-            />
-          ) : null}
+      {d.tab === 'PROYECCION' ? (
+        <ProyeccionPanel
+          rows={d.projection}
+          onPay={(row) => {
+            // por ahora solo cambia de tab, cuando exista POST pago ya usas row.periodo
+            d.setTab('PAGOS');
+          }}
+          onReceipt={(reciboId) => {
+            alert(`(Mock) Abrir recibo: ${reciboId}`);
+          }}
+        />
+      ) : null}
 
-          {d.tab === 'PAGOS' ? (
-            <PagosPanel
-              precioMensual={d.precioMensual}
-              payDate={d.payDate}
-              setPayDate={d.setPayDate}
-              payMethod={d.payMethod}
-              setPayMethod={d.setPayMethod}
-              alumnoPayments={d.alumnoPayments}
-              onAddMensualidad={d.addMensualidadPayment}
-              onToggle={d.togglePaymentStatus}
-              onRemove={d.removePayment}
-              onPrint={d.printReceipt}
-            />
-          ) : null}
+      {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
 
-          {d.tab === 'EXTRAS' ? (
-            <ExtrasPanel
-              extraConcept={d.extraConcept}
-              setExtraConcept={d.setExtraConcept}
-              extraAmount={d.extraAmount}
-              setExtraAmount={d.setExtraAmount}
-              extraDate={d.extraDate}
-              setExtraDate={d.setExtraDate}
-              extraMethod={d.extraMethod}
-              setExtraMethod={d.setExtraMethod}
-              onAddExtra={d.addExtraPayment}
-            />
-          ) : null}
-        </div>
-      )}
-    </>
+      {d.tab === 'EXTRAS' ? <ExtrasPanel /> : null}
+    </div>
   );
 }

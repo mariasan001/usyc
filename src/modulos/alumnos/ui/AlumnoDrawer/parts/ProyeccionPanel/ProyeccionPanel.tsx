@@ -1,93 +1,64 @@
 'use client';
 
-import { ProjectionItem } from '../../types/alumno-drawer.types';
 import s from './ProyeccionPanel.module.css';
-
-function formatMXN(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
-    Number.isFinite(n) ? n : 0,
-  );
-}
-
-function todayISO() {
-  const d = new Date();
-  const pad2 = (x: number) => String(x).padStart(2, '0');
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-
-function cmpISO(a: string, b: string) {
-  if (a === b) return 0;
-  return a < b ? -1 : 1;
-}
+import type { ProjectionRow } from '../../types/alumno-drawer.types';
 
 export default function ProyeccionPanel({
-  projection,
+  rows,
   onPay,
   onReceipt,
 }: {
-  projection: ProjectionItem[];
-  onPay: (dueDate: string) => void;
-  onReceipt?: (paymentId: string) => void;
+  rows: ProjectionRow[];
+  onPay: (row: ProjectionRow) => void;
+  onReceipt: (reciboId: number) => void;
 }) {
   return (
     <section className={s.panel}>
-      <div className={s.panelTitleRow}>
-        <div className={s.panelTitle}>Proyección</div>
-        <div className={s.panelHint}>Todas las mensualidades del plan.</div>
-      </div>
+      <header className={s.header}>
+        <div>
+          <div className={s.title}>Proyección</div>
+          <div className={s.subtitle}>Calendario completo de pagos.</div>
+        </div>
+      </header>
 
-      <div className={s.list}>
-        {projection.map((p) => {
-          const isPastDue = p.status === 'PENDIENTE' && cmpISO(p.dueDate, todayISO()) < 0;
-          const tag =
-            p.status === 'PAGADO' ? (
-              <span className={`${s.tag} ${s.tagOk}`}>Pagado</span>
-            ) : (
-              <span className={`${s.tag} ${isPastDue ? s.tagWarn : s.tagIdle}`}>
-                {isPastDue ? 'Vencido' : 'Pendiente'}
-              </span>
-            );
+      {rows.length === 0 ? (
+        <div className={s.empty}>Aún no hay proyección.</div>
+      ) : (
+        <div className={s.table}>
+          <div className={s.trHead}>
+            <div>#</div>
+            <div>Periodo</div>
+            <div>Vence</div>
+            <div>Concepto</div>
+            <div>Monto</div>
+            <div>Estado</div>
+            <div className={s.right}>Acción</div>
+          </div>
 
-          return (
-            <div key={p.idx} className={s.item}>
-              <div className={s.left}>
-                <div className={s.titleLine}>
-                  <b>{p.concept}</b>
-                  <span className={s.dot}>•</span>
-                  <span className={s.mono}>{p.dueDate}</span>
-                </div>
-                <div className={s.metaLine}>
-                  {tag}
-                  {p.method ? (
-                    <>
-                      <span className={s.dot}>•</span>
-                      <span className={s.muted}>{p.method}</span>
-                    </>
-                  ) : null}
-                </div>
-              </div>
+          {rows.map((r) => (
+            <div className={s.tr} key={`${r.periodo}_${r.idx}`}>
+              <div>{r.idx}</div>
+              <div className={s.mono}>{r.periodo}</div>
+              <div className={s.mono}>{r.dueDate}</div>
+              <div>{r.conceptCode}</div>
+              <div className={s.mono}>${r.amount.toFixed(2)}</div>
+              <div>{r.isPaid ? 'Pagado' : r.estado}</div>
 
               <div className={s.right}>
-                <b className={s.amount}>{formatMXN(p.amount)}</b>
-
-                {p.paymentId ? (
-                  <button
-                    className={s.linkBtn}
-                    onClick={() => onReceipt?.(p.paymentId!)}
-                    type="button"
-                  >
-                    Comprobante
+                {r.isPaid && typeof r.reciboId === 'number' ? (
+                  <button className={s.linkBtn} onClick={() => onReceipt(r.reciboId!)}>
+                    Recibo
                   </button>
                 ) : (
-                  <button className={s.linkBtn} onClick={() => onPay(p.dueDate)} type="button">
+                  <button className={s.primaryBtn} onClick={() => onPay(r)}>
                     Pagar
                   </button>
                 )}
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
