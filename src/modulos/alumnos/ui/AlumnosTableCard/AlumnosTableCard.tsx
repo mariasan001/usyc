@@ -1,32 +1,43 @@
+// src/modulos/alumnos/ui/AlumnosTableCard/AlumnosTableCard.tsx
 'use client';
 
 import s from './AlumnosTableCard.module.css';
 
-import type { Alumno, ID } from '../../types/alumnos.tipos';
-import AlumnoFiltersBar, { type AlumnoFilters, type AlumnoFiltersUpdater } from '../AlumnoFiltersBar/AlumnoFiltersBar';
+import type { Alumno, Page } from '../../types/alumno.types';
+import AlumnoFiltersBar, {
+  type AlumnoFilters,
+  type AlumnoFiltersUpdater,
+} from '../AlumnoFiltersBar/AlumnoFiltersBar';
 import AlumnoRow from '../AlumnoRow/AlumnoRow';
 
 export default function AlumnosTableCard({
-  items,
+  pageData,
   loading,
   error,
-  total,
   filters,
   onChangeFilters,
   onOpen,
   onRefresh,
+  onPageChange,
 }: {
-  items: Alumno[];
+  pageData: Page<Alumno> | null;
   loading: boolean;
   error: string | null;
-  total: number;
 
   filters: AlumnoFilters;
   onChangeFilters: (next: AlumnoFiltersUpdater) => void;
 
-  onOpen: (id: ID) => void;
+  onOpen: (alumnoId: string) => void;
   onRefresh: () => void;
+
+  // paginación
+  onPageChange: (page: number) => void;
 }) {
+  const items = pageData?.content ?? [];
+  const total = pageData?.totalElements ?? 0;
+  const page = pageData?.number ?? 0;
+  const totalPages = pageData?.totalPages ?? 1;
+
   const hasRows = !loading && items.length > 0;
 
   return (
@@ -43,12 +54,16 @@ export default function AlumnosTableCard({
         </div>
       </header>
 
-      <AlumnoFiltersBar filters={filters} onChange={onChangeFilters} onRefresh={onRefresh} />
+      <AlumnoFiltersBar
+        filters={filters}
+        onChange={onChangeFilters}
+        onRefresh={onRefresh}
+      />
 
       {error ? <div className={s.alertError}>{error}</div> : null}
 
       <div className={s.tableWrap}>
-        {/* ✅ Head fijo (no se scrollea) */}
+        {/* Head fijo */}
         <div className={s.tableHead}>
           <div>Alumno</div>
           <div>Escolaridad</div>
@@ -59,7 +74,7 @@ export default function AlumnosTableCard({
           <div className={s.actionsCol}>Acciones</div>
         </div>
 
-        {/* ✅ Scroll SOLO del body */}
+        {/* Scroll del body */}
         <div className={s.tableBodyScroll} role="region" aria-label="Tabla de alumnos">
           {loading ? (
             <div className={s.loading}>Cargando…</div>
@@ -68,14 +83,40 @@ export default function AlumnosTableCard({
           ) : (
             <div className={s.body}>
               {items.map((a) => (
-                <AlumnoRow key={a.id} alumno={a} onOpen={() => onOpen(a.id)} />
+                <AlumnoRow
+                  key={a.alumnoId}
+                  alumno={a}
+                  onOpen={() => onOpen(a.alumnoId)}
+                />
               ))}
 
-              {/* ✅ relleno sutil para que no se vea “cortada” cuando hay pocas filas */}
               {hasRows ? <div className={s.bottomPad} /> : null}
             </div>
           )}
         </div>
+
+        {/* Paginación simple */}
+        <footer className={s.pager}>
+          <button
+            className={s.pagerBtn}
+            onClick={() => onPageChange(Math.max(0, page - 1))}
+            disabled={loading || page <= 0}
+          >
+            ← Anterior
+          </button>
+
+          <span className={s.pagerInfo}>
+            Página <b>{page + 1}</b> de <b>{Math.max(1, totalPages)}</b>
+          </span>
+
+          <button
+            className={s.pagerBtn}
+            onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
+            disabled={loading || page >= totalPages - 1}
+          >
+            Siguiente →
+          </button>
+        </footer>
       </div>
     </section>
   );

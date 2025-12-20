@@ -3,8 +3,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import { useEscolaridades } from '@/modulos/configuraciones/hooks';
-import { useCarreras } from '@/modulos/configuraciones/hooks';
+import { useEscolaridades, useCarreras } from '@/modulos/configuraciones/hooks';
 import { useAlumnoCreate } from './useAlumnoCreate';
 
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
@@ -19,30 +18,45 @@ function todayISO() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-// Helper: suma meses a YYYY-MM-DD (normaliza overflow como 31/feb)
+// suma meses a YYYY-MM-DD y normaliza overflow (31/feb)
 function addMonthsISO(iso: string, months: number) {
   const [y, m, d] = iso.split('-').map(Number);
   const base = new Date(y, (m - 1) + months, d);
-  const daysInTargetMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-  const safe = new Date(base.getFullYear(), base.getMonth(), Math.min(d, daysInTargetMonth));
-  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(safe.getDate())}`;
+  const daysInTargetMonth = new Date(
+    base.getFullYear(),
+    base.getMonth() + 1,
+    0,
+  ).getDate();
+  const safe = new Date(
+    base.getFullYear(),
+    base.getMonth(),
+    Math.min(d, daysInTargetMonth),
+  );
+  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(
+    safe.getDate(),
+  )}`;
 }
 
 function normalize(s?: string | null) {
   return (s ?? '').trim().toLowerCase();
 }
 
-// Regla negocio: carrera NO aplica para primaria/secundaria/bachillerato
-function computeCarreraRequired(esc?: Escolaridad | null) {
-  const n = normalize(esc?.nombre);
-  const c = normalize((esc as any)?.codigo); // por si tu type trae codigo
+/**
+ * Regla:
+ * - primaria / secundaria / bachillerato => NO pide carrera
+ * - de ahí para arriba (técnico/TSU/licenciatura/posgrado...) => SÍ pide carrera
+ */
+function carreraEsRequerida(esc?: Escolaridad | null) {
+  const nombre = normalize((esc as any)?.nombre);
+  const codigo = normalize((esc as any)?.codigo);
+
   const noAplica =
-    n.includes('primaria') ||
-    n.includes('secundaria') ||
-    n.includes('bach') || // bachillerato / bach
-    c === 'prim' ||
-    c === 'sec' ||
-    c === 'bach';
+    nombre.includes('primaria') ||
+    nombre.includes('secundaria') ||
+    nombre.includes('bach') || // bachillerato / bach
+    codigo === 'prim' ||
+    codigo === 'sec' ||
+    codigo === 'bach';
 
   return !noAplica;
 }
@@ -52,63 +66,52 @@ export function useAlumnoForm() {
   const escolaridadesApi = useEscolaridades({ soloActivos: true });
   const carrerasApi = useCarreras({ soloActivos: true });
 
-  // crear alumno (API)
+  // create alumno (API)
   const alumnoCreate = useAlumnoCreate();
 
-  // state del form (nombres como los usa tu AlumnoRegistroCard)
-  const [nombre, setNombre] = useState('');
+  // state del form (coincide con tu AlumnoRegistroCard)
+  const [nombreCompleto, setNombreCompleto] = useState('');
   const [matricula, setMatricula] = useState('');
-
-  // ojo: en el <select> llega string
-  const [escolaridadId, setEscolaridadIdState] = useState<string>('');
+  const [escolaridadId, setEscolaridadIdState] = useState<number | null>(null);
   const [carreraId, setCarreraId] = useState<string | null>(null);
-
   const [fechaIngreso, setFechaIngreso] = useState<string>(todayISO());
 
-  // plantel (por ahora UI local; si luego hay catálogo, lo cambiamos igual)
-  const planteles = useMemo(
-    () => [
-      { id: '1', nombre: 'Plantel 1' },
-      { id: '2', nombre: 'Plantel 2' },
-      { id: '3', nombre: 'Plantel 3' },
-    ],
-    [],
-  );
-  const [plantelId, setPlantelId] = useState<string>('1');
-
+  // UI state
   const [formError, setFormError] = useState<string | null>(null);
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // listas
+  // listas (blindadas)
   const escolaridades = useMemo(
-    () => (escolaridadesApi.items ?? []) as Escolaridad[],
+    () => ((escolaridadesApi.items ?? []) as Escolaridad[]),
     [escolaridadesApi.items],
   );
 
   const escolaridadSel = useMemo(() => {
-    const idNum = Number(escolaridadId);
-    if (!idNum) return null;
-    return escolaridades.find((e) => Number((e as any).id) === idNum) ?? null;
+    if (!escolaridadId) return null;
+    return escolaridades.find((e) => Number((e as any).id) === Number(escolaridadId)) ?? null;
   }, [escolaridadId, escolaridades]);
 
   const carreraRequired = useMemo(
-    () => computeCarreraRequired(escolaridadSel),
+    () => carreraEsRequerida(escolaridadSel),
     [escolaridadSel],
   );
 
   // carreras filtradas por escolaridadId
-  const carreras = useMemo(() => {
+  const carrerasFiltradas = useMemo(() => {
     const all = (carrerasApi.items ?? []) as Carrera[];
-    const idNum = Number(escolaridadId);
-    if (!idNum) return [];
-    return all.filter((c) => Number((c as any).escolaridadId) === idNum);
+    if (!escolaridadId) return [];
+    return all.filter((c) => Number((c as any).escolaridadId) === Number(escolaridadId));
   }, [carrerasApi.items, escolaridadId]);
 
   const carreraSel = useMemo(() => {
     if (!carreraId) return null;
-    return carreras.find((c) => String((c as any).carreraId) === String(carreraId)) ?? null;
-  }, [carreraId, carreras]);
+    return (
+      carrerasFiltradas.find(
+        (c) => String((c as any).carreraId) === String(carreraId),
+      ) ?? null
+    );
+  }, [carreraId, carrerasFiltradas]);
 
   // cálculos (solo si aplica carrera)
   const precioMensual = useMemo(() => {
@@ -128,13 +131,11 @@ export function useAlumnoForm() {
     if (!carreraRequired) return '—';
     if (!duracionMeses) return '—';
     return addMonthsISO(fechaIngreso, duracionMeses);
-  }, [fechaIngreso, duracionMeses, carreraRequired]);
+  }, [fechaIngreso, carreraRequired, duracionMeses]);
 
-  // setters “safe”
-  const setEscolaridadId = useCallback((id: string) => {
+  // cambiar escolaridad resetea carrera
+  const setEscolaridadId = useCallback((id: number | null) => {
     setEscolaridadIdState(id);
-
-    // al cambiar escolaridad, resetea carrera siempre
     setCarreraId(null);
   }, []);
 
@@ -142,31 +143,38 @@ export function useAlumnoForm() {
     setFormError(null);
     setSuccessFlash(null);
 
-    if (!nombre.trim()) return setFormError('Falta el nombre.');
+    // validaciones
+    if (!nombreCompleto.trim()) return setFormError('Falta el nombre.');
     if (!matricula.trim()) return setFormError('Falta la matrícula.');
     if (!escolaridadId) return setFormError('Selecciona una escolaridad.');
     if (!fechaIngreso) return setFormError('Selecciona fecha de ingreso.');
-    if (!plantelId) return setFormError('Selecciona un plantel.');
 
-    // ✅ si aplica carrera, es obligatoria
-    if (carreraRequired && !carreraId) return setFormError('Selecciona una carrera.');
+    if (carreraRequired && !carreraId) {
+      return setFormError('Selecciona una carrera.');
+    }
 
     setSubmitting(true);
     try {
-      // OJO: carreraId es string tipo "01"
-      const payload = {
-        nombre: nombre.trim(),
+      // ✅ payload EXACTO según swagger POST /api/alumnos
+      // Nota: si NO aplica carrera, NO la mandamos.
+      const payload: any = {
+        nombreCompleto: nombreCompleto.trim(),
         matricula: matricula.trim(),
         escolaridadId: Number(escolaridadId),
-        carreraId: carreraRequired ? String(carreraId) : null,
         fechaIngreso,
-        plantelId: String(plantelId),
       };
 
-      const created = await alumnoCreate.create(payload as any);
+      if (carreraRequired) {
+        payload.carreraId = String(carreraId);
+      }
 
-      // Ajusta el mensaje según lo que regrese tu API
-      setSuccessFlash('Alumno creado correctamente ✅');
+      const created = await alumnoCreate.create(payload);
+
+      // swagger muestra alumnoId en response
+      setSuccessFlash(
+        created?.alumnoId ? `Alumno creado: ${created.alumnoId}` : 'Alumno creado ✅',
+      );
+
       return created;
     } catch (e: any) {
       setFormError(e?.message ?? 'No se pudo crear el alumno.');
@@ -174,28 +182,26 @@ export function useAlumnoForm() {
     } finally {
       setSubmitting(false);
     }
-  }, [nombre, matricula, escolaridadId, carreraId, fechaIngreso, plantelId, carreraRequired, alumnoCreate]);
+  }, [nombreCompleto, matricula, escolaridadId, fechaIngreso, carreraRequired, carreraId, alumnoCreate]);
 
   return {
     // values
-    nombre,
+    nombreCompleto,
     matricula,
     escolaridadId,
     carreraId,
     fechaIngreso,
-    plantelId,
 
     // setters
-    setNombre,
+    setNombreCompleto,
     setMatricula,
     setEscolaridadId,
     setCarreraId,
     setFechaIngreso,
-    setPlantelId,
 
     // catalogs
     escolaridades,
-    carreras,
+    carrerasFiltradas,
 
     // rule
     carreraRequired,
@@ -213,10 +219,7 @@ export function useAlumnoForm() {
     // actions
     submit,
 
-    // planteles
-    planteles,
-
-    // loading/error por si quieres spinners
+    // loading/error
     escolaridadesLoading: escolaridadesApi.isLoading,
     carrerasLoading: carrerasApi.isLoading,
     escolaridadesError: escolaridadesApi.error,

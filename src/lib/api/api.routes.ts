@@ -1,3 +1,4 @@
+// src/lib/api/api.routes.ts
 export const API = {
   catalogos: {
     carreras: '/api/catalogos/carreras',
