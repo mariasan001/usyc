@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import s from './AlumnoDrawer.module.css';
 import type { Alumno } from '../../types/alumno.types';
@@ -12,7 +13,7 @@ import DrawerTabs from './parts/DrawerTabs/DrawerTabs';
 
 import ResumenPanel from './parts/panels/ResumenPanel';
 import ProyeccionPanel from './parts/ProyeccionPanel/ProyeccionPanel';
-import PagosPanel from './parts/PagosPanel/PagosPanel'; // ✅ ESTE FALTABA
+import PagosPanel from './parts/PagosPanel/PagosPanel';
 import ExtrasPanel from './parts/ExtrasPanel/ExtrasPanel';
 
 import PayModal from './parts/PayModal/PayModal';
@@ -35,19 +36,10 @@ export default function AlumnoDrawer({
 
   return (
     <div className={s.backdrop} onMouseDown={onClose} role="presentation">
-      <aside
-        className={s.drawer}
-        onMouseDown={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
+      <aside className={s.drawer} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <DrawerHeader onClose={onClose} />
 
-        {!alumno ? (
-          <div className={s.empty}>Sin selección.</div>
-        ) : (
-          <AlumnoDrawerInner key={alumno.alumnoId} alumno={alumno} />
-        )}
+        {!alumno ? <div className={s.empty}>Sin selección.</div> : <AlumnoDrawerInner key={alumno.alumnoId} alumno={alumno} />}
       </aside>
     </div>
   );
@@ -55,6 +47,7 @@ export default function AlumnoDrawer({
 
 function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const d = useAlumnoDrawerData({ alumno });
+  const router = useRouter();
 
   const [payOpen, setPayOpen] = useState(false);
   const [payRow, setPayRow] = useState<ProjectionRow | null>(null);
@@ -62,11 +55,7 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
 
   return (
     <div className={s.content}>
-      <IdentityPill
-        nombreCompleto={d.nombreCompleto}
-        matricula={d.matricula}
-        activo={d.activo}
-      />
+      <IdentityPill nombreCompleto={d.nombreCompleto} matricula={d.matricula} activo={d.activo} />
 
       <StickySummary totals={d.totals} />
       <DrawerTabs tab={d.tab} onChange={d.setTab} />
@@ -88,14 +77,18 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         />
       ) : null}
 
-    {d.tab === 'PROYECCION' ? (
-  <ProyeccionPanel
-    rows={d.projection}
-    onPay={(row) => { setPayRow(row); setPayOpen(true); }}
-    onReceipt={(reciboId) => alert(`(Mock) Abrir recibo: ${reciboId}`)}
-  />
-) : null}
-
+      {d.tab === 'PROYECCION' ? (
+        <ProyeccionPanel
+          rows={d.projection}
+          onPay={(row) => {
+            setPayRow(row);
+            setPayOpen(true);
+          }}
+          onReceipt={(reciboId) => {
+            router.push(`/recibos/print?reciboId=${reciboId}`);
+          }}
+        />
+      ) : null}
 
       {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
 
@@ -125,15 +118,17 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         onSubmit={async (payload) => {
           setPaySaving(true);
           try {
-            await RecibosService.create(payload);
+            const created = await RecibosService.create(payload);
 
-            // ✅ refresca proyección/pagos/totales
+            // refresca proyección/pagos/totales
             await d.reload();
 
             setPayOpen(false);
             setPayRow(null);
 
-            // opcional: brinca a Pagos
+            // ✅ opcional: imprimir al instante
+            // router.push(`/recibos/print?reciboId=${created.reciboId}`);
+
             d.setTab('PAGOS');
           } finally {
             setPaySaving(false);

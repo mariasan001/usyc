@@ -1,10 +1,10 @@
 export type ReciboCreateDTO = {
   alumnoId: string;
-  concepto: string;       // INSCRIPCION | MENSUALIDAD | OTRO | etc
-  montoManual?: number;   // requerido si concepto === OTRO
-  fechaPago: string;      // YYYY-MM-DD
+  concepto: string;      // INSCRIPCION | MENSUALIDAD | OTRO | etc
+  montoManual: number;   // ✅ SIEMPRE, nunca 0
+  fechaPago: string;     // YYYY-MM-DD
+  tipoPagoId: number;    // ✅ SIEMPRE
   comentario?: string;
-  // metodo?: 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA' (listo para el futuro)
 };
 
 export type ReciboDTO = {

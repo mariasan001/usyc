@@ -361,3 +361,9 @@
     page-break-inside: avoid;
   }
 }
+/* ReceiptDocument.module.css */
+.qrImg{
+  display: block;
+  width: 120px;
+  height: 120px;
+}

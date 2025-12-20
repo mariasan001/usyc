@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import Image from 'next/image';
-import QRCode from 'qrcode';
 
 import type { Receipt } from '@/modules/receipts/types/receipt.types';
 import type { ReceiptTemplateSettings } from '@/modules/receipts/utils/receipt-template.settings';
 
 import s from './ReceiptDocument.module.css';
-import { encodeReceiptQr } from '@/qr/utils/qr.codec';
 
 function fmtMoney(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
@@ -19,14 +17,12 @@ function pad(n: string, size = 5) {
 }
 
 function splitFolio(folio: string) {
-  // Soporta "USYC-000001" o "000001" o "FOL-202601-0007"
   const parts = (folio ?? '').split('-');
   const raw = parts.length > 1 ? parts[parts.length - 1] : folio;
   return pad(raw.replace(/\D/g, '') || raw);
 }
 
 function safeDate(v?: string) {
-  // Si viene vacío, no rompas el layout
   return v?.trim() ? v : '—';
 }
 
@@ -35,70 +31,48 @@ function safeText(v?: string | null, fallback = '—') {
   return t ? t : fallback;
 }
 
-function QrImg({ value }: { value: string }) {
-  const [src, setSrc] = useState<string>('');
-
-  useEffect(() => {
-    let alive = true;
-
-    (async () => {
-      try {
-        const dataUrl = await QRCode.toDataURL(value, {
-          margin: 1,
-          width: 180,
-          errorCorrectionLevel: 'M',
-        });
-        if (alive) setSrc(dataUrl);
-      } catch {
-        if (alive) setSrc('');
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [value]);
-
-  if (!src) return <div className={s.qrFallback}>QR</div>;
-
-  return <Image alt="QR" src={src} width={120} height={120} className={s.qrImg} />;
+function QrImgApi({ src }: { src: string }) {
+  // ✅ Con <img> evitamos configuración extra de next/image para dominios.
+  return (
+    <img
+      src={src}
+      alt="QR del recibo"
+      className={s.qrImg}
+      style={{ width: 120, height: 120, objectFit: 'contain' }}
+    />
+  );
 }
 
 export default function ReceiptDocument({
   receipt,
   settings,
+  reciboId,
 }: {
   receipt: Receipt;
   settings: ReceiptTemplateSettings;
+
+  // ✅ nuevo: lo necesitamos para el endpoint del QR
+  reciboId: number;
 }) {
   const folioDisplay = useMemo(() => splitFolio(receipt.folio), [receipt.folio]);
-  const qrValue = useMemo(() => encodeReceiptQr(receipt.folio), [receipt.folio]);
+
+  const qrSrc = useMemo(() => {
+    return `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/recibos/${reciboId}/qr`;
+  }, [reciboId]);
 
   const cancelled = receipt.status === 'CANCELLED';
-
-  // ✅ con tu type actual, concepto es opcional
   const concepto = safeText(receipt.concepto, 'Colegiatura');
-
-  // ✅ en emisión/pago real, fechaPago puede ser hoy o lo que decidas
   const fecha = safeDate(receipt.fechaPago);
 
   return (
     <div className={s.page}>
       <div className={s.sheet}>
-        {/* Watermark cancelado */}
         {cancelled ? <div className={s.watermark}>CANCELADO</div> : null}
 
-        {/* Top bar */}
         <div className={s.top}>
           <div className={s.logoBox}>
             {settings.logoDataUrl ? (
-              <Image
-                alt="Logo"
-                src={settings.logoDataUrl}
-                width={120}
-                height={120}
-                className={s.logo}
-              />
+              <Image alt="Logo" src={settings.logoDataUrl} width={120} height={120} className={s.logo} />
             ) : (
               <div className={s.logoPlaceholder}>LOGO</div>
             )}
@@ -134,7 +108,6 @@ export default function ReceiptDocument({
           </div>
         </div>
 
-        {/* Main info box */}
         <div className={s.infoBox}>
           <div className={s.row2}>
             <div className={s.field}>
@@ -177,11 +150,11 @@ export default function ReceiptDocument({
           ) : null}
         </div>
 
-        {/* Bottom */}
         <div className={s.bottom}>
           <div className={s.qrBlock}>
             <div className={s.qrFrame}>
-              <QrImg value={qrValue} />
+              {/* ✅ QR real desde API */}
+              <QrImgApi src={qrSrc} />
             </div>
             <div className={s.scanMe}>
               <span className={s.scanDot} />

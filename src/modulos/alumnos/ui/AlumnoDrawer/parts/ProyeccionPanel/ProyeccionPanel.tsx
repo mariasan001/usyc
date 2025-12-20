@@ -10,6 +10,8 @@ export default function ProyeccionPanel({
 }: {
   rows: ProjectionRow[];
   onPay: (row: ProjectionRow) => void;
+
+  // ✅ abre pantalla de impresión
   onReceipt: (reciboId: number) => void;
 }) {
   return (
@@ -35,39 +37,42 @@ export default function ProyeccionPanel({
             <div className={s.right}>Acción</div>
           </div>
 
-          {rows.map((r) => (
-            <div className={s.tr} key={`${r.periodo}_${r.idx}`}>
-              <div>{r.idx}</div>
-              <div className={s.mono}>{r.periodo}</div>
-              <div className={s.mono}>{r.dueDate}</div>
-              <div>{r.conceptCode}</div>
-              <div className={`${s.mono} ${s.right}`}>${r.amount.toFixed(2)}</div>
+          {rows.map((r) => {
+            const key = `${r.periodo}_${r.idx}`;
+            const isPaid = !!r.isPaid;
+            const hasReciboId = typeof r.reciboId === 'number';
 
-              <div className={r.isPaid ? s.paid : s.pending}>
-                {r.isPaid ? 'Pagado' : r.estado}
-              </div>
+            return (
+              <div className={s.tr} key={key}>
+                <div>{r.idx}</div>
+                <div className={s.mono}>{r.periodo}</div>
+                <div className={s.mono}>{r.dueDate}</div>
+                <div>{r.conceptCode}</div>
+                <div className={`${s.mono} ${s.right}`}>${r.amount.toFixed(2)}</div>
 
-              <div className={s.right}>
-                {r.isPaid && typeof r.reciboId === 'number' ? (
-                  <button
-                    className={s.linkBtn}
-                    type="button"
-                    onClick={() => onReceipt(r.reciboId!)}
-                  >
-                    Recibo
-                  </button>
-                ) : (
-                  <button
-                    className={s.primaryBtn}
-                    type="button"
-                    onClick={() => onPay(r)}
-                  >
-                    Pagar
-                  </button>
-                )}
+                <div className={isPaid ? s.paid : s.pending}>
+                  {isPaid ? 'Pagado' : r.estado}
+                </div>
+
+                <div className={s.right}>
+                  {isPaid && hasReciboId ? (
+                    <button
+                      className={s.linkBtn}
+                      type="button"
+                      onClick={() => onReceipt(r.reciboId!)}
+                      title={`Imprimir comprobante #${r.reciboId}`}
+                    >
+                      Imprimir comprobante
+                    </button>
+                  ) : (
+                    <button className={s.primaryBtn} type="button" onClick={() => onPay(r)}>
+                      Pagar
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
