@@ -1,38 +1,59 @@
+// src/modulos/alumnos/hooks/useAlumnoById.ts
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { AlumnosService } from '../services/alumnos.service';
 import type { Alumno } from '../types/alumno.types';
 
-export function useAlumnoById() {
-  const [item, setItem] = useState<Alumno | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<unknown>(null);
+type State = {
+  loading: boolean;
+  error: string | null;
+  data: Alumno | null;
+};
 
-  const getById = useCallback(async (alumnoId: string) => {
-    setIsLoading(true);
-    setError(null);
+export function useAlumnoById() {
+  const cacheRef = useRef<Map<string, Alumno>>(new Map());
+
+  const [state, setState] = useState<State>({
+    loading: false,
+    error: null,
+    data: null,
+  });
+
+  const fetchById = useCallback(async (alumnoId: string) => {
+    if (!alumnoId) return;
+
+    // ✅ cache
+    const cached = cacheRef.current.get(alumnoId);
+    if (cached) {
+      setState({ loading: false, error: null, data: cached });
+      return cached;
+    }
+
+    setState((s) => ({ ...s, loading: true, error: null }));
+
     try {
-      const res = await AlumnosService.getById(alumnoId);
-      setItem(res);
-      return res;
-    } catch (e) {
-      setError(e);
-      setItem(null);
+      const data = await AlumnosService.getById(alumnoId);
+      cacheRef.current.set(alumnoId, data);
+      setState({ loading: false, error: null, data });
+      return data;
+    } catch (e: any) {
+      setState({
+        loading: false,
+        error: e?.message ?? 'No se pudo cargar el alumno.',
+        data: null,
+      });
       throw e;
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
-  const reset = useCallback(() => {
-    setItem(null);
-    setError(null);
-    setIsLoading(false);
+  const clear = useCallback(() => {
+    setState({ loading: false, error: null, data: null });
   }, []);
 
-  return useMemo(
-    () => ({ item, isLoading, error, getById, reset }),
-    [item, isLoading, error, getById, reset],
-  );
+  return {
+    ...state,
+    fetchById,
+    clear,
+  };
 }

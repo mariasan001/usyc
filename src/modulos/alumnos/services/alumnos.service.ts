@@ -4,9 +4,9 @@ import { API } from '@/lib/api/api.routes';
 import type { Alumno, AlumnoCreate, Page } from '../types/alumno.types';
 
 export type AlumnosListParams = {
-  page?: number;
-  size?: number;
-  sort?: string | string[];
+  page?: number;            // 0-based
+  size?: number;            // ej 20
+  sort?: string | string[]; // ej "nombreCompleto,asc" o ["nombreCompleto,asc","matricula,desc"]
 };
 
 function qs(params?: Record<string, any>) {
@@ -24,12 +24,22 @@ function qs(params?: Record<string, any>) {
 }
 
 export const AlumnosService = {
+  // POST /api/alumnos
   create: (payload: AlumnoCreate) =>
     api<Alumno>(API.alumnos.base, { method: 'POST', body: payload }),
 
+  // GET /api/alumnos/{alumnoId}
   getById: (alumnoId: string) =>
     api<Alumno>(`${API.alumnos.base}/${encodeURIComponent(alumnoId)}`),
 
-  list: (params?: AlumnosListParams) =>
-    api<Page<Alumno>>(`${API.alumnos.base}${qs(params)}`),
+  // GET /api/alumnos?page=0&size=20&sort=nombreCompleto,asc
+  list: (params?: AlumnosListParams) => {
+    const safe: AlumnosListParams = {
+      page: params?.page ?? 0,
+      size: params?.size ?? 20,
+      sort: params?.sort,
+    };
+
+    return api<Page<Alumno>>(`${API.alumnos.base}${qs(safe)}`);
+  },
 };
