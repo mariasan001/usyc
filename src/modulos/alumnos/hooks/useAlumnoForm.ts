@@ -2,82 +2,139 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import type { AlumnoCreatePayload, ID } from '../types/alumnos.tipos';
 
-import { ESCOLARIDADES, PLANTELES, getCarrerasPorEscolaridad } from '../constants/catalogos.constants';
-import { calcularDuracionMeses, calcularFechaTermino, calcularPrecioMensual } from '../utils/alumnos-calculos.utils';
-import { normalizarMatricula, requiereCarrera, validarPayload } from '../utils/alumnos-form.utils';
+import { useEscolaridades } from '@/modulos/configuraciones/hooks';
+import { useCarreras } from '@/modulos/configuraciones/hooks';
+import { useAlumnoCreate } from './useAlumnoCreate';
 
-type SubmitFn = (payload: AlumnoCreatePayload) => Promise<any>;
+import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
+import type { Carrera } from '@/modulos/configuraciones/types/carreras.types';
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
 
 function todayISO() {
   const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-export function useAlumnoForm(onSubmit: SubmitFn) {
+// Helper: suma meses a YYYY-MM-DD (normaliza overflow como 31/feb)
+function addMonthsISO(iso: string, months: number) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const base = new Date(y, (m - 1) + months, d);
+  const daysInTargetMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const safe = new Date(base.getFullYear(), base.getMonth(), Math.min(d, daysInTargetMonth));
+  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(safe.getDate())}`;
+}
+
+function normalize(s?: string | null) {
+  return (s ?? '').trim().toLowerCase();
+}
+
+// Regla negocio: carrera NO aplica para primaria/secundaria/bachillerato
+function computeCarreraRequired(esc?: Escolaridad | null) {
+  const n = normalize(esc?.nombre);
+  const c = normalize((esc as any)?.codigo); // por si tu type trae codigo
+  const noAplica =
+    n.includes('primaria') ||
+    n.includes('secundaria') ||
+    n.includes('bach') || // bachillerato / bach
+    c === 'prim' ||
+    c === 'sec' ||
+    c === 'bach';
+
+  return !noAplica;
+}
+
+export function useAlumnoForm() {
+  // catálogos (API)
+  const escolaridadesApi = useEscolaridades({ soloActivos: true });
+  const carrerasApi = useCarreras({ soloActivos: true });
+
+  // crear alumno (API)
+  const alumnoCreate = useAlumnoCreate();
+
+  // state del form (nombres como los usa tu AlumnoRegistroCard)
   const [nombre, setNombre] = useState('');
   const [matricula, setMatricula] = useState('');
-  const [escolaridadId, setEscolaridadId] = useState<ID>(ESCOLARIDADES[0]?.id ?? 'E1');
-  const [carreraId, setCarreraId] = useState<ID | null>(null);
-  const [plantelId, setPlantelId] = useState<ID>(PLANTELES[0]?.id ?? 'P1');
+
+  // ojo: en el <select> llega string
+  const [escolaridadId, setEscolaridadIdState] = useState<string>('');
+  const [carreraId, setCarreraId] = useState<string | null>(null);
+
   const [fechaIngreso, setFechaIngreso] = useState<string>(todayISO());
 
-  // futuro
-  const [pagoInicialAplica, setPagoInicialAplica] = useState(false);
-  const [pagoInicialMonto, setPagoInicialMonto] = useState<number>(0);
-
-  const carreras = useMemo(() => getCarrerasPorEscolaridad(escolaridadId), [escolaridadId]);
-
-  const carreraRequired = useMemo(() => requiereCarrera(escolaridadId), [escolaridadId]);
-
-  // asegurar consistencia: si cambia escolaridad y ya no aplica carrera, limpiamos
-  const safeCarreraId = useMemo(() => {
-    if (!carreraRequired) return null;
-    return carreraId;
-  }, [carreraRequired, carreraId]);
-
-  const duracionMeses = useMemo(() => {
-    return calcularDuracionMeses({ escolaridadId, carreraId: safeCarreraId });
-  }, [escolaridadId, safeCarreraId]);
-
-  const precioMensual = useMemo(() => {
-    return calcularPrecioMensual({
-      escolaridadId,
-      carreraId: safeCarreraId,
-      plantelId,
-      duracionMeses,
-    });
-  }, [escolaridadId, safeCarreraId, plantelId, duracionMeses]);
-
-  const fechaTermino = useMemo(() => {
-    return calcularFechaTermino(fechaIngreso, duracionMeses);
-  }, [fechaIngreso, duracionMeses]);
-
-  const payload: AlumnoCreatePayload = useMemo(
-    () => ({
-      nombre,
-      matricula: normalizarMatricula(matricula),
-      escolaridadId,
-      carreraId: safeCarreraId,
-      plantelId,
-      fechaIngreso,
-      pagoInicialAplica,
-      pagoInicialMonto,
-    }),
-    [nombre, matricula, escolaridadId, safeCarreraId, plantelId, fechaIngreso, pagoInicialAplica, pagoInicialMonto]
+  // plantel (por ahora UI local; si luego hay catálogo, lo cambiamos igual)
+  const planteles = useMemo(
+    () => [
+      { id: '1', nombre: 'Plantel 1' },
+      { id: '2', nombre: 'Plantel 2' },
+      { id: '3', nombre: 'Plantel 3' },
+    ],
+    [],
   );
+  const [plantelId, setPlantelId] = useState<string>('1');
 
-  const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const setEscolaridadSafe = useCallback((id: ID) => {
-    setEscolaridadId(id);
-    // reset carrera cuando cambias escolaridad
+  // listas
+  const escolaridades = useMemo(
+    () => (escolaridadesApi.items ?? []) as Escolaridad[],
+    [escolaridadesApi.items],
+  );
+
+  const escolaridadSel = useMemo(() => {
+    const idNum = Number(escolaridadId);
+    if (!idNum) return null;
+    return escolaridades.find((e) => Number((e as any).id) === idNum) ?? null;
+  }, [escolaridadId, escolaridades]);
+
+  const carreraRequired = useMemo(
+    () => computeCarreraRequired(escolaridadSel),
+    [escolaridadSel],
+  );
+
+  // carreras filtradas por escolaridadId
+  const carreras = useMemo(() => {
+    const all = (carrerasApi.items ?? []) as Carrera[];
+    const idNum = Number(escolaridadId);
+    if (!idNum) return [];
+    return all.filter((c) => Number((c as any).escolaridadId) === idNum);
+  }, [carrerasApi.items, escolaridadId]);
+
+  const carreraSel = useMemo(() => {
+    if (!carreraId) return null;
+    return carreras.find((c) => String((c as any).carreraId) === String(carreraId)) ?? null;
+  }, [carreraId, carreras]);
+
+  // cálculos (solo si aplica carrera)
+  const precioMensual = useMemo(() => {
+    if (!carreraRequired) return 0;
+    return Number((carreraSel as any)?.montoMensual ?? 0);
+  }, [carreraRequired, carreraSel]);
+
+  const duracionMeses = useMemo(() => {
+    if (!carreraRequired) return 0;
+    const a = Number((carreraSel as any)?.duracionAnios ?? 0);
+    const m = Number((carreraSel as any)?.duracionMeses ?? 0);
+    return a * 12 + m;
+  }, [carreraRequired, carreraSel]);
+
+  const fechaTermino = useMemo(() => {
+    if (!fechaIngreso) return '—';
+    if (!carreraRequired) return '—';
+    if (!duracionMeses) return '—';
+    return addMonthsISO(fechaIngreso, duracionMeses);
+  }, [fechaIngreso, duracionMeses, carreraRequired]);
+
+  // setters “safe”
+  const setEscolaridadId = useCallback((id: string) => {
+    setEscolaridadIdState(id);
+
+    // al cambiar escolaridad, resetea carrera siempre
     setCarreraId(null);
   }, []);
 
@@ -85,73 +142,84 @@ export function useAlumnoForm(onSubmit: SubmitFn) {
     setFormError(null);
     setSuccessFlash(null);
 
-    const val = validarPayload(payload);
-    if (!val.ok) {
-      setFormError(val.message);
-      return null;
-    }
+    if (!nombre.trim()) return setFormError('Falta el nombre.');
+    if (!matricula.trim()) return setFormError('Falta la matrícula.');
+    if (!escolaridadId) return setFormError('Selecciona una escolaridad.');
+    if (!fechaIngreso) return setFormError('Selecciona fecha de ingreso.');
+    if (!plantelId) return setFormError('Selecciona un plantel.');
 
+    // ✅ si aplica carrera, es obligatoria
+    if (carreraRequired && !carreraId) return setFormError('Selecciona una carrera.');
+
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-      const created = await onSubmit(payload);
+      // OJO: carreraId es string tipo "01"
+      const payload = {
+        nombre: nombre.trim(),
+        matricula: matricula.trim(),
+        escolaridadId: Number(escolaridadId),
+        carreraId: carreraRequired ? String(carreraId) : null,
+        fechaIngreso,
+        plantelId: String(plantelId),
+      };
 
-      setSuccessFlash('Alumno generado ✅');
-      // reset leve (mantén plantel y escolaridad para captura rápida)
-      setNombre('');
-      setMatricula('');
-      setCarreraId(null);
-      setPagoInicialAplica(false);
-      setPagoInicialMonto(0);
+      const created = await alumnoCreate.create(payload as any);
 
+      // Ajusta el mensaje según lo que regrese tu API
+      setSuccessFlash('Alumno creado correctamente ✅');
       return created;
     } catch (e: any) {
       setFormError(e?.message ?? 'No se pudo crear el alumno.');
-      return null;
+      throw e;
     } finally {
       setSubmitting(false);
-      setTimeout(() => setSuccessFlash(null), 1800);
     }
-  }, [onSubmit, payload]);
+  }, [nombre, matricula, escolaridadId, carreraId, fechaIngreso, plantelId, carreraRequired, alumnoCreate]);
 
   return {
-    // options
-    escolaridades: ESCOLARIDADES,
-    planteles: PLANTELES,
-    carreras,
-
-    // values + setters
+    // values
     nombre,
-    setNombre,
     matricula,
-    setMatricula,
-
     escolaridadId,
-    setEscolaridadId: setEscolaridadSafe,
-
-    carreraId: safeCarreraId,
-    setCarreraId,
-
+    carreraId,
+    fechaIngreso,
     plantelId,
+
+    // setters
+    setNombre,
+    setMatricula,
+    setEscolaridadId,
+    setCarreraId,
+    setFechaIngreso,
     setPlantelId,
 
-    fechaIngreso,
-    setFechaIngreso,
+    // catalogs
+    escolaridades,
+    carreras,
 
-    pagoInicialAplica,
-    setPagoInicialAplica,
-    pagoInicialMonto,
-    setPagoInicialMonto,
+    // rule
+    carreraRequired,
 
     // computed
-    carreraRequired,
-    duracionMeses,
     precioMensual,
+    duracionMeses,
     fechaTermino,
 
-    // submit state
-    submitting,
+    // ui state
     formError,
     successFlash,
+    submitting,
+
+    // actions
     submit,
+
+    // planteles
+    planteles,
+
+    // loading/error por si quieres spinners
+    escolaridadesLoading: escolaridadesApi.isLoading,
+    carrerasLoading: carrerasApi.isLoading,
+    escolaridadesError: escolaridadesApi.error,
+    carrerasError: carrerasApi.error,
   };
 }

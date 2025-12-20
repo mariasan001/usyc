@@ -145,22 +145,22 @@ export default function ConfiguracionCatalogosPage() {
       </section>
 
       {modal.open && (
-  <CatalogModal
-    catalog={modal.catalog}
-    mode={modal.mode}
-    initialValue={modal.item}
-    escolaridadesOptions={escolaridades.items} // ✅ para el select
-    isSaving={
-      modal.catalog === 'escolaridades'
-        ? escolaridades.isSaving
-        : modal.catalog === 'carreras'
-        ? carreras.isSaving
-        : estatus.isSaving
-    }
-    onClose={() => setModal({ open: false })}
-    onSave={handleSave}
-  />
-)}
+        <CatalogModal
+          catalog={modal.catalog}
+          mode={modal.mode}
+          initialValue={modal.item}
+          escolaridadesOptions={escolaridades.items} // ✅ para el select
+          isSaving={
+            modal.catalog === 'escolaridades'
+              ? escolaridades.isSaving
+              : modal.catalog === 'carreras'
+                ? carreras.isSaving
+                : estatus.isSaving
+          }
+          onClose={() => setModal({ open: false })}
+          onSave={handleSave}
+        />
+      )}
 
     </div>
   );
