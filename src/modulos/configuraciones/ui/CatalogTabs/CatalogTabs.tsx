@@ -1,9 +1,12 @@
-// src/modules/configuraciones/catalogos/ui/CatalogTabs/CatalogTabs.tsx
 'use client';
 
 import s from './CatalogTabs.module.css';
 
-export type CatalogKey = 'escolaridades' | 'carreras' | 'estatusRecibo';
+export type CatalogKey =
+  | 'escolaridades'
+  | 'carreras'
+  | 'estatusRecibo'
+  | 'conceptosPago';
 
 type Props = {
   value: CatalogKey;
@@ -14,6 +17,7 @@ const TABS: Array<{ key: CatalogKey; label: string }> = [
   { key: 'escolaridades', label: 'Escolaridades' },
   { key: 'carreras', label: 'Carreras' },
   { key: 'estatusRecibo', label: 'Estatus Recibo' },
+  { key: 'conceptosPago', label: 'Conceptos de Pago' },
 ];
 
 export default function CatalogTabs({ value, onChange }: Props) {
@@ -30,7 +34,7 @@ export default function CatalogTabs({ value, onChange }: Props) {
             aria-selected={isActive}
             className={`${s.tab} ${isActive ? s.active : ''}`}
             onClick={() => onChange(t.key)}
-            disabled={isActive} // opcional, puedes quitarlo si no te gusta
+            disabled={isActive}
           >
             {t.label}
           </button>

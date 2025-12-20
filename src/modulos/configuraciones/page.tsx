@@ -1,34 +1,52 @@
-// src/modules/configuraciones/catalogos/page/ConfiguracionCatalogosPage.tsx
 'use client';
 
 import { useMemo, useState } from 'react';
 
-
 import s from './ConfiguracionCatalogosPage.module.css';
-import { useCarreras, useEscolaridades } from '@/modulos/configuraciones/hooks';
-import { useEstatusRecibo } from '@/modulos/configuraciones/hooks/useEstatusRecibo';
+
 import CatalogTabs, { CatalogKey } from '@/modulos/configuraciones/ui/CatalogTabs/CatalogTabs';
 import CatalogTable from '@/modulos/configuraciones/ui/CatalogTable/CatalogTable';
 import CatalogModal from '@/modulos/configuraciones/ui/CatalogModal/CatalogModal';
-import { Escolaridad, EscolaridadCreate, EscolaridadUpdate } from '@/modulos/configuraciones/types/escolaridades.types';
-import { Carrera, CarreraCreate, CarreraUpdate } from '@/modulos/configuraciones/types/carreras.types';
-import { EstatusRecibo, EstatusReciboCreate, EstatusReciboUpdate } from '@/modulos/configuraciones/types/estatusRecibo.types';
+
+import { useCarreras, useEscolaridades } from '@/modulos/configuraciones/hooks';
+import { useEstatusRecibo } from '@/modulos/configuraciones/hooks/useEstatusRecibo';
+import { useConceptosPago } from '@/modulos/configuraciones/hooks/useConceptosPago';
+
+import type {
+  Escolaridad,
+  EscolaridadCreate,
+  EscolaridadUpdate,
+} from '@/modulos/configuraciones/types/escolaridades.types';
+
+import type { Carrera, CarreraCreate, CarreraUpdate } from '@/modulos/configuraciones/types/carreras.types';
+
+import type {
+  EstatusRecibo,
+  EstatusReciboCreate,
+  EstatusReciboUpdate,
+} from '@/modulos/configuraciones/types/estatusRecibo.types';
+
+import type {
+  ConceptoPago,
+  ConceptoPagoCreate,
+  ConceptoPagoUpdate,
+} from '@/modulos/configuraciones/types/conceptosPago.types';
 
 type ModalState =
   | { open: false }
-  | { open: true; mode: 'create' | 'edit'; catalog: CatalogKey; item?: any };
+  | { open: true; mode: 'create' | 'edit'; catalog: CatalogKey; item?: unknown };
 
 export default function ConfiguracionCatalogosPage() {
   const [tab, setTab] = useState<CatalogKey>('escolaridades');
   const [soloActivos, setSoloActivos] = useState(true);
 
   const escolaridades = useEscolaridades({ soloActivos });
-  const carreras = useCarreras({ soloActivos }); // si luego filtras por escolaridadId, se setea params
+  const carreras = useCarreras({ soloActivos });
   const estatus = useEstatusRecibo({ soloActivos });
+  const conceptos = useConceptosPago({ soloActivos });
 
   const [modal, setModal] = useState<ModalState>({ open: false });
 
-  // 🔥 data “normalizada” para la tabla
   const current = useMemo(() => {
     if (tab === 'escolaridades') {
       return {
@@ -60,6 +78,21 @@ export default function ConfiguracionCatalogosPage() {
       };
     }
 
+    if (tab === 'conceptosPago') {
+      return {
+        title: 'Conceptos de Pago',
+        items: conceptos.items,
+        isLoading: conceptos.isLoading,
+        isSaving: conceptos.isSaving,
+        error: conceptos.error,
+        onReload: conceptos.reload,
+        onCreate: () => setModal({ open: true, mode: 'create', catalog: tab }),
+        onEdit: (item: ConceptoPago) => setModal({ open: true, mode: 'edit', catalog: tab, item }),
+        onToggleActive: (item: ConceptoPago) =>
+          item.activo ? conceptos.desactivar(item.conceptoId) : conceptos.activar(item.conceptoId),
+      };
+    }
+
     return {
       title: 'Estatus de Recibo',
       items: estatus.items,
@@ -72,10 +105,9 @@ export default function ConfiguracionCatalogosPage() {
       onToggleActive: (item: EstatusRecibo) =>
         item.activo ? estatus.desactivar(item.id) : estatus.activar(item.id),
     };
-  }, [tab, soloActivos, escolaridades, carreras, estatus]);
+  }, [tab, escolaridades, carreras, estatus, conceptos]);
 
-  async function handleSave(payload: any) {
-    // modal.mode + modal.catalog definen qué llamar
+  async function handleSave(payload: unknown) {
     if (!modal.open) return;
 
     if (modal.catalog === 'escolaridades') {
@@ -91,6 +123,14 @@ export default function ConfiguracionCatalogosPage() {
         await carreras.create(payload as CarreraCreate);
       } else {
         await carreras.update((modal.item as Carrera).carreraId, payload as CarreraUpdate);
+      }
+    }
+
+    if (modal.catalog === 'conceptosPago') {
+      if (modal.mode === 'create') {
+        await conceptos.create(payload as ConceptoPagoCreate);
+      } else {
+        await conceptos.update((modal.item as ConceptoPago).conceptoId, payload as ConceptoPagoUpdate);
       }
     }
 
@@ -110,7 +150,7 @@ export default function ConfiguracionCatalogosPage() {
       <header className={s.header}>
         <div className={s.titleBlock}>
           <h1 className={s.h1}>Configuración · Catálogos</h1>
-          <p className={s.subtitle}>Administra escolaridades, carreras y estatus.</p>
+          <p className={s.subtitle}>Administra escolaridades, carreras, estatus y conceptos de pago.</p>
         </div>
 
         <div className={s.actions}>
@@ -149,19 +189,20 @@ export default function ConfiguracionCatalogosPage() {
           catalog={modal.catalog}
           mode={modal.mode}
           initialValue={modal.item}
-          escolaridadesOptions={escolaridades.items} // ✅ para el select
+          escolaridadesOptions={escolaridades.items}
           isSaving={
             modal.catalog === 'escolaridades'
               ? escolaridades.isSaving
               : modal.catalog === 'carreras'
                 ? carreras.isSaving
-                : estatus.isSaving
+                : modal.catalog === 'conceptosPago'
+                  ? conceptos.isSaving
+                  : estatus.isSaving
           }
           onClose={() => setModal({ open: false })}
           onSave={handleSave}
         />
       )}
-
     </div>
   );
 }

@@ -36,60 +36,83 @@
   font-size: 13px;
 }
 
-/* table wrapper */
-.table{
+/* list */
+.list{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* row card */
+.row{
   border: 1px solid #eef0f4;
   background: #ffffff;
   border-radius: 16px;
-  overflow: hidden;
+  padding: 12px 14px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
-/* header row */
-.trHead{
-  position: sticky;
-  top: 0;
-  z-index: 2;
+.row:hover{
+  background: #fafcff;
+  border-color: #e6e8ee;
+  transform: translateY(-1px);
+}
 
-  display: grid;
-  grid-template-columns: 52px 110px 118px 1fr 130px 110px 120px;
-  gap: 10px;
+.left{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-  padding: 12px 14px;
-  background: #fbfcff;
-  border-bottom: 1px solid #eef0f4;
+.top{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
 
+.top b{
+  font-size: 13px;
+  font-weight: 900;
+  color: #101828;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 520px;
+}
+
+.meta{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 12px;
-  font-weight: 800;
   color: #475467;
 }
 
-/* rows */
-.tr{
-  display: grid;
-  grid-template-columns: 52px 110px 118px 1fr 130px 110px 120px;
-  gap: 10px;
-
-  align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid #f2f4f7;
-
-  font-size: 13px;
-  color: #101828;
-}
-
-.tr:last-child{
-  border-bottom: none;
-}
-
-.tr:hover{
-  background: #fafcff;
-}
-
 .right{
+  flex: 0 0 auto;
   display: flex;
-  justify-content: flex-end;
   align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dot{
+  color: #c0c6d4;
+  font-weight: 900;
+}
+
+.muted{
+  color: #667085;
 }
 
 .mono{
@@ -98,78 +121,46 @@
   letter-spacing: -0.01em;
 }
 
-/* buttons */
-.primaryBtn{
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid #111827;
-  background: #111827;
-  color: #fff;
-  font-weight: 800;
-  font-size: 12px;
-  cursor: pointer;
-  transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+/* cancel badge */
+.cancel{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #fecaca;
+  background: #fff1f2;
+  color: #b42318;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.primaryBtn:hover{
-  opacity: 0.95;
-  transform: translateY(-1px);
-}
-
-.primaryBtn:active{
-  transform: translateY(0px);
-}
-
-.linkBtn{
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 12px;
+/* optional: you can use this for status chip later if you decide */
+.status{
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
   border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
-  font-weight: 800;
-  font-size: 12px;
-  cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
-}
-
-.linkBtn:hover{
   background: #f9fafb;
-  border-color: #d0d5dd;
-  transform: translateY(-1px);
+  color: #344054;
+  font-weight: 900;
+  line-height: 1;
 }
 
-.linkBtn:active{
-  transform: translateY(0px);
-}
-
-/* responsive: colapsa columnas a mobile “cards” */
+/* responsive */
 @media (max-width: 900px){
-  .trHead{
-    display: none;
+  .row{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
   }
 
-  .tr{
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 14px;
-  }
-
-  .tr > div{
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .tr > div::before{
-    content: attr(data-label);
-    font-weight: 800;
-    color: #667085;
-  }
-
-  /* el botón alineado al final */
   .right{
-    justify-content: flex-end;
+    justify-content: flex-start;
+  }
+
+  .top b{
+    max-width: 100%;
   }
 }

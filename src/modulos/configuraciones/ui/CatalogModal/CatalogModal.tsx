@@ -1,22 +1,30 @@
-// src/modules/configuraciones/catalogos/ui/CatalogModal/CatalogModal.tsx
 'use client';
 
 import { useMemo, useState } from 'react';
+
 import type { CatalogKey } from '../CatalogTabs/CatalogTabs';
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
+
 import s from './CatalogModal.module.css';
 
 type Props = {
   catalog: CatalogKey;
   mode: 'create' | 'edit';
-  initialValue?: any;
+  initialValue?: unknown;
   isSaving?: boolean;
   onClose: () => void;
-  onSave: (payload: any) => Promise<void>;
+  onSave: (payload: unknown) => Promise<void>;
 
-  // ✅ nuevo: opciones para el select
+  // ✅ para select en carreras
   escolaridadesOptions?: Escolaridad[];
 };
+
+type FormState = Record<string, unknown>;
+
+function asObj(v: unknown): Record<string, any> {
+  if (v && typeof v === 'object') return v as any;
+  return {};
+}
 
 export default function CatalogModal({
   catalog,
@@ -27,13 +35,18 @@ export default function CatalogModal({
   onSave,
   escolaridadesOptions = [],
 }: Props) {
+  const init = asObj(initialValue);
+
   const title = useMemo(() => {
     const name =
       catalog === 'escolaridades'
         ? 'Escolaridad'
         : catalog === 'carreras'
-        ? 'Carrera'
-        : 'Estatus Recibo';
+          ? 'Carrera'
+          : catalog === 'conceptosPago'
+            ? 'Concepto de Pago'
+            : 'Estatus Recibo';
+
     return mode === 'create' ? `Crear ${name}` : `Editar ${name}`;
   }, [catalog, mode]);
 
@@ -43,79 +56,112 @@ export default function CatalogModal({
     );
   }, [escolaridadesOptions]);
 
-  // form state
-  const [form, setForm] = useState<any>(() => {
+  const [form, setForm] = useState<FormState>(() => {
+    // ESCOLARIDADES
     if (catalog === 'escolaridades') {
       return {
-        codigo: initialValue?.codigo ?? '',
-        nombre: initialValue?.nombre ?? '',
-        activo: initialValue?.activo ?? true,
+        codigo: init.codigo ?? '',
+        nombre: init.nombre ?? '',
+        activo: init.activo ?? true,
       };
     }
 
+    // CARRERAS
     if (catalog === 'carreras') {
-      // ✅ default: si es create y no hay escolaridadId, selecciona la primera escolaridad si existe
       const fallbackEscolaridadId =
-        typeof initialValue?.escolaridadId === 'number'
-          ? initialValue.escolaridadId
+        typeof init.escolaridadId === 'number'
+          ? init.escolaridadId
           : escolaridadesSorted[0]?.id ?? 0;
 
       return {
-        carreraId: initialValue?.carreraId ?? '', // 👈 string "01"
+        carreraId: init.carreraId ?? '',
         escolaridadId: fallbackEscolaridadId,
-        nombre: initialValue?.nombre ?? '',
-        montoMensual: initialValue?.montoMensual ?? 0,
-        montoInscripcion: initialValue?.montoInscripcion ?? 0,
-        duracionAnios: initialValue?.duracionAnios ?? 0,
-        duracionMeses: initialValue?.duracionMeses ?? 0,
-        activo: initialValue?.activo ?? true,
+        nombre: init.nombre ?? '',
+        montoMensual: init.montoMensual ?? 0,
+        montoInscripcion: init.montoInscripcion ?? 0,
+        duracionAnios: init.duracionAnios ?? 0,
+        duracionMeses: init.duracionMeses ?? 0,
+        activo: init.activo ?? true,
       };
     }
 
-    // ✅ EstatusRecibo (NO tiene "activo" en tu API)
+    // CONCEPTOS DE PAGO
+    if (catalog === 'conceptosPago') {
+      return {
+        codigo: init.codigo ?? '',
+        nombre: init.nombre ?? '',
+        descripcion: init.descripcion ?? '',
+        tipoMonto: init.tipoMonto ?? '',
+        activo: init.activo ?? true,
+      };
+    }
+
+    // ESTATUS RECIBO
     return {
-      codigo: initialValue?.codigo ?? '',
-      nombre: initialValue?.nombre ?? '',
+      codigo: init.codigo ?? '',
+      nombre: init.nombre ?? '',
     };
   });
 
-  function set<K extends string>(key: K, value: any) {
-    setForm((prev: any) => ({ ...prev, [key]: value }));
+  function set<K extends string>(key: K, value: unknown) {
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  const showActivo = catalog !== 'estatusRecibo';
+  const showCarreraId = catalog === 'carreras' && mode === 'create';
+  const showEscolaridadSelect = catalog === 'carreras';
+
+  const showConceptoCodigo = catalog === 'conceptosPago' && mode === 'create';
+  const showConceptoDescripcion = catalog === 'conceptosPago';
+  const showConceptoTipoMonto = catalog === 'conceptosPago';
+
+  const showCodigo =
+    (catalog === 'escolaridades' && mode === 'create') ||
+    (catalog === 'estatusRecibo' && mode === 'create') ||
+    showConceptoCodigo;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (isSaving) return;
 
+    // ESCOLARIDADES
     if (catalog === 'escolaridades') {
       const payload =
         mode === 'create'
-          ? { codigo: String(form.codigo).trim(), nombre: String(form.nombre).trim(), activo: !!form.activo }
-          : { nombre: String(form.nombre).trim(), activo: !!form.activo };
+          ? {
+              codigo: String(form.codigo ?? '').trim(),
+              nombre: String(form.nombre ?? '').trim(),
+              activo: !!form.activo,
+            }
+          : {
+              nombre: String(form.nombre ?? '').trim(),
+              activo: !!form.activo,
+            };
       await onSave(payload);
       return;
     }
 
+    // CARRERAS
     if (catalog === 'carreras') {
       const payload =
         mode === 'create'
           ? {
-              carreraId: String(form.carreraId).trim(), // ✅ string
-              escolaridadId: Number(form.escolaridadId), // ✅ id num
-              nombre: String(form.nombre).trim(),
-              montoMensual: Number(form.montoMensual),
-              montoInscripcion: Number(form.montoInscripcion),
-              duracionAnios: Number(form.duracionAnios),
-              duracionMeses: Number(form.duracionMeses),
+              carreraId: String(form.carreraId ?? '').trim(),
+              escolaridadId: Number(form.escolaridadId ?? 0),
+              nombre: String(form.nombre ?? '').trim(),
+              montoMensual: Number(form.montoMensual ?? 0),
+              montoInscripcion: Number(form.montoInscripcion ?? 0),
+              duracionAnios: Number(form.duracionAnios ?? 0),
+              duracionMeses: Number(form.duracionMeses ?? 0),
               activo: !!form.activo,
             }
           : {
-              escolaridadId: Number(form.escolaridadId),
-              nombre: String(form.nombre).trim(),
-              montoMensual: Number(form.montoMensual),
-              montoInscripcion: Number(form.montoInscripcion),
-              duracionAnios: Number(form.duracionAnios),
-              duracionMeses: Number(form.duracionMeses),
+              escolaridadId: Number(form.escolaridadId ?? 0),
+              nombre: String(form.nombre ?? '').trim(),
+              montoMensual: Number(form.montoMensual ?? 0),
+              montoInscripcion: Number(form.montoInscripcion ?? 0),
+              duracionAnios: Number(form.duracionAnios ?? 0),
+              duracionMeses: Number(form.duracionMeses ?? 0),
               activo: !!form.activo,
             };
 
@@ -123,20 +169,40 @@ export default function CatalogModal({
       return;
     }
 
-    // ✅ Estatus Recibo (create requiere codigo+nombre, update solo nombre según tu types)
+    // CONCEPTOS PAGO
+    if (catalog === 'conceptosPago') {
+      const payload =
+        mode === 'create'
+          ? {
+              codigo: String(form.codigo ?? '').trim(),
+              nombre: String(form.nombre ?? '').trim(),
+              descripcion: String(form.descripcion ?? '').trim(),
+              tipoMonto: String(form.tipoMonto ?? '').trim(),
+              activo: !!form.activo,
+            }
+          : {
+              nombre: String(form.nombre ?? '').trim(),
+              descripcion: String(form.descripcion ?? '').trim(),
+              tipoMonto: String(form.tipoMonto ?? '').trim(),
+              activo: !!form.activo,
+            };
+
+      await onSave(payload);
+      return;
+    }
+
+    // ESTATUS RECIBO
     if (mode === 'create') {
       await onSave({
-        codigo: String(form.codigo).trim(),
-        nombre: String(form.nombre).trim(),
+        codigo: String(form.codigo ?? '').trim(),
+        nombre: String(form.nombre ?? '').trim(),
       });
     } else {
-      await onSave({ nombre: String(form.nombre).trim() });
+      await onSave({
+        nombre: String(form.nombre ?? '').trim(),
+      });
     }
   }
-
-  const showCarreraId = catalog === 'carreras' && mode === 'create';
-  const showEscolaridadSelect = catalog === 'carreras';
-  const showActivo = catalog !== 'estatusRecibo'; // ✅ estatus no lleva activo
 
   return (
     <div className={s.backdrop} role="dialog" aria-modal="true">
@@ -149,25 +215,31 @@ export default function CatalogModal({
         </div>
 
         <form className={s.form} onSubmit={submit}>
-          {/* ESCOLARIDADES */}
-          {catalog === 'escolaridades' && mode === 'create' && (
+          {/* CODIGO (según catálogo+modo) */}
+          {showCodigo && (
             <div className={s.field}>
               <label>Código</label>
               <input
-                value={form.codigo}
+                value={String(form.codigo ?? '')}
                 onChange={(e) => set('codigo', e.target.value)}
-                placeholder="SEC, BACH, LIC…"
+                placeholder={
+                  catalog === 'conceptosPago'
+                    ? 'INSCRIPCION, MENSUALIDAD...'
+                    : catalog === 'estatusRecibo'
+                      ? 'EMITIDO, PAGADO...'
+                      : 'SEC, LIC...'
+                }
                 required
               />
             </div>
           )}
 
-          {/* CARRERAS */}
+          {/* CARRERAS: carreraId */}
           {showCarreraId && (
             <div className={s.field}>
               <label>Código de Carrera</label>
               <input
-                value={form.carreraId}
+                value={String(form.carreraId ?? '')}
                 onChange={(e) => set('carreraId', e.target.value)}
                 placeholder="01, 10…"
                 required
@@ -176,11 +248,12 @@ export default function CatalogModal({
             </div>
           )}
 
+          {/* CARRERAS: escolaridad select */}
           {showEscolaridadSelect && (
             <div className={s.field}>
               <label>Escolaridad</label>
               <select
-                value={String(form.escolaridadId)}
+                value={String(form.escolaridadId ?? 0)}
                 onChange={(e) => set('escolaridadId', Number(e.target.value))}
                 required
                 disabled={!escolaridadesSorted.length}
@@ -201,33 +274,54 @@ export default function CatalogModal({
             </div>
           )}
 
-          {/* ESTATUS RECIBO */}
-          {catalog === 'estatusRecibo' && mode === 'create' && (
+          {/* NOMBRE (común) */}
+          <div className={s.field}>
+            <label>Nombre</label>
+            <input
+              value={String(form.nombre ?? '')}
+              onChange={(e) => set('nombre', e.target.value)}
+              required
+            />
+          </div>
+
+          {/* CONCEPTOS PAGO: descripcion */}
+          {showConceptoDescripcion && (
             <div className={s.field}>
-              <label>Código</label>
-              <input
-                value={form.codigo}
-                onChange={(e) => set('codigo', e.target.value)}
-                placeholder="EMITIDO, PAGADO…"
-                required
+              <label>Descripción</label>
+              <textarea
+                className={s.textarea}
+                value={String(form.descripcion ?? '')}
+                onChange={(e) => set('descripcion', e.target.value)}
+                placeholder="Detalle del concepto…"
+                rows={4}
               />
             </div>
           )}
 
-          {/* NOMBRE (común) */}
-          <div className={s.field}>
-            <label>Nombre</label>
-            <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} required />
-          </div>
+          {/* CONCEPTOS PAGO: tipoMonto */}
+          {showConceptoTipoMonto && (
+            <div className={s.field}>
+              <label>Tipo de monto</label>
+              <input
+                value={String(form.tipoMonto ?? '')}
+                onChange={(e) => set('tipoMonto', e.target.value)}
+                placeholder="FIJO, VARIABLE, PORCENTAJE…"
+                required
+              />
+              <small className={s.help}>
+                Si luego tenemos un catálogo cerrado, lo convertimos a select + union type.
+              </small>
+            </div>
+          )}
 
-          {/* CAMPOS SOLO CARRERAS */}
+          {/* CARRERAS: grid de montos y duración */}
           {catalog === 'carreras' && (
             <div className={s.grid2}>
               <div className={s.field}>
                 <label>Monto mensual</label>
                 <input
                   type="number"
-                  value={form.montoMensual}
+                  value={String(form.montoMensual ?? 0)}
                   onChange={(e) => set('montoMensual', e.target.value)}
                 />
               </div>
@@ -236,7 +330,7 @@ export default function CatalogModal({
                 <label>Monto inscripción</label>
                 <input
                   type="number"
-                  value={form.montoInscripcion}
+                  value={String(form.montoInscripcion ?? 0)}
                   onChange={(e) => set('montoInscripcion', e.target.value)}
                 />
               </div>
@@ -245,7 +339,7 @@ export default function CatalogModal({
                 <label>Duración (años)</label>
                 <input
                   type="number"
-                  value={form.duracionAnios}
+                  value={String(form.duracionAnios ?? 0)}
                   onChange={(e) => set('duracionAnios', e.target.value)}
                 />
               </div>
@@ -254,14 +348,14 @@ export default function CatalogModal({
                 <label>Duración (meses)</label>
                 <input
                   type="number"
-                  value={form.duracionMeses}
+                  value={String(form.duracionMeses ?? 0)}
                   onChange={(e) => set('duracionMeses', e.target.value)}
                 />
               </div>
             </div>
           )}
 
-          {/* ACTIVO solo en escolaridades/carreras */}
+          {/* ACTIVO (todos menos estatusRecibo) */}
           {showActivo && (
             <label className={s.check}>
               <input

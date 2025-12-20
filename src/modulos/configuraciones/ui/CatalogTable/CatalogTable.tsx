@@ -1,13 +1,46 @@
-// src/modules/configuraciones/catalogos/ui/CatalogTable/CatalogTable.tsx
 'use client';
 
 import s from './CatalogTable.module.css';
 
-function guessColumns(item: any) {
-  // columnas “smart”: ajusta si quieres
+type CatalogRowLike = Record<string, unknown> & {
+  id?: number | string;
+  codigo?: string;
+  carreraId?: string;
+  conceptoId?: number;
+  activo?: boolean;
+};
+
+function guessColumns(item: CatalogRowLike) {
+  // Escolaridades / Estatus / Conceptos suelen traer codigo+nombre
+  if ('conceptoId' in item) return ['codigo', 'nombre', 'tipoMonto', 'activo'];
   if ('codigo' in item) return ['codigo', 'nombre', 'activo'];
-  if ('carreraId' in item) return ['carreraId', 'nombre', 'escolaridadNombre', 'montoMensual', 'montoInscripcion', 'duracionAnios', 'duracionMeses', 'activo'];
+
+  // Carreras (tu shape actual)
+  if ('carreraId' in item)
+    return [
+      'carreraId',
+      'nombre',
+      'escolaridadNombre',
+      'montoMensual',
+      'montoInscripcion',
+      'duracionAnios',
+      'duracionMeses',
+      'activo',
+    ];
+
+  // fallback
   return Object.keys(item).slice(0, 4);
+}
+
+function rowKey(it: CatalogRowLike): string {
+  const k = it.id ?? it.conceptoId ?? it.codigo ?? it.carreraId;
+  return String(k ?? crypto.randomUUID());
+}
+
+function renderCellValue(v: unknown) {
+  if (typeof v === 'boolean') return v ? 'Sí' : 'No';
+  if (v === null || v === undefined) return '';
+  return String(v);
 }
 
 export default function CatalogTable({
@@ -21,13 +54,13 @@ export default function CatalogTable({
   onToggleActive,
 }: {
   title: string;
-  items: any[];
+  items: CatalogRowLike[];
   isLoading?: boolean;
   isSaving?: boolean;
   error?: unknown;
   onReload: () => void;
-  onEdit: (item: any) => void;
-  onToggleActive: (item: any) => void;
+  onEdit: (item: CatalogRowLike) => void;
+  onToggleActive: (item: CatalogRowLike) => void;
 }) {
   const cols = items[0] ? guessColumns(items[0]) : [];
 
@@ -78,12 +111,11 @@ export default function CatalogTable({
               </tr>
             ) : (
               items.map((it) => (
-                <tr key={it.id ?? it.codigo ?? it.carreraId}>
+                <tr key={rowKey(it)}>
                   {cols.map((c) => (
-                    <td key={c}>
-                      {typeof it[c] === 'boolean' ? (it[c] ? 'Sí' : 'No') : String(it[c] ?? '')}
-                    </td>
+                    <td key={c}>{renderCellValue(it[c])}</td>
                   ))}
+
                   <td className={s.actions}>
                     <button className={s.link} onClick={() => onEdit(it)} disabled={isSaving}>
                       Editar
