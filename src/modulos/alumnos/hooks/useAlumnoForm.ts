@@ -2,11 +2,15 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useEscolaridades, useCarreras } from '@/modulos/configuraciones/hooks';
+import {
+  useEscolaridades,
+  useCarreras,
+  usePlanteles, // ✅ nuevo
+} from '@/modulos/configuraciones/hooks';
+
 import { useAlumnoCreate } from './useAlumnoCreate';
 
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
-import type { Carrera } from '@/modulos/configuraciones/types/carreras.types';
 import type { AlumnoCreate } from '../types/alumno.types';
 
 function pad2(n: number) {
@@ -21,9 +25,19 @@ function todayISO() {
 function addMonthsISO(iso: string, months: number) {
   const [y, m, d] = iso.split('-').map(Number);
   const base = new Date(y, (m - 1) + months, d);
-  const daysInTargetMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-  const safe = new Date(base.getFullYear(), base.getMonth(), Math.min(d, daysInTargetMonth));
-  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(safe.getDate())}`;
+  const daysInTargetMonth = new Date(
+    base.getFullYear(),
+    base.getMonth() + 1,
+    0,
+  ).getDate();
+  const safe = new Date(
+    base.getFullYear(),
+    base.getMonth(),
+    Math.min(d, daysInTargetMonth),
+  );
+  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(
+    safe.getDate(),
+  )}`;
 }
 
 function normalize(s?: string | null) {
@@ -48,6 +62,7 @@ function carreraEsRequerida(esc?: Escolaridad | null) {
 export function useAlumnoForm() {
   const escolaridadesApi = useEscolaridades({ soloActivos: true });
   const carrerasApi = useCarreras({ soloActivos: true });
+  const plantelesApi = usePlanteles({ soloActivos: true }); // ✅ nuevo
 
   const alumnoCreate = useAlumnoCreate();
 
@@ -56,6 +71,8 @@ export function useAlumnoForm() {
   const [escolaridadId, setEscolaridadIdState] = useState<number | null>(null);
   const [carreraId, setCarreraId] = useState<string | null>(null);
   const [fechaIngreso, setFechaIngreso] = useState<string>(todayISO());
+
+  const [plantelId, setPlantelId] = useState<number | null>(null); // ✅ nuevo
 
   const [formError, setFormError] = useState<string | null>(null);
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
@@ -66,9 +83,16 @@ export function useAlumnoForm() {
     [escolaridadesApi.items],
   );
 
+  const planteles = useMemo(
+    () => plantelesApi.items ?? [],
+    [plantelesApi.items],
+  );
+
   const escolaridadSel = useMemo(() => {
     if (!escolaridadId) return null;
-    return escolaridades.find((e) => Number(e.id) === Number(escolaridadId)) ?? null;
+    return (
+      escolaridades.find((e) => Number(e.id) === Number(escolaridadId)) ?? null
+    );
   }, [escolaridadId, escolaridades]);
 
   const carreraRequired = useMemo(
@@ -84,7 +108,10 @@ export function useAlumnoForm() {
 
   const carreraSel = useMemo(() => {
     if (!carreraId) return null;
-    return carrerasFiltradas.find((c) => String(c.carreraId) === String(carreraId)) ?? null;
+    return (
+      carrerasFiltradas.find((c) => String(c.carreraId) === String(carreraId)) ??
+      null
+    );
   }, [carreraId, carrerasFiltradas]);
 
   const precioMensual = useMemo(() => {
@@ -117,6 +144,7 @@ export function useAlumnoForm() {
     if (!nombreCompleto.trim()) return setFormError('Falta el nombre.');
     if (!matricula.trim()) return setFormError('Falta la matrícula.');
     if (!escolaridadId) return setFormError('Selecciona una escolaridad.');
+    if (!plantelId) return setFormError('Selecciona un plantel.'); // ✅ nuevo
     if (!fechaIngreso) return setFormError('Selecciona fecha de ingreso.');
     if (carreraRequired && !carreraId) return setFormError('Selecciona una carrera.');
 
@@ -126,13 +154,16 @@ export function useAlumnoForm() {
         nombreCompleto: nombreCompleto.trim(),
         matricula: matricula.trim(),
         escolaridadId: Number(escolaridadId),
+        plantelId: Number(plantelId), // ✅ nuevo
         fechaIngreso,
         ...(carreraRequired ? { carreraId: String(carreraId) } : {}),
       };
 
       const created = await alumnoCreate.create(payload);
 
-      setSuccessFlash(created?.alumnoId ? `Alumno creado: ${created.alumnoId}` : 'Alumno creado ✅');
+      setSuccessFlash(
+        created?.alumnoId ? `Alumno creado: ${created.alumnoId}` : 'Alumno creado ✅',
+      );
       return created;
     } catch (e: any) {
       setFormError(e?.message ?? 'No se pudo crear el alumno.');
@@ -140,7 +171,16 @@ export function useAlumnoForm() {
     } finally {
       setSubmitting(false);
     }
-  }, [nombreCompleto, matricula, escolaridadId, fechaIngreso, carreraRequired, carreraId, alumnoCreate]);
+  }, [
+    nombreCompleto,
+    matricula,
+    escolaridadId,
+    plantelId,
+    fechaIngreso,
+    carreraRequired,
+    carreraId,
+    alumnoCreate,
+  ]);
 
   return {
     // values
@@ -148,6 +188,7 @@ export function useAlumnoForm() {
     matricula,
     escolaridadId,
     carreraId,
+    plantelId,
     fechaIngreso,
 
     // setters
@@ -155,11 +196,13 @@ export function useAlumnoForm() {
     setMatricula,
     setEscolaridadId,
     setCarreraId,
+    setPlantelId,
     setFechaIngreso,
 
     // catalogs
     escolaridades,
     carrerasFiltradas,
+    planteles,
 
     // rules / computed
     carreraRequired,
@@ -178,7 +221,10 @@ export function useAlumnoForm() {
     // loading/error
     escolaridadesLoading: escolaridadesApi.isLoading,
     carrerasLoading: carrerasApi.isLoading,
+    plantelesLoading: plantelesApi.isLoading,
+
     escolaridadesError: escolaridadesApi.error,
     carrerasError: carrerasApi.error,
+    plantelesError: plantelesApi.error,
   };
 }

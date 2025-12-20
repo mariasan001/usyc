@@ -79,7 +79,38 @@ export default function AlumnoRegistroCard() {
           </select>
 
           {f.escolaridadesError ? (
-            <div className={s.helperError}>No se pudieron cargar escolaridades.</div>
+            <div className={s.helperError}>
+              No se pudieron cargar escolaridades.
+            </div>
+          ) : null}
+        </div>
+
+        {/* ✅ Plantel FULL */}
+        <div className={`${s.field} ${s.full}`}>
+          <label className={s.label}>Plantel</label>
+
+          <select
+            className={s.select}
+            value={f.plantelId ?? ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              f.setPlantelId(v ? Number(v) : null);
+            }}
+            disabled={f.plantelesLoading}
+          >
+            <option value="">
+              {f.plantelesLoading ? 'Cargando…' : 'Selecciona…'}
+            </option>
+
+            {f.planteles.map((p) => (
+              <option key={p.id} value={String(p.id)}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+          {f.plantelesError ? (
+            <div className={s.helperError}>No se pudieron cargar planteles.</div>
           ) : null}
         </div>
 
@@ -126,8 +157,6 @@ export default function AlumnoRegistroCard() {
             onChange={(e) => f.setFechaIngreso(e.target.value)}
           />
         </div>
-
-        {/* Plantel: cuando compartas API/shape, lo agregamos aquí sin ensuciar. */}
       </div>
 
       <div className={s.preview}>

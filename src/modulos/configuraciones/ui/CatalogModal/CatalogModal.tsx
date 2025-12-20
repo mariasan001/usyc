@@ -16,7 +16,7 @@ type Props = {
   onClose: () => void;
   onSave: (payload: unknown) => Promise<void>;
 
-  // ✅ para select en carreras
+  // para select en carreras
   escolaridadesOptions?: Escolaridad[];
 };
 
@@ -28,10 +28,10 @@ function asObj(v: unknown): Record<string, any> {
 }
 
 /* ────────────────────────────────────────────────────────────
-   Dinero MXN (FIX REAL)
-   - mientras escribes: NO formatea (para poder teclear 408, 1200, etc.)
-   - al salir (blur): formatea (1,200.00)
-   - estado siempre guarda number real
+   Dinero MXN
+   - Mientras escribes NO formatea (permite 408, 1200, etc.)
+   - En blur formatea a MXN (1,200.00)
+   - El estado SIEMPRE guarda number real
 ──────────────────────────────────────────────────────────── */
 
 function formatMXNInput(n: number) {
@@ -49,11 +49,9 @@ function parseMXNInput(raw: string) {
   const hasDot = s.includes('.');
   const hasComma = s.includes(',');
 
-  // 1,65 -> 1.65
   if (hasComma && !hasDot) {
     s = s.replace(',', '.');
   } else {
-    // 1,234.56 -> 1234.56
     s = s.replace(/,/g, '');
   }
 
@@ -74,9 +72,7 @@ function MoneyInput({
 }) {
   const [draft, setDraft] = useState<string>('');
 
-  // sync al abrir/editar registro
   useEffect(() => {
-    // si value viene como 0, dejamos vacío para poder teclear directo
     setDraft(value ? String(value) : '');
   }, [value]);
 
@@ -89,7 +85,7 @@ function MoneyInput({
       onChange={(e) => {
         const next = e.target.value;
         setDraft(next);
-        onChange(parseMXNInput(next)); // estado number real
+        onChange(parseMXNInput(next));
       }}
       onBlur={() => {
         const n = parseMXNInput(draft);
@@ -123,6 +119,8 @@ export default function CatalogModal({
         ? 'Concepto de Pago'
         : catalog === 'tiposPago'
         ? 'Tipo de pago'
+        : catalog === 'planteles'
+        ? 'Plantel'
         : 'Estatus Recibo';
 
     return mode === 'create' ? `Crear ${name}` : `Editar ${name}`;
@@ -135,7 +133,6 @@ export default function CatalogModal({
   }, [escolaridadesOptions]);
 
   const [form, setForm] = useState<FormState>(() => {
-    // ESCOLARIDADES
     if (catalog === 'escolaridades') {
       return {
         codigo: init.codigo ?? '',
@@ -144,7 +141,6 @@ export default function CatalogModal({
       };
     }
 
-    // CARRERAS
     if (catalog === 'carreras') {
       const fallbackEscolaridadId =
         typeof init.escolaridadId === 'number'
@@ -163,7 +159,6 @@ export default function CatalogModal({
       };
     }
 
-    // CONCEPTOS DE PAGO
     if (catalog === 'conceptosPago') {
       return {
         codigo: init.codigo ?? '',
@@ -174,7 +169,6 @@ export default function CatalogModal({
       };
     }
 
-    // TIPOS DE PAGO
     if (catalog === 'tiposPago') {
       return {
         code: init.code ?? '',
@@ -183,7 +177,16 @@ export default function CatalogModal({
       };
     }
 
-    // ESTATUS RECIBO
+    // ✅ PLANTELES (Swagger: code, name, address, active)
+    if (catalog === 'planteles') {
+      return {
+        code: init.code ?? '',
+        name: init.name ?? '',
+        address: init.address ?? '',
+        active: init.active ?? true,
+      };
+    }
+
     return {
       codigo: init.codigo ?? '',
       nombre: init.nombre ?? '',
@@ -194,7 +197,6 @@ export default function CatalogModal({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // visibilidad de campos
   const showActivo = catalog !== 'estatusRecibo';
 
   const showCarreraId = catalog === 'carreras' && mode === 'create';
@@ -206,19 +208,23 @@ export default function CatalogModal({
 
   const showTipoPagoCode = catalog === 'tiposPago' && mode === 'create';
 
+  // ✅ PLANTELES
+  const showPlantelCode = catalog === 'planteles' && mode === 'create';
+  const showPlantelAddress = catalog === 'planteles';
+
   const showCodigo =
     (catalog === 'escolaridades' && mode === 'create') ||
     (catalog === 'estatusRecibo' && mode === 'create') ||
     showConceptoCodigo ||
-    showTipoPagoCode;
+    showTipoPagoCode ||
+    showPlantelCode;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (isSaving) return;
 
-    // ESCOLARIDADES
     if (catalog === 'escolaridades') {
-      const payload =
+      await onSave(
         mode === 'create'
           ? {
               codigo: String(form.codigo ?? '').trim(),
@@ -228,14 +234,13 @@ export default function CatalogModal({
           : {
               nombre: String(form.nombre ?? '').trim(),
               activo: !!form.activo,
-            };
-      await onSave(payload);
+            },
+      );
       return;
     }
 
-    // CARRERAS
     if (catalog === 'carreras') {
-      const payload =
+      await onSave(
         mode === 'create'
           ? {
               carreraId: String(form.carreraId ?? '').trim(),
@@ -255,15 +260,13 @@ export default function CatalogModal({
               duracionAnios: Number(form.duracionAnios ?? 0),
               duracionMeses: Number(form.duracionMeses ?? 0),
               activo: !!form.activo,
-            };
-
-      await onSave(payload);
+            },
+      );
       return;
     }
 
-    // CONCEPTOS PAGO
     if (catalog === 'conceptosPago') {
-      const payload =
+      await onSave(
         mode === 'create'
           ? {
               codigo: String(form.codigo ?? '').trim(),
@@ -277,15 +280,13 @@ export default function CatalogModal({
               descripcion: String(form.descripcion ?? '').trim(),
               tipoMonto: String(form.tipoMonto ?? '').trim(),
               activo: !!form.activo,
-            };
-
-      await onSave(payload);
+            },
+      );
       return;
     }
 
-    // TIPOS PAGO
     if (catalog === 'tiposPago') {
-      const payload =
+      await onSave(
         mode === 'create'
           ? {
               code: String(form.code ?? '').trim(),
@@ -295,28 +296,47 @@ export default function CatalogModal({
           : {
               name: String(form.name ?? '').trim(),
               active: !!form.active,
-            };
-
-      await onSave(payload);
+            },
+      );
       return;
     }
 
-    // ESTATUS RECIBO
-    if (mode === 'create') {
-      await onSave({
-        codigo: String(form.codigo ?? '').trim(),
-        nombre: String(form.nombre ?? '').trim(),
-      });
-    } else {
-      await onSave({
-        nombre: String(form.nombre ?? '').trim(),
-      });
+    // ✅ PLANTELES
+    if (catalog === 'planteles') {
+      await onSave(
+        mode === 'create'
+          ? {
+              code: String(form.code ?? '').trim(),
+              name: String(form.name ?? '').trim(),
+              address: String(form.address ?? '').trim(),
+              active: !!form.active,
+            }
+          : {
+              name: String(form.name ?? '').trim(),
+              address: String(form.address ?? '').trim(),
+              active: !!form.active,
+            },
+      );
+      return;
     }
+
+    await onSave(
+      mode === 'create'
+        ? {
+            codigo: String(form.codigo ?? '').trim(),
+            nombre: String(form.nombre ?? '').trim(),
+          }
+        : {
+            nombre: String(form.nombre ?? '').trim(),
+          },
+    );
   }
 
   const isTiposPago = catalog === 'tiposPago';
-  const nameKey = isTiposPago ? 'name' : 'nombre';
-  const activeKey = isTiposPago ? 'active' : 'activo';
+  const isPlanteles = catalog === 'planteles';
+
+  const nameKey = isTiposPago || isPlanteles ? 'name' : 'nombre';
+  const activeKey = isTiposPago || isPlanteles ? 'active' : 'activo';
 
   return (
     <div className={s.backdrop} role="dialog" aria-modal="true">
@@ -340,20 +360,22 @@ export default function CatalogModal({
             <div className={s.field}>
               <label>Código</label>
               <input
-                value={isTiposPago ? String(form.code ?? '') : String(form.codigo ?? '')}
-                onChange={(e) => set(isTiposPago ? 'code' : 'codigo', e.target.value)}
+                value={isTiposPago || isPlanteles ? String(form.code ?? '') : String(form.codigo ?? '')}
+                onChange={(e) => set(isTiposPago || isPlanteles ? 'code' : 'codigo', e.target.value)}
                 placeholder={
                   catalog === 'conceptosPago'
                     ? 'INSCRIPCION, MENSUALIDAD...'
                     : catalog === 'estatusRecibo'
-                    ? 'EMITIDO, PAGADO...'
-                    : catalog === 'tiposPago'
-                    ? 'EFECTIVO, TARJETA...'
-                    : 'SEC, LIC...'
+                      ? 'EMITIDO, PAGADO...'
+                      : catalog === 'tiposPago'
+                        ? 'EFECTIVO, TARJETA...'
+                        : catalog === 'planteles'
+                          ? 'PL01, PL02...'
+                          : 'SEC, LIC...'
                 }
                 required
               />
-              {catalog === 'tiposPago' ? (
+              {(catalog === 'tiposPago' || catalog === 'planteles') ? (
                 <small className={s.help}>Recomendado: MAYÚSCULAS y sin espacios.</small>
               ) : null}
             </div>
@@ -381,21 +403,13 @@ export default function CatalogModal({
                 value={String(form.escolaridadId ?? 0)}
                 onChange={(e) => set('escolaridadId', Number(e.target.value))}
                 required
-                disabled={!escolaridadesSorted.length}
               >
-                {!escolaridadesSorted.length ? (
-                  <option value="0">Cargando escolaridades…</option>
-                ) : (
-                  escolaridadesSorted.map((esc) => (
-                    <option key={esc.id} value={esc.id}>
-                      {esc.nombre} ({esc.codigo})
-                    </option>
-                  ))
-                )}
+                {escolaridadesSorted.map((esc) => (
+                  <option key={esc.id} value={esc.id}>
+                    {esc.nombre} ({esc.codigo})
+                  </option>
+                ))}
               </select>
-              <small className={s.help}>
-                Se muestra el nombre, pero se envía el <b>ID</b>.
-              </small>
             </div>
           )}
 
@@ -408,6 +422,20 @@ export default function CatalogModal({
               required
             />
           </div>
+
+          {/* ✅ PLANTELES: address */}
+          {showPlantelAddress && (
+            <div className={s.field}>
+              <label>Dirección</label>
+              <textarea
+                className={s.textarea}
+                value={String(form.address ?? '')}
+                onChange={(e) => set('address', e.target.value)}
+                placeholder="Dirección del plantel…"
+                rows={3}
+              />
+            </div>
+          )}
 
           {/* CONCEPTOS PAGO: descripcion */}
           {showConceptoDescripcion && (

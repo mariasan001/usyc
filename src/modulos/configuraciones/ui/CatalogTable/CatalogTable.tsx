@@ -17,16 +17,27 @@ type CatalogRowLike = Record<string, unknown> & {
   // conceptos pago
   conceptoId?: number;
 
-  // tipos de pago (swagger)
+  // tipos de pago / planteles (swagger)
   code?: string;
   name?: string;
+  address?: string;
   active?: boolean;
 };
 
 function guessColumns(item: CatalogRowLike) {
+  // PLANTELES (code + name + address + active)
+  if ('address' in item) return ['code', 'name', 'address', 'active'];
+
+  // TIPOS DE PAGO
   if ('code' in item) return ['code', 'name', 'active'];
+
+  // CONCEPTOS PAGO
   if ('conceptoId' in item) return ['codigo', 'nombre', 'tipoMonto', 'activo'];
+
+  // ESCOLARIDADES / ESTATUS
   if ('codigo' in item) return ['codigo', 'nombre', 'activo'];
+
+  // CARRERAS
   if ('carreraId' in item)
     return [
       'carreraId',
@@ -55,6 +66,7 @@ function titleCaseHeader(key: string) {
 
     code: 'Código',
     name: 'Nombre',
+    address: 'Dirección',
     active: 'Activo',
 
     carreraId: 'ID',
@@ -68,7 +80,12 @@ function titleCaseHeader(key: string) {
     tipoMonto: 'Tipo de monto',
   };
 
-  return map[key] ?? key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (m) => m.toUpperCase());
+  return (
+    map[key] ??
+    key
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/^./, (m) => m.toUpperCase())
+  );
 }
 
 function isActiveRow(it: CatalogRowLike) {
@@ -76,7 +93,6 @@ function isActiveRow(it: CatalogRowLike) {
 }
 
 function renderCellValue(key: string, v: unknown, it: CatalogRowLike) {
-  // Badge bonito para activo/active
   if (key === 'activo' || key === 'active') {
     const ok = isActiveRow(it);
     return (
@@ -87,13 +103,14 @@ function renderCellValue(key: string, v: unknown, it: CatalogRowLike) {
     );
   }
 
-  if (typeof v === 'boolean') return v ? 'Sí' : 'No';
   if (v === null || v === undefined) return '—';
 
-  // formatos simples para montos
   if (typeof v === 'number' && /monto|mensual|inscripcion/i.test(key)) {
     try {
-      return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(v);
+      return new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+      }).format(v);
     } catch {
       return String(v);
     }
@@ -135,7 +152,12 @@ export default function CatalogTable({
         </div>
 
         <div className={s.headerActions}>
-          <button className={s.btnGhost} onClick={onReload} disabled={isLoading} type="button">
+          <button
+            className={s.btnGhost}
+            onClick={onReload}
+            disabled={isLoading}
+            type="button"
+          >
             <RefreshCw size={16} />
             Recargar
           </button>
@@ -145,7 +167,9 @@ export default function CatalogTable({
       {error ? (
         <div className={s.error}>
           <div className={s.errorTitle}>Ocurrió un error</div>
-          <div className={s.errorText}>{String((error as any)?.message ?? 'Error desconocido')}</div>
+          <div className={s.errorText}>
+            {String((error as any)?.message ?? 'Error desconocido')}
+          </div>
         </div>
       ) : null}
 
@@ -180,7 +204,16 @@ export default function CatalogTable({
                 return (
                   <tr key={rowKey(it)}>
                     {cols.map((c) => (
-                      <td key={c} className={c === 'nombre' || c === 'name' ? s.tdStrong : ''}>
+                      <td
+                        key={c}
+                        className={
+                          c === 'nombre' || c === 'name'
+                            ? s.tdStrong
+                            : c === 'address'
+                            ? s.tdMuted
+                            : ''
+                        }
+                      >
                         {renderCellValue(c, it[c], it)}
                       </td>
                     ))}
@@ -198,7 +231,9 @@ export default function CatalogTable({
                       </button>
 
                       <button
-                        className={`${s.iconBtn} ${active ? s.iconDanger : s.iconOk}`}
+                        className={`${s.iconBtn} ${
+                          active ? s.iconDanger : s.iconOk
+                        }`}
                         onClick={() => onToggleActive(it)}
                         disabled={isSaving}
                         type="button"

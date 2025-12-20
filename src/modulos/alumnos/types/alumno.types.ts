@@ -23,6 +23,8 @@ export type AlumnoCreate = {
   escolaridadId: number;
   carreraId?: string;              // ✅ opcional
   fechaIngreso: string;
+    plantelId: number;         // ✅ NUEVO (requerido)
+
 };
 
 export type Page<T> = {

@@ -2,3 +2,4 @@
 export * from './useEscolaridades';
 export * from './useCarreras';
 export * from './useEstatusRecibo';
+export * from './usePlanteles'; // ✅ nuevo

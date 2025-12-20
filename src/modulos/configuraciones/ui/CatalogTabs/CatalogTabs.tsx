@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   Receipt,
   CreditCard,
+  School,
 } from 'lucide-react';
 
 import s from './CatalogTabs.module.css';
@@ -15,7 +16,8 @@ export type CatalogKey =
   | 'carreras'
   | 'estatusRecibo'
   | 'conceptosPago'
-  | 'tiposPago';
+  | 'tiposPago'
+  | 'planteles';
 
 type Props = {
   value: CatalogKey;
@@ -29,6 +31,7 @@ const TABS: Array<{
 }> = [
   { key: 'escolaridades', label: 'Escolaridades', Icon: GraduationCap },
   { key: 'carreras', label: 'Carreras', Icon: BookOpen },
+  { key: 'planteles', label: 'Planteles', Icon: School },
   { key: 'estatusRecibo', label: 'Estatus de recibo', Icon: BadgeCheck },
   { key: 'conceptosPago', label: 'Conceptos de pago', Icon: Receipt },
   { key: 'tiposPago', label: 'Tipos de pago', Icon: CreditCard },
@@ -52,7 +55,7 @@ export default function CatalogTabs({ value, onChange }: Props) {
             >
               <Icon size={16} className={s.icon} />
               <span className={s.label}>{label}</span>
-              {isActive ? <span className={s.dot} aria-hidden="true" /> : null}
+              {isActive ? <span className={s.dot} aria-hidden /> : null}
             </button>
           );
         })}
