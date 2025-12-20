@@ -59,3 +59,14 @@
 
 .paid{ color: #16a34a; font-weight: 700; }
 .pending{ color: #6b7280; }
+.linkBtnDisabled{
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
+  border: 1px solid #e6e8ee;
+  background: #f7f8fb;
+  color: #7a8395;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 600;
+}

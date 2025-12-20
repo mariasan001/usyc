@@ -1,12 +1,10 @@
 // src/lib/api/api.routes.ts
 export const API = {
   catalogos: {
-    // ===== Catálogos base =====
     carreras: '/api/catalogos/carreras',
     escolaridades: '/api/catalogos/escolaridades',
     estatusRecibo: '/api/catalogos/estatus-recibo',
 
-    // ===== Conceptos de pago =====
     conceptosPago: '/api/catalogos/conceptos-pago',
     conceptoPagoById: (conceptoId: number) =>
       `/api/catalogos/conceptos-pago/${conceptoId}`,
@@ -17,7 +15,7 @@ export const API = {
     conceptoPagoDesactivar: (conceptoId: number) =>
       `/api/catalogos/conceptos-pago/${conceptoId}/desactivar`,
 
-    // ===== Tipos de pago =====
+    // Tipos de pago
     tiposPago: '/api/catalogos/tipos-pago',
     tipoPagoById: (id: number) => `/api/catalogos/tipos-pago/${id}`,
     tipoPagoActivar: (id: number) => `/api/catalogos/tipos-pago/${id}/activar`,
@@ -33,13 +31,13 @@ export const API = {
   },
 
   recibos: {
-    // ===== Recibos =====
     base: '/api/recibos',
-    create: '/api/recibos', // ✅ POST (registrar pago / emitir recibo)
-    byId: (id: number) => `/api/recibos/${id}`, // ✅ GET (detalle recibo)
+    create: '/api/recibos', // POST
 
-    // ===== QR =====
-    // Swagger: GET /api/recibos/{reciboId}/qr (image/png)
+    // OJO: tu backend AHORITA NO TIENE este GET, por eso te da 404.
+    // byId: (id: number) => `/api/recibos/${id}`,
+
+    // QR (image/png)
     qr: (id: number) => `/api/recibos/${id}/qr`,
   },
 } as const;

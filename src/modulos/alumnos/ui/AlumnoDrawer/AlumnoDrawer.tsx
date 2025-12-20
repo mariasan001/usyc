@@ -22,6 +22,7 @@ import { useAlumnoDrawerData } from './hooks/useAlumnoDrawerData';
 import type { ProjectionRow } from './types/alumno-drawer.types';
 
 import { RecibosService } from '../../services/recibos.service';
+import type { ReciboDTO } from './types/recibos.types';
 
 export default function AlumnoDrawer({
   open,
@@ -36,10 +37,19 @@ export default function AlumnoDrawer({
 
   return (
     <div className={s.backdrop} onMouseDown={onClose} role="presentation">
-      <aside className={s.drawer} onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <aside
+        className={s.drawer}
+        onMouseDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         <DrawerHeader onClose={onClose} />
 
-        {!alumno ? <div className={s.empty}>Sin selección.</div> : <AlumnoDrawerInner key={alumno.alumnoId} alumno={alumno} />}
+        {!alumno ? (
+          <div className={s.empty}>Sin selección.</div>
+        ) : (
+          <AlumnoDrawerInner key={alumno.alumnoId} alumno={alumno} />
+        )}
       </aside>
     </div>
   );
@@ -53,9 +63,35 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const [payRow, setPayRow] = useState<ProjectionRow | null>(null);
   const [paySaving, setPaySaving] = useState(false);
 
+  /**
+   * ✅ Guardar el ReciboDTO COMPLETO para que /recibos/print
+   * pinte datos reales SIN depender de GET /api/recibos/{id}.
+   */
+  function cacheReciboForPrint(dto: ReciboDTO) {
+    try {
+      sessionStorage.setItem(`recibo:${dto.reciboId}`, JSON.stringify(dto));
+    } catch {
+      // si storage falla, no tronamos la UX
+    }
+  }
+
+  /**
+   * ✅ Intentar abrir impresión desde historial/proyección
+   * - Si tenemos un cache previo, perfecto.
+   * - Si NO, igual navegamos, pero el print page te mostrará un aviso
+   *   (porque sin GET /recibos/{id} no podemos reconstruir el recibo).
+   */
+  function openPrint(reciboId: number) {
+    router.push(`/recibos/print?reciboId=${reciboId}`);
+  }
+
   return (
     <div className={s.content}>
-      <IdentityPill nombreCompleto={d.nombreCompleto} matricula={d.matricula} activo={d.activo} />
+      <IdentityPill
+        nombreCompleto={d.nombreCompleto}
+        matricula={d.matricula}
+        activo={d.activo}
+      />
 
       <StickySummary totals={d.totals} />
       <DrawerTabs tab={d.tab} onChange={d.setTab} />
@@ -85,12 +121,21 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
             setPayOpen(true);
           }}
           onReceipt={(reciboId) => {
-            router.push(`/recibos/print?reciboId=${reciboId}`);
+            // ✅ aquí NO intentamos “inventar” un DTO desde pagosReales UI,
+            // porque normalmente no trae folio/alumnoNombre/fechaEmision/etc.
+            // Si ya lo guardaste antes (por haber pagado), print lo lee del storage.
+            openPrint(reciboId);
           }}
         />
       ) : null}
 
-      {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
+      {d.tab === 'PAGOS' ? (
+        <PagosPanel
+          pagos={d.pagosReales}
+          // si tu PagosPanel tiene botón de recibo, aquí igual:
+          // onReceipt={(reciboId) => openPrint(reciboId)}
+        />
+      ) : null}
 
       {d.tab === 'EXTRAS' ? (
         <ExtrasPanel
@@ -118,18 +163,23 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         onSubmit={async (payload) => {
           setPaySaving(true);
           try {
+            // ✅ POST /api/recibos -> devuelve ReciboDTO completo
             const created = await RecibosService.create(payload);
 
-            // refresca proyección/pagos/totales
+            // ✅ guardamos el DTO completo para impresión
+            cacheReciboForPrint(created);
+
+            // ✅ refresca proyección/pagos/totales (para que la fila cambie a pagado)
             await d.reload();
 
             setPayOpen(false);
             setPayRow(null);
 
-            // ✅ opcional: imprimir al instante
-            // router.push(`/recibos/print?reciboId=${created.reciboId}`);
-
+            // opcional: brinca a Pagos
             d.setTab('PAGOS');
+
+            // ✅ (modo pro) imprimir al instante al pagar:
+            // openPrint(created.reciboId);
           } finally {
             setPaySaving(false);
           }

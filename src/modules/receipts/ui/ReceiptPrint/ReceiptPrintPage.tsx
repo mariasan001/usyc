@@ -12,33 +12,29 @@ import Badge from '@/shared/ui/Badge/Badge';
 import ReceiptDocument from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
 import { loadReceiptSettings } from '@/modules/receipts/utils/receipt-template.settings';
 
-import { RecibosService } from '@/modulos/alumnos/services/recibos.service';
-import type { Receipt } from '@/modules/receipts/types/receipt.types';
+import type { ReciboDTO } from '@/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types';
 
 import s from './ReceiptPrintPage.module.css';
-import { ReciboDTO } from '@/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types';
 
 function parseReciboId(sp: URLSearchParams): number | null {
   const v = sp.get('reciboId');
-  if (!v) return null;
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-// ✅ mapea tu DTO real del back al type Receipt del documento
 function mapReciboToReceipt(dto: ReciboDTO): Receipt {
   return {
     folio: dto.folio,
     alumno: {
       nombre: dto.alumnoNombre ?? '—',
       matricula: dto.alumnoId ?? undefined,
-      carrera: '—', // si luego el back lo manda, aquí lo llenas
+      carrera: '—',
       duracionMeses: undefined,
       fechaInicio: undefined,
     },
     concepto: dto.concepto,
     monto: dto.monto ?? 0,
-    montoLetras: '—', // si quieres: convertir número a letras luego
+    montoLetras: '—', // luego lo convertimos a letras si quieres
     fechaPago: dto.fechaPago,
     status: dto.cancelado ? 'CANCELLED' : 'VALID',
     cancelReason: undefined,
@@ -53,47 +49,40 @@ export default function ReceiptPrintPage() {
   const reciboId = useMemo(() => parseReciboId(sp), [sp]);
 
   const [item, setItem] = useState<Receipt | null>(null);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>('');
-
   const didAutoPrint = useRef(false);
 
   useEffect(() => {
     if (!reciboId) {
-      setLoading(false);
       setErr('Falta reciboId en la URL.');
       return;
     }
 
-    const ctrl = new AbortController();
+    // ✅ leemos del storage (no hacemos GET /api/recibos/{id})
+    const raw = sessionStorage.getItem(`recibo:${reciboId}`);
+    if (!raw) {
+      setErr('No se encontró el recibo en memoria. Vuelve a pagar o abre desde Pagos.');
+      setItem(null);
+      return;
+    }
 
-    (async () => {
-      setLoading(true);
+    try {
+      const dto = JSON.parse(raw) as ReciboDTO;
+      setItem(mapReciboToReceipt(dto));
       setErr('');
-      try {
-        const dto = await RecibosService.getById(reciboId, { signal: ctrl.signal });
-        setItem(mapReciboToReceipt(dto));
-      } catch (e: any) {
-        setItem(null);
-        setErr(String(e?.message ?? 'No se pudo cargar el recibo.'));
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => ctrl.abort();
+    } catch {
+      setErr('Recibo corrupto en memoria.');
+      setItem(null);
+    }
   }, [reciboId]);
 
-  // auto print
   useEffect(() => {
-    if (loading) return;
     if (!item) return;
     if (didAutoPrint.current) return;
-
     didAutoPrint.current = true;
     const t = setTimeout(() => window.print(), 450);
     return () => clearTimeout(t);
-  }, [loading, item]);
+  }, [item]);
 
   return (
     <div className={s.wrap}>
@@ -114,7 +103,7 @@ export default function ReceiptPrintPage() {
       {err ? (
         <Card
           title="No se pudo cargar el comprobante"
-          subtitle="Revisa el reciboId y/o el endpoint."
+          subtitle="En este flujo el recibo se arma con la respuesta del POST."
           right={
             <Badge tone="warn">
               <AlertTriangle size={14} /> Aviso
@@ -125,15 +114,10 @@ export default function ReceiptPrintPage() {
         </Card>
       ) : null}
 
-      {loading ? <div className={s.loading}>Cargando recibo…</div> : null}
-
-      {!loading && !item ? <div className={s.loading}>No hay recibo para imprimir.</div> : null}
-
       <div className={s.pages}>
-        {item ? (
+        {item && reciboId ? (
           <div className={s.printPage}>
-            {/* ✅ le pasamos reciboId para QR */}
-            <ReceiptDocument receipt={item} settings={settings} reciboId={reciboId!} />
+            <ReceiptDocument receipt={item} settings={settings} reciboId={reciboId} />
           </div>
         ) : null}
       </div>

@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import Image from 'next/image';
 
-import type { Receipt } from '@/modules/receipts/types/receipt.types';
 import type { ReceiptTemplateSettings } from '@/modules/receipts/utils/receipt-template.settings';
 
 import s from './ReceiptDocument.module.css';

@@ -3,13 +3,13 @@
 import { useMemo, useState } from 'react';
 import type { Alumno } from '../../../types/alumno.types';
 
-
 import type {
   DrawerTab,
   ProjectionRow,
   PagoRealRow,
   Totals,
 } from '../types/alumno-drawer.types';
+
 import { useAlumnoPagosResumen } from './useAlumnoPagosResumen';
 
 function cmpISO(a: string, b: string) {
@@ -23,6 +23,11 @@ function todayISO() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+function periodoFromISO(iso: string) {
+  // "2025-12-20" -> "2025-12"
+  return (iso ?? '').slice(0, 7);
+}
+
 type Args = {
   alumno: Alumno;
 };
@@ -31,7 +36,7 @@ export function useAlumnoDrawerData({ alumno }: Args) {
   const [tab, setTab] = useState<DrawerTab>('RESUMEN');
 
   const alumnoId = alumno.alumnoId;
-const { data, loading, error, reload } = useAlumnoPagosResumen(alumnoId);
+  const { data, loading, error, reload } = useAlumnoPagosResumen(alumnoId);
 
   // Identidad
   const nombreCompleto = alumno.nombreCompleto ?? '—';
@@ -50,7 +55,7 @@ const { data, loading, error, reload } = useAlumnoPagosResumen(alumnoId);
   const carNombre = data?.carreraNombre ?? alumno.carreraNombre ?? '—';
   const plaNombre = '—'; // cuando llegue plantelNombre real, lo conectas
 
-  // Pagos reales -> UI
+  // Pagos reales -> UI (esto lo usa PagosPanel)
   const pagosReales: PagoRealRow[] = useMemo(() => {
     const list = data?.pagosReales ?? [];
     return list
@@ -68,44 +73,49 @@ const { data, loading, error, reload } = useAlumnoPagosResumen(alumnoId);
       }));
   }, [data]);
 
-// Proyección -> UI
-const projection: ProjectionRow[] = useMemo(() => {
-  const list = data?.proyeccion ?? [];
+  // Proyección -> UI (esto es lo que habilita el botón de imprimir)
+  const projection: ProjectionRow[] = useMemo(() => {
+    const list = data?.proyeccion ?? [];
 
-  // pagos válidos (no cancelados)
-  const pagosValidos = (data?.pagosReales ?? []).filter((p) => !p.cancelado);
+    // ✅ pagos válidos (no cancelados)
+    const pagosValidos = (data?.pagosReales ?? []).filter((p) => !p.cancelado);
 
-  // ✅ match por (concepto + periodo)
-  // periodo lo sacamos de fechaPago: "YYYY-MM-DD" -> "YYYY-MM"
-  const paidByConceptAndPeriod = new Map<string, number>(); // key -> reciboId
+    // ✅ Mapa: "YYYY-MM|CONCEPTO" -> reciboId
+    // Ej: "2025-12|INSCRIPCION" -> 2
+    const paidMap = new Map<string, number>();
+    for (const p of pagosValidos) {
+      const per = periodoFromISO(p.fechaPago);
+      const concepto = String(p.concepto ?? '').toUpperCase();
+      const key = `${per}|${concepto}`;
+      paidMap.set(key, p.reciboId);
+    }
 
-  for (const p of pagosValidos) {
-    const periodoPago = String(p.fechaPago || '').slice(0, 7);
-    const key = `${p.concepto}__${periodoPago}`;
-    paidByConceptAndPeriod.set(key, p.reciboId);
-  }
+    return list.map((x, i) => {
+      const estadoUpper = String(x.estado ?? '').toUpperCase();
+      const conceptoUpper = String(x.conceptoCodigo ?? '').toUpperCase();
 
-  return list.map((x, i) => {
-    const key = `${x.conceptoCodigo}__${x.periodo}`;
+      // ✅ si el back dice pagado, lo respetamos
+      const backPaid = estadoUpper === 'PAGADO';
 
-    const reciboId = paidByConceptAndPeriod.get(key);
+      // ✅ colgar reciboId desde pagos reales (porque proyección no lo trae)
+      const key = `${x.periodo}|${conceptoUpper}`;
+      const reciboId = paidMap.get(key);
 
-    // ✅ si el back ya te dice PAGADO, le creemos
-    // pero igual intentamos colgarle reciboId por el índice
-    const isPaid = x.estado === 'PAGADO' || typeof reciboId === 'number';
+      // ✅ pagado si: back lo dice o encontramos reciboId
+      const isPaid = backPaid || typeof reciboId === 'number';
 
-    return {
-      idx: i + 1,
-      periodo: x.periodo,
-      dueDate: x.fechaVencimiento,
-      conceptCode: x.conceptoCodigo,
-      amount: x.monto,
-      estado: x.estado,
-      isPaid,
-      reciboId, // <- aquí ya debe venir el id para imprimir
-    };
-  });
-}, [data]);
+      return {
+        idx: i + 1,
+        periodo: x.periodo,
+        dueDate: x.fechaVencimiento,
+        conceptCode: x.conceptoCodigo,
+        amount: x.monto,
+        estado: x.estado,
+        isPaid,
+        reciboId, // ✅ AHORA SÍ existe y se habilita imprimir
+      };
+    });
+  }, [data]);
 
   // Totales
   const totals: Totals = useMemo(() => {
@@ -146,6 +156,7 @@ const projection: ProjectionRow[] = useMemo(() => {
     // request state
     loading,
     error,
+    reload,
 
     // identity
     alumnoId,
