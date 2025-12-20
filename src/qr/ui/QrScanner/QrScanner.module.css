@@ -1,0 +1,172 @@
+.card{
+  border: 1px solid #e6e9f2;
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.left{ min-width: 0; }
+
+.title{
+  font-weight: 700;
+  font-size: 13px;
+  color: #0b0b0b;
+}
+
+.sub{
+  margin-top: 2px;
+  font-size: 12px;
+  color: #5a6472;
+}
+
+.right{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chip{
+  height: 30px;
+  display:inline-flex;
+  align-items:center;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+  border: 1px solid #e6e9f2;
+  background: #fbfcff;
+  color: #2b2f36;
+}
+.chipIdle{ background:#fbfcff; }
+.chipStop{ background:#fffaf0; border-color:#f1e2b5; color:#6a4b00; }
+.chipScan{ background:#f2f7ff; border-color:#d9e6ff; color:#1f3b8a; }
+.chipErr{ background:#fff4f4; border-color:#f3c7c7; color:#8a1f1f; }
+
+.btn{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid #e6e9f2;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  transition: transform .08s ease, background .12s ease, border-color .12s ease;
+}
+.btn:active{ transform: scale(0.98); }
+
+.btnOn{
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+}
+.btnOn:hover{ background:#0b1220; }
+
+.btnOff{
+  background: #fbfcff;
+  color: #111;
+}
+.btnOff:hover{ background:#f6f8ff; }
+
+.err{
+  border: 1px solid #f3c7c7;
+  background: #fff4f4;
+  color: #8a1f1f;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* =========================
+   PREVIEW (efecto enfoque)
+   ========================= */
+.preview{
+  /* tamaño del recuadro “nítido” */
+  --cut-w: 64%;
+  --cut-h: 52%;
+  --cut-r: 18px;
+
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e6e9f2;
+  background: #0a0a0a;
+}
+
+/* ambos videos ocupan el mismo espacio */
+.videoBlur,
+.videoSharp{
+  width: 100%;
+  display:block;
+  aspect-ratio: 16/10;
+  object-fit: cover;
+  background: #000;
+}
+
+/* fondo borroso + más oscuro (así no “distrae” lo de atrás) */
+.videoBlur{
+  filter: blur(10px) brightness(0.65) saturate(0.9);
+  transform: scale(1.04); /* evita bordes al blur */
+}
+
+/* este se recorta para que solo se vea dentro del marco */
+.videoSharp{
+  position: absolute;
+  inset: 0;
+
+  /* clip-path para que SOLO se vea el centro */
+  clip-path: inset(
+    calc(50% - (var(--cut-h) / 2))
+    calc(50% - (var(--cut-w) / 2))
+    calc(50% - (var(--cut-h) / 2))
+    calc(50% - (var(--cut-w) / 2))
+    round var(--cut-r)
+  );
+}
+
+/* overlay con marco + sombra */
+.overlay{
+  position:absolute;
+  inset: 0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+
+.frame{
+  width: var(--cut-w);
+  height: var(--cut-h);
+  border-radius: var(--cut-r);
+  border: 2px solid rgba(255,255,255,0.88);
+  box-shadow:
+    0 0 0 999px rgba(0,0,0,0.12),
+    0 16px 40px rgba(0,0,0,0.25);
+}
+
+.hint{
+  margin-top: 10px;
+  font-size: 12px;
+  color: #5a6472;
+}
+
+@media (max-width: 820px){
+  .right{ justify-content: flex-start; }
+  .preview{ --cut-w: 76%; --cut-h: 56%; }
+}

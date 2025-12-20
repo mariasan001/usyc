@@ -1,10 +1,13 @@
+// src/app/verificar/page.tsx
+'use client';
+
 import AppShell from '@/layout/AppShell/AppShell';
-import QrVerifyPanel from '@/qr/ui/QrVerifyPanel';
+import VerifyQrPage from '@/qr/ui/VerifyQrPage/VerifyQrPage';
 
 export default function VerifyPage() {
   return (
     <AppShell>
-      <QrVerifyPanel />
+      <VerifyQrPage />
     </AppShell>
   );
 }

@@ -21,6 +21,10 @@ export const API = {
     tipoPagoActivar: (id: number) => `/api/catalogos/tipos-pago/${id}/activar`,
     tipoPagoDesactivar: (id: number) =>
       `/api/catalogos/tipos-pago/${id}/desactivar`,
+
+    // Planteles
+    planteles: '/api/catalogos/planteles',
+    plantelById: (id: number) => `/api/catalogos/planteles/${id}`,
   },
 
   alumnos: {
@@ -34,10 +38,11 @@ export const API = {
     base: '/api/recibos',
     create: '/api/recibos', // POST
 
-    // OJO: tu backend AHORITA NO TIENE este GET, por eso te da 404.
-    // byId: (id: number) => `/api/recibos/${id}`,
-
     // QR (image/png)
     qr: (id: number) => `/api/recibos/${id}/qr`,
+
+    // ✅ Validar por QR (GET con query param)
+    validarQr: (qrPayload: string) =>
+      `/api/recibos/validar-qr?qrPayload=${encodeURIComponent(qrPayload)}`,
   },
 } as const;
