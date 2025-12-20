@@ -1,0 +1,47 @@
+.identity{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 18px 10px;
+}
+
+.avatar{
+  width:40px;
+  height:40px;
+  border-radius:14px;
+  background:#0f172a;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+}
+
+.identityMain{ min-width:0; display:flex; flex-direction:column; gap:4px; }
+.identityName{
+  font-weight:800;
+  color:#0f172a;
+  font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.identityMeta{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
+  color:#64748b;
+}
+.mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dot{ opacity:.7; }
+
+.pill{
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid #e7ebf3;
+  font-weight:700;
+  font-size:11px;
+}
+.pillOk{ background:#eafff1; border-color:#b7f0c7; color:#0b6b2d; }
+.pillIdle{ background:#f6f7fb; border-color:#e7ebf3; color:#334155; }

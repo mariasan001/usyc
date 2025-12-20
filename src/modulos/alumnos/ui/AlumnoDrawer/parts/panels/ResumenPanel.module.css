@@ -1,0 +1,53 @@
+.panel{ padding:14px 18px 18px; }
+
+.panelTitleRow{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.panelTitle{ font-weight:900; color:#0f172a; }
+.panelHint{ font-size:12px; color:#64748b; }
+
+.grid{
+  display:grid;
+  gap:12px;
+}
+
+.card{
+  border:1px solid #e7ebf3;
+  background:#fff;
+  border-radius:18px;
+  padding:14px;
+}
+
+.label{ font-size:12px; color:#64748b; margin-bottom:10px; font-weight:800; }
+
+.nextPay{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.nextLeft{ display:flex; align-items:center; gap:8px; min-width:0; }
+.nextRight b{ color:#0f172a; }
+.dot{ opacity:.6; }
+.mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.muted{ color:#64748b; font-size:12px; }
+
+.kvGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px 12px;
+}
+.kv{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  border-bottom:1px dashed #eef2f7;
+  padding-bottom:8px;
+}
+.kv span{ color:#64748b; font-size:12px; }
+.kv b{ color:#0f172a; font-size:12px; }

@@ -1,0 +1,23 @@
+.header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:18px 18px 14px;
+  border-bottom:1px solid #eef2f7;
+  background:#fff;
+}
+
+.headerText{ display:flex; flex-direction:column; gap:4px; }
+.title{ font-weight:800; font-size:15px; color:#0f172a; }
+.subtitle{ font-size:12px; color:#64748b; }
+
+.close{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+  border:1px solid #e7ebf3;
+  background:#fff;
+  cursor:pointer;
+}
+.close:hover{ background:#f7f9fd; }

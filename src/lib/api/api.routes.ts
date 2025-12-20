@@ -1,4 +1,3 @@
-// src/lib/api/api.routes.ts
 export const API = {
   catalogos: {
     carreras: '/api/catalogos/carreras',
@@ -8,5 +7,6 @@ export const API = {
 
   alumnos: {
     base: '/api/alumnos',
+    pagosResumen: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
   },
 } as const;
