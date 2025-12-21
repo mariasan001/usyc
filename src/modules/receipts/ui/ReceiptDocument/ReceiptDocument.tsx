@@ -176,110 +176,72 @@ export default function ReceiptDocument({
   const nombre = safeText(receipt.alumno?.nombre);
   const montoLetras = useMemo(() => toMoneyWordsMXN(receipt.monto ?? 0), [receipt.monto]);
 
-  return (
-    <div className={s.page}>
-      <div className={s.sheet}>
-        {cancelled ? <div className={s.watermark}>CANCELADO</div> : null}
+return (
+  <div className={s.page}>
+    <div className={s.sheet}>
+      {cancelled ? <div className={s.watermark}>CANCELADO</div> : null}
 
-        <div className={s.top}>
-          <div className={s.logoBox}>
-            {/* ✅ Logo desde public/img/USYC-logo.png */}
+      {/* Top bar + header */}
+      <header className={s.header}>
+        <div className={s.headerLeft}>
+          <div className={s.logoWrap}>
             <Image
               alt="Logo"
               src="/img/USYC-logo.png"
-              width={120}
-              height={120}
+              width={92}
+              height={92}
               className={s.logo}
               priority
             />
           </div>
 
-          <div className={s.topCenter}>
-            <h1 className={s.title}>RECIBO DE CAJA</h1>
-
-            <div className={s.plantelPill}>
-              <span className={s.pillDot} />
-              <span>{settings.plantelName}</span>
-            </div>
-          </div>
-
-          <div className={s.topRight}>
-            <div className={s.folioBlock}>
-              <div className={s.folioLabel}>RECIBO N°</div>
-              <div className={s.folioBox}>
-                <div className={s.folioNum}>{folioDisplay}</div>
-                <div className={s.folioSerie}>{settings.serie}</div>
-              </div>
-            </div>
-
-            <div className={s.amountBlock}>
-              <div className={s.amountLabel}>POR:</div>
-              <div className={s.amountBox}>
-                <div className={s.amountCurrency}>$</div>
-                <div className={s.amountValue}>
-                  {fmtMoney(receipt.monto).replace('$', '').trim()}
-                </div>
-              </div>
-            </div>
+          <div className={s.folioMini}>
+            <span className={s.folioPrefix}>N_</span>
+            <span className={s.folioNumMini}>{folioDisplay}</span>
+            <span className={s.folioLine} />
           </div>
         </div>
 
-        <div className={s.infoBox}>
-          <div className={s.row2}>
-            <div className={s.field}>
-              <div className={s.fieldLabel}>NOMBRE :</div>
-              <div className={s.fieldLine}>{nombre}</div>
-            </div>
-
-            <div className={s.fieldRight}>
-              <div className={s.fieldRightLabel}>LA CANTIDAD DE:</div>
-              <div className={s.fieldRightValue}>{fmtMoney(receipt.monto)}</div>
-            </div>
-          </div>
-
-          <div className={s.row1}>
-            <div className={s.field}>
-              <div className={s.fieldLabel}>CANTIDAD EN LETRAS :</div>
-              {/* ✅ Ya no depende de receipt.montoLetras (lo generamos) */}
-              <div className={s.fieldLine}>{montoLetras}</div>
-            </div>
-          </div>
-
-          <div className={s.row1}>
-            <div className={s.field}>
-              <div className={s.fieldLabel}>CONCEPTO :</div>
-              <div className={s.fieldLine}>{concepto}</div>
-            </div>
-          </div>
-
-          <div className={s.row1}>
-            <div className={s.fieldDate}>
-              <div className={s.fieldLabel}>FECHA:</div>
-              <div className={s.dateValue}>{fecha}</div>
-            </div>
-          </div>
-
-          {cancelled ? (
-            <div className={s.cancelBox}>
-              <div className={s.cancelTitle}>Motivo de cancelación</div>
-              <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
-            </div>
-          ) : null}
+        <div className={s.headerCenter}>
+          <div className={s.headerTitle}>RECIBO DE CAJA</div>
+          <div className={s.headerSub}>{settings.plantelName}</div>
         </div>
 
-        <div className={s.bottom}>
-          <div className={s.qrBlock}>
-            <div className={s.qrFrame}>
-              {/* ✅ QR real desde API */}
-              <QrImgApi src={qrSrc} />
-            </div>
-            <div className={s.scanMe}>
-              <span className={s.scanDot} />
-              <span>SCAN ME</span>
-            </div>
+        <div className={s.headerRight}>
+          <div className={s.headerRightTitle}>CONTROL ESCOLAR</div>
+          <div className={s.headerRightRow}>
+            <span className={s.headerRightLabel}>FECHA:</span>
+            <span className={s.headerRightValue}>{fecha}</span>
+          </div>
+        </div>
+      </header>
+
+      <div className={s.divider} />
+
+      {/* Body: left form + right QR */}
+      <main className={s.body}>
+        <section className={s.form}>
+          <div className={s.fieldRow}>
+            <div className={s.label}>NOMBRE&nbsp;&nbsp;COMPLETO:</div>
+            <div className={s.lineValue}>{nombre}</div>
           </div>
 
-          <div className={s.signatures}>
+          <div className={s.fieldRow}>
+            <div className={s.label}>CANTIDAD EN LETRAS :</div>
+            <div className={s.lineValue}>{montoLetras}</div>
+          </div>
+
+          <div className={s.fieldRow}>
+            <div className={s.label}>CONCEPTO:</div>
+            <div className={s.lineValue}>{concepto}</div>
+          </div>
+
+          <div className={s.totalRow}>
+            <div className={s.label}>TOTAL:</div>
+            <div className={s.totalPill}>{fmtMoney(receipt.monto)}</div>
+          </div>
+
+          <div className={s.sigs}>
             <div className={s.sig}>
               <div className={s.sigLine} />
               <div className={s.sigLabel}>RECIBÍ CONFORME</div>
@@ -291,9 +253,22 @@ export default function ReceiptDocument({
             </div>
           </div>
 
-          <div className={s.footer}>{settings.footerText}</div>
-        </div>
-      </div>
+          {cancelled ? (
+            <div className={s.cancelBox}>
+              <div className={s.cancelTitle}>Motivo de cancelación</div>
+              <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
+            </div>
+          ) : null}
+        </section>
+
+        <aside className={s.qrSide}>
+          <div className={s.qrFrame}>
+            <QrImgApi src={qrSrc} />
+          </div>
+        </aside>
+      </main>
     </div>
-  );
+  </div>
+);
+
 }

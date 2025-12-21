@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import s from './ProyeccionPrintPage.module.css';
 
@@ -33,7 +33,7 @@ type ProjectionPrintPayload = {
   matricula: string;
   generadoISO: string;
   rows: ProjectionRow[];
-  totals?: Totals; // 👈 OJO: lo dejamos opcional por si el cache viejo no lo trae
+  totals?: Totals;
 };
 
 const DEFAULT_TOTALS: Totals = {
@@ -78,7 +78,13 @@ function fmtDateTime(iso: string) {
   }
 }
 
+function safeUpper(v?: string) {
+  const t = (v ?? '').toString().trim();
+  return t ? t.toUpperCase() : 'PENDIENTE';
+}
+
 export default function ProyeccionPrintPage() {
+  const router = useRouter();
   const sp = useSearchParams();
   const alumnoId = useMemo(() => parseAlumnoId(sp), [sp]);
 
@@ -105,7 +111,6 @@ export default function ProyeccionPrintPage() {
       return;
     }
 
-    // ✅ normalizamos por si viene incompleto
     setData({
       ...payload,
       rows: Array.isArray(payload.rows) ? payload.rows : [],
@@ -122,12 +127,26 @@ export default function ProyeccionPrintPage() {
     return () => clearTimeout(t);
   }, [data]);
 
+  function onPrint() {
+    window.print();
+  }
+
+  function onBack() {
+    router.back();
+  }
+
   if (err) {
     return (
       <div className={s.wrap}>
         <div className={s.card}>
           <div className={s.title}>No se pudo generar el PDF</div>
           <div className={s.msg}>{err}</div>
+
+          <div className={s.actions}>
+            <button className={s.btn} onClick={onBack}>
+              Volver
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -149,19 +168,50 @@ export default function ProyeccionPrintPage() {
 
   return (
     <div className={s.page}>
+      {/* Barra de acciones (solo pantalla) */}
+      <div className={s.actionBar}>
+        <button className={s.actionBtn} onClick={onBack}>
+          ← Volver
+        </button>
+
+        <div className={s.actionMeta}>
+          <span className={s.metaChip}>USYC • Control de Recibos</span>
+        </div>
+
+        <button className={s.actionBtnPrimary} onClick={onPrint}>
+          Imprimir
+        </button>
+      </div>
+
       <div className={s.sheet}>
         <header className={s.header}>
-          <div className={s.hLeft}>
-            <div className={s.hTitle}>REPORTE DE PROYECCIÓN</div>
-            <div className={s.hSub}>Generado: {fmtDateTime(data.generadoISO)}</div>
+          <div className={s.headerCenter}>
+            <div className={s.headerTitle}>REPORTE DE PROYECCIÓN</div>
+            <div className={s.headerSub}>Generado: {fmtDateTime(data.generadoISO)}</div>
           </div>
 
-          <div className={s.hRight}>
-            <div className={s.pill}>Alumno: {data.alumnoNombre}</div>
-            <div className={s.pill}>Matrícula: {data.matricula}</div>
-            <div className={s.pill}>ID: {data.alumnoId}</div>
+          <div className={s.headerRight}>
+            <div className={s.headerRightTitle}>CONTROL ESCOLAR</div>
+            <div className={s.headerRightRow}>
+              <span className={s.headerRightLabel}>ALUMNO:</span>
+              <span className={s.headerRightValue}>{data.alumnoNombre}</span>
+            </div>
           </div>
         </header>
+
+        <div className={s.divider} />
+
+        <section className={s.infoStrip}>
+          <div className={s.infoPill}>
+            <span className={s.infoK}>MATRÍCULA</span>
+            <span className={s.infoV}>{data.matricula}</span>
+          </div>
+
+          <div className={s.infoPill}>
+            <span className={s.infoK}>ID</span>
+            <span className={s.infoV}>{data.alumnoId}</span>
+          </div>
+        </section>
 
         <section className={s.summary}>
           <div className={s.sumCard}>
@@ -178,47 +228,60 @@ export default function ProyeccionPrintPage() {
             <div className={s.sumLabel}>Saldo</div>
             <div className={s.sumValue}>{fmtMoney(totals.saldo)}</div>
           </div>
-
-          <div className={s.sumCard}>
-            <div className={s.sumLabel}>Pagados / Pendientes</div>
-            <div className={s.sumValue}>
-              {totals.pagados} / {totals.pendientes}
-            </div>
-          </div>
         </section>
 
-        <section className={s.table}>
-          <div className={s.trHead}>
-            <div>#</div>
-            <div>Periodo</div>
-            <div>Vence</div>
-            <div>Concepto</div>
-            <div className={s.right}>Monto</div>
-            <div>Estado</div>
+        <section className={s.tableCard}>
+          <div className={s.tableTitle}>Detalle de pagos / periodos</div>
+
+          <div className={s.tableWrap}>
+            <table className={s.table}>
+              <thead>
+                <tr>
+                  <th className={s.thSmall}>#</th>
+                  <th>Periodo</th>
+                  <th>Vence</th>
+                  <th>Concepto</th>
+                  <th className={s.tRight}>Monto</th>
+                  <th>Estatus</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {rows.map((r) => {
+                  const paid = !!r.isPaid;
+                  const statusLabel = paid ? 'PAGADO' : safeUpper(r.estado);
+
+                  return (
+                    <tr key={`${r.periodo}_${r.idx}`}>
+                      <td className={`${s.mono} ${s.tCenter}`}>{r.idx}</td>
+                      <td className={s.mono}>{r.periodo}</td>
+                      <td className={s.mono}>{r.dueDate}</td>
+                      <td className={s.ellipsis}>{r.conceptCode}</td>
+                      <td className={`${s.mono} ${s.tRight}`}>{fmtMoney(r.amount)}</td>
+                      <td>
+                        <span className={s.pill} data-status={statusLabel}>
+                          {statusLabel}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className={s.empty}>
+                      Sin proyección para mostrar.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
           </div>
-
-          {rows.map((r) => {
-            const paid = !!r.isPaid;
-            return (
-              <div className={s.tr} key={`${r.periodo}_${r.idx}`}>
-                <div>{r.idx}</div>
-                <div className={s.mono}>{r.periodo}</div>
-                <div className={s.mono}>{r.dueDate}</div>
-                <div>{r.conceptCode}</div>
-                <div className={`${s.mono} ${s.right}`}>{fmtMoney(r.amount)}</div>
-                <div className={paid ? s.paid : s.pending}>
-                  {paid ? 'PAGADO' : String(r.estado ?? 'PENDIENTE').toUpperCase()}
-                </div>
-              </div>
-            );
-          })}
-
-          {rows.length === 0 ? <div className={s.empty}>Sin proyección para mostrar.</div> : null}
         </section>
 
         <footer className={s.footer}>
-          <div>Control escolar</div>
-          <div>Reporte interno • Proyección</div>
+          <div className={s.footerLeft}>Control escolar</div>
+          <div className={s.footerRight}>Reporte interno • Proyección</div>
         </footer>
       </div>
     </div>
