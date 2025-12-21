@@ -1,4 +1,3 @@
-// src/modulos/alumnos/ui/AlumnoDrawer/parts/ProyeccionPanel/ProyeccionPanel.tsx
 'use client';
 
 import s from './ProyeccionPanel.module.css';
@@ -12,7 +11,11 @@ export default function ProyeccionPanel({
 }: {
   rows: ProjectionRow[];
   onPay: (row: ProjectionRow) => void;
+
+  // ✅ navega a /recibos/print?reciboId=...
   onReceipt: (reciboId: number) => void;
+
+  // ✅ exportar proyección
   onExportPdf: () => void;
 }) {
   return (
@@ -28,8 +31,7 @@ export default function ProyeccionPanel({
             className={s.secondaryBtn}
             type="button"
             onClick={onExportPdf}
-            title="Exportar proyección a PDF (imprimir)"
-            disabled={rows.length === 0}
+            title="Exportar la tabla de proyección a PDF"
           >
             Exportar PDF
           </button>
@@ -52,8 +54,10 @@ export default function ProyeccionPanel({
 
           {rows.map((r) => {
             const key = `${r.periodo}_${r.idx}`;
+
             const isPaid = !!r.isPaid;
-            const hasReciboId = typeof r.reciboId === 'number' && r.reciboId > 0;
+            const hasReciboId =
+              typeof r.reciboId === 'number' && r.reciboId > 0;
 
             return (
               <div className={s.tr} key={key}>
@@ -67,12 +71,16 @@ export default function ProyeccionPanel({
                 </div>
 
                 <div className={isPaid ? s.paid : s.pending}>
-                  {isPaid ? 'Pagado' : r.estado}
+                  {isPaid ? 'Pagado' : (r.estado ?? 'Pendiente')}
                 </div>
 
                 <div className={s.right}>
                   {!isPaid ? (
-                    <button className={s.primaryBtn} type="button" onClick={() => onPay(r)}>
+                    <button
+                      className={s.primaryBtn}
+                      type="button"
+                      onClick={() => onPay(r)}
+                    >
                       Pagar
                     </button>
                   ) : hasReciboId ? (
@@ -85,7 +93,12 @@ export default function ProyeccionPanel({
                       Imprimir
                     </button>
                   ) : (
-                    <button className={s.linkBtnDisabled} type="button" disabled>
+                    <button
+                      className={s.linkBtnDisabled}
+                      type="button"
+                      disabled
+                      title="Pagado, pero falta reciboId para imprimir"
+                    >
                       Imprimir
                     </button>
                   )}
