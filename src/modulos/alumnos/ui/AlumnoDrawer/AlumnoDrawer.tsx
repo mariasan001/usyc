@@ -140,17 +140,28 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   // =========================
   // EXPORT PDF PROYECCIÓN (SIN API / SIN POPUPS)
   // =========================
-  function cacheProjectionForPrint(alumnoId: string, rows: ProjectionRow[]) {
-    try {
-      sessionStorage.setItem(`projection:${alumnoId}`, JSON.stringify(rows));
-    } catch {}
-  }
+function cacheProjectionForPrint() {
+  try {
+    const payload = {
+      alumnoId: d.alumnoId,
+      alumnoNombre: d.nombreCompleto,
+      matricula: d.matricula,
+      generadoISO: new Date().toISOString(),
 
- function openProjectionPrint(alumnoId: string) {
-  router.push(
-    `/alumnos/proyeccion/print?alumnoId=${encodeURIComponent(alumnoId)}`
-  );
+      rows: d.projection,
+
+      // ✅ IMPORTANTÍSIMO: aquí va TODO lo que ya calcula tu hook
+      totals: d.totals,
+    };
+
+    sessionStorage.setItem(`projection:${d.alumnoId}`, JSON.stringify(payload));
+  } catch {}
 }
+
+function openProjectionPrint() {
+  router.push(`/alumnos/proyeccion/print?alumnoId=${encodeURIComponent(d.alumnoId)}`);
+}
+
 
   async function onAddExtra() {
     setExtraError(null);
@@ -225,24 +236,40 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         />
       ) : null}
 
-      {d.tab === 'PROYECCION' ? (
-        <ProyeccionPanel
-          rows={d.projection}
-          onPay={(row) => {
-            setPayRow(row);
-            setPayOpen(true);
-          }}
-          onReceipt={(reciboId) => {
-            openReceipt(reciboId);
-          }}
-          onExportPdf={() => {
-            // ✅ NO fetch. NO endpoint. NO about:blank.
-            if (!d.alumnoId) return;
-            cacheProjectionForPrint(d.alumnoId, d.projection);
-            openProjectionPrint(d.alumnoId);
-          }}
-        />
-      ) : null}
+{d.tab === 'PROYECCION' ? (
+  <ProyeccionPanel
+    rows={d.projection}
+    onPay={(row) => {
+      setPayRow(row);
+      setPayOpen(true);
+    }}
+    onReceipt={(reciboId) => {
+      openReceipt(reciboId);
+    }}
+    onExportPdf={() => {
+      // ✅ sin API, sin popups, solo cache + route
+      if (d.loading) return;
+      if (!d.alumnoId) return;
+
+      try {
+        const payload = {
+          alumnoId: d.alumnoId,
+          alumnoNombre: d.nombreCompleto,
+          matricula: d.matricula,
+          generadoISO: new Date().toISOString(),
+          rows: d.projection,
+          totals: d.totals,
+        };
+
+        sessionStorage.setItem(`projection:${d.alumnoId}`, JSON.stringify(payload));
+      } catch {}
+
+      router.push(
+        `/alumnos/proyeccion/print?alumnoId=${encodeURIComponent(d.alumnoId)}`
+      );
+    }}
+  />
+) : null}
 
       {d.tab === 'PAGOS' ? (
         <PagosPanel

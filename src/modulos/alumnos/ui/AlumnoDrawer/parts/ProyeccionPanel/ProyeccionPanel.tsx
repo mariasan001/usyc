@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import s from './ProyeccionPanel.module.css';
 import type { ProjectionRow } from '../../types/alumno-drawer.types';
@@ -12,10 +12,10 @@ export default function ProyeccionPanel({
   rows: ProjectionRow[];
   onPay: (row: ProjectionRow) => void;
 
-  // ✅ navega a /recibos/print?reciboId=...
+  // navega a /recibos/print?reciboId=...
   onReceipt: (reciboId: number) => void;
 
-  // ✅ exportar proyección
+  // ✅ nuevo: exportar reporte
   onExportPdf: () => void;
 }) {
   return (
@@ -31,7 +31,7 @@ export default function ProyeccionPanel({
             className={s.secondaryBtn}
             type="button"
             onClick={onExportPdf}
-            title="Exportar la tabla de proyección a PDF"
+            title="Exportar reporte de proyección"
           >
             Exportar PDF
           </button>
@@ -54,10 +54,8 @@ export default function ProyeccionPanel({
 
           {rows.map((r) => {
             const key = `${r.periodo}_${r.idx}`;
-
             const isPaid = !!r.isPaid;
-            const hasReciboId =
-              typeof r.reciboId === 'number' && r.reciboId > 0;
+            const hasReciboId = typeof r.reciboId === 'number' && r.reciboId > 0;
 
             return (
               <div className={s.tr} key={key}>
@@ -65,10 +63,7 @@ export default function ProyeccionPanel({
                 <div className={s.mono}>{r.periodo}</div>
                 <div className={s.mono}>{r.dueDate}</div>
                 <div>{r.conceptCode}</div>
-
-                <div className={`${s.mono} ${s.right}`}>
-                  ${Number(r.amount ?? 0).toFixed(2)}
-                </div>
+                <div className={`${s.mono} ${s.right}`}>${r.amount.toFixed(2)}</div>
 
                 <div className={isPaid ? s.paid : s.pending}>
                   {isPaid ? 'Pagado' : (r.estado ?? 'Pendiente')}
@@ -76,11 +71,7 @@ export default function ProyeccionPanel({
 
                 <div className={s.right}>
                   {!isPaid ? (
-                    <button
-                      className={s.primaryBtn}
-                      type="button"
-                      onClick={() => onPay(r)}
-                    >
+                    <button className={s.primaryBtn} type="button" onClick={() => onPay(r)}>
                       Pagar
                     </button>
                   ) : hasReciboId ? (
