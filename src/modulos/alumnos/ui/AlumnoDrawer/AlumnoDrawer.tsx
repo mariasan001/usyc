@@ -90,7 +90,7 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const [extraError, setExtraError] = useState<string | null>(null);
 
   // =========================
-  // PRINT CACHE
+  // PRINT CACHE (RECIBOS)
   // =========================
   function cacheReciboForPrint(dto: ReciboDTO) {
     try {
@@ -129,15 +129,28 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
 
   /**
    * ✅ Unificado: siempre cachea primero y luego navega.
-   * Lo usas desde PROYECCIÓN y desde PAGOS.
+   * Úsalo desde PROYECCIÓN y desde PAGOS.
    */
   function openReceipt(reciboId: number) {
-    // Si aún está cargando o no hay pagos, evita mandar al print vacío:
     if (d.loading) return;
-
     cacheFromPagosReales(reciboId);
     openPrint(reciboId);
   }
+
+  // =========================
+  // EXPORT PDF PROYECCIÓN (SIN API / SIN POPUPS)
+  // =========================
+  function cacheProjectionForPrint(alumnoId: string, rows: ProjectionRow[]) {
+    try {
+      sessionStorage.setItem(`projection:${alumnoId}`, JSON.stringify(rows));
+    } catch {}
+  }
+
+ function openProjectionPrint(alumnoId: string) {
+  router.push(
+    `/alumnos/proyeccion/print?alumnoId=${encodeURIComponent(alumnoId)}`
+  );
+}
 
   async function onAddExtra() {
     setExtraError(null);
@@ -176,7 +189,6 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
       setExtraError(null);
 
       d.setTab('PAGOS');
-      // openPrint(created.reciboId);
     } catch (e: any) {
       setExtraError(e?.message ?? 'No se pudo registrar el pago extra.');
       throw e;
@@ -221,8 +233,13 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
             setPayOpen(true);
           }}
           onReceipt={(reciboId) => {
-            // ✅ ahora usa el unificado
             openReceipt(reciboId);
+          }}
+          onExportPdf={() => {
+            // ✅ NO fetch. NO endpoint. NO about:blank.
+            if (!d.alumnoId) return;
+            cacheProjectionForPrint(d.alumnoId, d.projection);
+            openProjectionPrint(d.alumnoId);
           }}
         />
       ) : null}
@@ -230,7 +247,8 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
       {d.tab === 'PAGOS' ? (
         <PagosPanel
           pagos={d.pagosReales}
-          onPrint={(reciboId) => openReceipt(reciboId)} // ✅ FIX: ahora también cachea
+          // si luego quieres imprimir desde aquí:
+          // onPrint={(reciboId) => openReceipt(reciboId)}
         />
       ) : null}
 
@@ -273,8 +291,6 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
             setPayOpen(false);
             setPayRow(null);
             d.setTab('PAGOS');
-
-            // openPrint(created.reciboId);
           } finally {
             setPaySaving(false);
           }
