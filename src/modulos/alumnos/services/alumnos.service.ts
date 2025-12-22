@@ -1,7 +1,7 @@
-// src/modulos/alumnos/services/alumnos.service.ts
 import { api } from '@/lib/api/api.client';
 import { API } from '@/lib/api/api.routes';
 import type { Alumno, AlumnoCreate, Page } from '../types/alumno.types';
+import type { RecibosPreviosCountResponse } from '../types/recibos-previos.types';
 
 export type AlumnosListParams = {
   page?: number;            // 0-based
@@ -41,5 +41,11 @@ export const AlumnosService = {
     };
 
     return api<Page<Alumno>>(`${API.alumnos.base}${qs(safe)}`);
+  },
+
+  // ✅ GET /api/aux/recibos-previos/count?nombre=...
+  countRecibosPreviosByNombre: (nombreCompleto: string) => {
+    const url = `${API.aux.recibosPreviosCount}${qs({ nombre: nombreCompleto })}`;
+    return api<RecibosPreviosCountResponse>(url);
   },
 };

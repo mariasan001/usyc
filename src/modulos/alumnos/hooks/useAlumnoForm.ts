@@ -1,13 +1,10 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import {
-  useEscolaridades,
-  useCarreras,
-  usePlanteles,
-} from '@/modulos/configuraciones/hooks';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { useEscolaridades, useCarreras, usePlanteles } from '@/modulos/configuraciones/hooks';
 
 import { useAlumnoCreate } from './useAlumnoCreate';
+import { AlumnosService } from '../services/alumnos.service';
 
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
 import type { AlumnoCreate } from '../types/alumno.types';
@@ -24,19 +21,9 @@ function todayISO() {
 function addMonthsISO(iso: string, months: number) {
   const [y, m, d] = iso.split('-').map(Number);
   const base = new Date(y, (m - 1) + months, d);
-  const daysInTargetMonth = new Date(
-    base.getFullYear(),
-    base.getMonth() + 1,
-    0,
-  ).getDate();
-  const safe = new Date(
-    base.getFullYear(),
-    base.getMonth(),
-    Math.min(d, daysInTargetMonth),
-  );
-  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(
-    safe.getDate(),
-  )}`;
+  const daysInTargetMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const safe = new Date(base.getFullYear(), base.getMonth(), Math.min(d, daysInTargetMonth));
+  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(safe.getDate())}`;
 }
 
 function normalize(s?: string | null) {
@@ -45,7 +32,7 @@ function normalize(s?: string | null) {
 
 function carreraEsRequerida(esc?: Escolaridad | null) {
   const nombre = normalize(esc?.nombre);
-  const codigo = normalize(esc?.codigo);
+  const codigo = normalize((esc as any)?.codigo); // por si tu type no trae codigo
 
   const noAplica =
     nombre.includes('primaria') ||
@@ -58,6 +45,12 @@ function carreraEsRequerida(esc?: Escolaridad | null) {
   return !noAplica;
 }
 
+function nombreMinOk(nombre: string) {
+  // evita spamear API con "lu" o espacios
+  const t = (nombre ?? '').trim();
+  return t.length >= 6; // ajustable (6-8 suele ir bien)
+}
+
 export function useAlumnoForm() {
   const escolaridadesApi = useEscolaridades({ soloActivos: true });
   const carrerasApi = useCarreras({ soloActivos: true });
@@ -65,9 +58,6 @@ export function useAlumnoForm() {
 
   const alumnoCreate = useAlumnoCreate();
 
-  // ======================
-  // FORM STATE
-  // ======================
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [matricula, setMatricula] = useState('');
   const [escolaridadId, setEscolaridadIdState] = useState<number | null>(null);
@@ -75,38 +65,31 @@ export function useAlumnoForm() {
   const [fechaIngreso, setFechaIngreso] = useState<string>(todayISO());
   const [plantelId, setPlantelId] = useState<number | null>(null);
 
-  // ✅ nuevos (API)
+  // ✅ NUEVO: migración recibos previos
   const [pullPrevReceipts, setPullPrevReceipts] = useState(false);
   const [prevReceiptsNombre, setPrevReceiptsNombre] = useState('');
+
+  // ✅ NUEVO: count recibos previos por nombre
+  const [prevCount, setPrevCount] = useState<number | null>(null);
+  const [prevCountLoading, setPrevCountLoading] = useState(false);
+  const [prevCountError, setPrevCountError] = useState<string | null>(null);
+
+  const lastQueryRef = useRef<string>('');
+  const debounceRef = useRef<number | null>(null);
 
   const [formError, setFormError] = useState<string | null>(null);
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // ======================
-  // CATALOGS
-  // ======================
-  const escolaridades = useMemo(
-    () => escolaridadesApi.items ?? [],
-    [escolaridadesApi.items],
-  );
-
-  const planteles = useMemo(
-    () => plantelesApi.items ?? [],
-    [plantelesApi.items],
-  );
+  const escolaridades = useMemo(() => escolaridadesApi.items ?? [], [escolaridadesApi.items]);
+  const planteles = useMemo(() => plantelesApi.items ?? [], [plantelesApi.items]);
 
   const escolaridadSel = useMemo(() => {
     if (!escolaridadId) return null;
-    return (
-      escolaridades.find((e) => Number(e.id) === Number(escolaridadId)) ?? null
-    );
+    return escolaridades.find((e) => Number(e.id) === Number(escolaridadId)) ?? null;
   }, [escolaridadId, escolaridades]);
 
-  const carreraRequired = useMemo(
-    () => carreraEsRequerida(escolaridadSel),
-    [escolaridadSel],
-  );
+  const carreraRequired = useMemo(() => carreraEsRequerida(escolaridadSel), [escolaridadSel]);
 
   const carrerasFiltradas = useMemo(() => {
     const all = carrerasApi.items ?? [];
@@ -116,24 +99,18 @@ export function useAlumnoForm() {
 
   const carreraSel = useMemo(() => {
     if (!carreraId) return null;
-    return (
-      carrerasFiltradas.find((c) => String(c.carreraId) === String(carreraId)) ??
-      null
-    );
+    return carrerasFiltradas.find((c) => String(c.carreraId) === String(carreraId)) ?? null;
   }, [carreraId, carrerasFiltradas]);
 
-  // ======================
-  // COMPUTED
-  // ======================
   const precioMensual = useMemo(() => {
     if (!carreraRequired) return 0;
-    return Number(carreraSel?.montoMensual ?? 0);
+    return Number((carreraSel as any)?.montoMensual ?? 0);
   }, [carreraRequired, carreraSel]);
 
   const duracionMeses = useMemo(() => {
     if (!carreraRequired) return 0;
-    const a = Number(carreraSel?.duracionAnios ?? 0);
-    const m = Number(carreraSel?.duracionMeses ?? 0);
+    const a = Number((carreraSel as any)?.duracionAnios ?? 0);
+    const m = Number((carreraSel as any)?.duracionMeses ?? 0);
     return a * 12 + m;
   }, [carreraRequired, carreraSel]);
 
@@ -148,15 +125,53 @@ export function useAlumnoForm() {
     setCarreraId(null);
   }, []);
 
-  // ✅ si apagas migración, limpia el nombre
-  const togglePullPrevReceipts = useCallback((v: boolean) => {
-    setPullPrevReceipts(v);
-    if (!v) setPrevReceiptsNombre('');
-  }, []);
+  // ✅ Efecto: consultar recibos previos por nombre (debounce)
+  useEffect(() => {
+    const nombre = (nombreCompleto ?? '').trim();
 
-  // ======================
-  // SUBMIT
-  // ======================
+    setPrevCountError(null);
+
+    if (!nombreMinOk(nombre)) {
+      setPrevCount(null);
+      // si el nombre aún no es “usable”, no mostramos nada
+      return;
+    }
+
+    if (lastQueryRef.current === nombre) return;
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+
+    debounceRef.current = window.setTimeout(async () => {
+      lastQueryRef.current = nombre;
+      setPrevCountLoading(true);
+
+      try {
+        const r = await AlumnosService.countRecibosPreviosByNombre(nombre);
+        const total = Number(r?.totalRecibosPrevios ?? 0);
+        setPrevCount(Number.isFinite(total) ? total : 0);
+
+        // 🎯 UX: si hay recibos previos, sugerimos activar migración
+        // (no lo forzamos, solo ayudamos)
+        if ((Number.isFinite(total) ? total : 0) > 0) {
+          // si aún no escribió un nombre de migración, proponemos uno
+          if (!prevReceiptsNombre.trim()) {
+            setPrevReceiptsNombre(`Migración ${nombre}`);
+          }
+        }
+      } catch (e: any) {
+        setPrevCount(null);
+        setPrevCountError(e?.message ?? 'No se pudo consultar recibos previos.');
+      } finally {
+        setPrevCountLoading(false);
+      }
+    }, 450);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nombreCompleto]);
+
   const submit = useCallback(async () => {
     setFormError(null);
     setSuccessFlash(null);
@@ -168,33 +183,34 @@ export function useAlumnoForm() {
     if (!fechaIngreso) return setFormError('Selecciona fecha de ingreso.');
     if (carreraRequired && !carreraId) return setFormError('Selecciona una carrera.');
 
-    // ✅ validación nueva (API)
-    if (pullPrevReceipts && prevReceiptsNombre.trim().length < 3) {
-      return setFormError('Si migras recibos previos, escribe el nombre (mín. 3 letras).');
+    // ✅ validación migración
+    if (pullPrevReceipts) {
+      if (prevReceiptsNombre.trim().length < 3) {
+        return setFormError('Escribe el nombre para recibos previos (mín. 3 letras).');
+      }
     }
 
     setSubmitting(true);
     try {
-      const payload: AlumnoCreate = {
+      const payload: any = {
         nombreCompleto: nombreCompleto.trim(),
         matricula: matricula.trim(),
         escolaridadId: Number(escolaridadId),
         plantelId: Number(plantelId),
         fechaIngreso,
-
         ...(carreraRequired ? { carreraId: String(carreraId) } : {}),
 
-        // ✅ nuevos (solo manda si aplica)
-        ...(pullPrevReceipts ? { pullPrevReceipts: true } : { pullPrevReceipts: false }),
+        // ✅ mandar solo lo necesario
+        pullPrevReceipts: !!pullPrevReceipts,
         ...(pullPrevReceipts ? { prevReceiptsNombre: prevReceiptsNombre.trim() } : {}),
+      } satisfies AlumnoCreate & {
+        pullPrevReceipts: boolean;
+        prevReceiptsNombre?: string;
       };
 
       const created = await alumnoCreate.create(payload);
 
-      setSuccessFlash(
-        created?.alumnoId ? `Alumno creado: ${created.alumnoId}` : 'Alumno creado ✅',
-      );
-
+      setSuccessFlash(created?.alumnoId ? `Alumno creado: ${created.alumnoId}` : 'Alumno creado ✅');
       return created;
     } catch (e: any) {
       setFormError(e?.message ?? 'No se pudo crear el alumno.');
@@ -224,9 +240,14 @@ export function useAlumnoForm() {
     plantelId,
     fechaIngreso,
 
-    // ✅ nuevos
+    // ✅ migración
     pullPrevReceipts,
     prevReceiptsNombre,
+
+    // ✅ contador
+    prevCount,
+    prevCountLoading,
+    prevCountError,
 
     // setters
     setNombreCompleto,
@@ -236,8 +257,7 @@ export function useAlumnoForm() {
     setPlantelId,
     setFechaIngreso,
 
-    // ✅ nuevos
-    setPullPrevReceipts: togglePullPrevReceipts,
+    setPullPrevReceipts,
     setPrevReceiptsNombre,
 
     // catalogs

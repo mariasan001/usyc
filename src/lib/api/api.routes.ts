@@ -32,6 +32,7 @@ export const API = {
     byId: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}`,
     pagosResumen: (alumnoId: string) =>
       `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
+    
   },
 
   recibos: {
@@ -45,4 +46,8 @@ export const API = {
     validarQr: (qrPayload: string) =>
       `/api/recibos/validar-qr?qrPayload=${encodeURIComponent(qrPayload)}`,
   },
+    aux: {
+    recibosPreviosCount: '/api/aux/recibos-previos/count',
+  },
+
 } as const;

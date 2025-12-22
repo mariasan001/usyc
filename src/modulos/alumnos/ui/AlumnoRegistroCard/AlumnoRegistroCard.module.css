@@ -286,3 +286,38 @@
   font-weight: 600;
   color: #b42318;
 }
+ /* ─────────────────────────────────────────
+   Recibos previos (info box)
+───────────────────────────────────────── */
+.prevBox{
+  margin-top: -6px; /* se pega bonito a inputs */
+}
+
+.prevInfo,
+.prevOk,
+.prevWarn{
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #1f2a44;
+}
+
+.prevOk{
+  border-color: #cfe7d6;
+  background: #f3fbf6;
+}
+
+.prevWarn{
+  border-color: #f2d6d6;
+  background: #fff5f5;
+  color: #7b1f1f;
+}
+
+.prevHint{
+  display: block;
+  margin-top: 6px;
+  color: #5a667f;
+}

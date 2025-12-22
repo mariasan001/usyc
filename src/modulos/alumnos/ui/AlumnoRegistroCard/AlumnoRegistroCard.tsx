@@ -53,6 +53,30 @@ export default function AlumnoRegistroCard() {
           />
         </div>
 
+        {/* ✅ Aviso recibos previos (por nombre) */}
+        {f.nombreCompleto.trim().length >= 6 ? (
+          <div className={`${s.full} ${s.prevBox}`}>
+            {f.prevCountLoading ? (
+              <div className={s.prevInfo}>Buscando recibos previos…</div>
+            ) : f.prevCountError ? (
+              <div className={s.prevWarn}>{f.prevCountError}</div>
+            ) : typeof f.prevCount === 'number' ? (
+              f.prevCount > 0 ? (
+                <div className={s.prevOk}>
+                  Se encontraron <b>{f.prevCount}</b> recibos previos para este nombre.
+                  <span className={s.prevHint}>
+                    Si deseas, activa “Migrar recibos previos” para vincular el historial.
+                  </span>
+                </div>
+              ) : (
+                <div className={s.prevInfo}>
+                  No se encontraron recibos previos para este nombre.
+                </div>
+              )
+            ) : null}
+          </div>
+        ) : null}
+
         {/* 2) Escolaridad FULL */}
         <div className={`${s.field} ${s.full}`}>
           <label className={s.label}>Escolaridad</label>
@@ -155,7 +179,7 @@ export default function AlumnoRegistroCard() {
           />
         </div>
 
-        {/* ✅ NUEVO: Migración de recibos previos */}
+        {/* ✅ Migración de recibos previos */}
         <div className={`${s.field} ${s.full}`}>
           <label className={s.label}>Recibos previos</label>
 
@@ -172,14 +196,21 @@ export default function AlumnoRegistroCard() {
           </div>
 
           {f.pullPrevReceipts ? (
-            <div className={s.field} style={{ marginTop: 10 }}>
+            <div className={s.miniBlock}>
               <label className={s.label}>Nombre para recibos previos</label>
               <input
                 className={s.input}
                 value={f.prevReceiptsNombre}
                 onChange={(e) => f.setPrevReceiptsNombre(e.target.value)}
-                placeholder="Ej. Recibos migrados"
+                placeholder="Ej. Migración MONSERRAT SERRANO NUÑEZ"
+                autoComplete="off"
               />
+
+              {typeof f.prevCount === 'number' && f.prevCount === 0 ? (
+                <div className={s.helperWarn}>
+                  No hay recibos previos detectados para este nombre. Si continúas, probablemente no se migrará nada.
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
