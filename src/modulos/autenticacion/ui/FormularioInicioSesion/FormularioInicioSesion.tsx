@@ -153,7 +153,7 @@ export default function FormularioInicioSesion() {
 
             <div className={s.hint}>
               <span className={s.dot} />
-              Demo: <b>admin / 1234</b> · <b>caja / 1234</b>
+           
             </div>
           </form>
         </div>
