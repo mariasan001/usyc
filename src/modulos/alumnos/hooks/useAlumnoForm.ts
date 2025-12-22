@@ -1,11 +1,10 @@
-// src/modulos/alumnos/hooks/useAlumnoForm.ts
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
 import {
   useEscolaridades,
   useCarreras,
-  usePlanteles, // ✅ nuevo
+  usePlanteles,
 } from '@/modulos/configuraciones/hooks';
 
 import { useAlumnoCreate } from './useAlumnoCreate';
@@ -62,22 +61,31 @@ function carreraEsRequerida(esc?: Escolaridad | null) {
 export function useAlumnoForm() {
   const escolaridadesApi = useEscolaridades({ soloActivos: true });
   const carrerasApi = useCarreras({ soloActivos: true });
-  const plantelesApi = usePlanteles({ soloActivos: true }); // ✅ nuevo
+  const plantelesApi = usePlanteles({ soloActivos: true });
 
   const alumnoCreate = useAlumnoCreate();
 
+  // ======================
+  // FORM STATE
+  // ======================
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [matricula, setMatricula] = useState('');
   const [escolaridadId, setEscolaridadIdState] = useState<number | null>(null);
   const [carreraId, setCarreraId] = useState<string | null>(null);
   const [fechaIngreso, setFechaIngreso] = useState<string>(todayISO());
+  const [plantelId, setPlantelId] = useState<number | null>(null);
 
-  const [plantelId, setPlantelId] = useState<number | null>(null); // ✅ nuevo
+  // ✅ nuevos (API)
+  const [pullPrevReceipts, setPullPrevReceipts] = useState(false);
+  const [prevReceiptsNombre, setPrevReceiptsNombre] = useState('');
 
   const [formError, setFormError] = useState<string | null>(null);
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // ======================
+  // CATALOGS
+  // ======================
   const escolaridades = useMemo(
     () => escolaridadesApi.items ?? [],
     [escolaridadesApi.items],
@@ -114,6 +122,9 @@ export function useAlumnoForm() {
     );
   }, [carreraId, carrerasFiltradas]);
 
+  // ======================
+  // COMPUTED
+  // ======================
   const precioMensual = useMemo(() => {
     if (!carreraRequired) return 0;
     return Number(carreraSel?.montoMensual ?? 0);
@@ -137,6 +148,15 @@ export function useAlumnoForm() {
     setCarreraId(null);
   }, []);
 
+  // ✅ si apagas migración, limpia el nombre
+  const togglePullPrevReceipts = useCallback((v: boolean) => {
+    setPullPrevReceipts(v);
+    if (!v) setPrevReceiptsNombre('');
+  }, []);
+
+  // ======================
+  // SUBMIT
+  // ======================
   const submit = useCallback(async () => {
     setFormError(null);
     setSuccessFlash(null);
@@ -144,9 +164,14 @@ export function useAlumnoForm() {
     if (!nombreCompleto.trim()) return setFormError('Falta el nombre.');
     if (!matricula.trim()) return setFormError('Falta la matrícula.');
     if (!escolaridadId) return setFormError('Selecciona una escolaridad.');
-    if (!plantelId) return setFormError('Selecciona un plantel.'); // ✅ nuevo
+    if (!plantelId) return setFormError('Selecciona un plantel.');
     if (!fechaIngreso) return setFormError('Selecciona fecha de ingreso.');
     if (carreraRequired && !carreraId) return setFormError('Selecciona una carrera.');
+
+    // ✅ validación nueva (API)
+    if (pullPrevReceipts && prevReceiptsNombre.trim().length < 3) {
+      return setFormError('Si migras recibos previos, escribe el nombre (mín. 3 letras).');
+    }
 
     setSubmitting(true);
     try {
@@ -154,9 +179,14 @@ export function useAlumnoForm() {
         nombreCompleto: nombreCompleto.trim(),
         matricula: matricula.trim(),
         escolaridadId: Number(escolaridadId),
-        plantelId: Number(plantelId), // ✅ nuevo
+        plantelId: Number(plantelId),
         fechaIngreso,
+
         ...(carreraRequired ? { carreraId: String(carreraId) } : {}),
+
+        // ✅ nuevos (solo manda si aplica)
+        ...(pullPrevReceipts ? { pullPrevReceipts: true } : { pullPrevReceipts: false }),
+        ...(pullPrevReceipts ? { prevReceiptsNombre: prevReceiptsNombre.trim() } : {}),
       };
 
       const created = await alumnoCreate.create(payload);
@@ -164,6 +194,7 @@ export function useAlumnoForm() {
       setSuccessFlash(
         created?.alumnoId ? `Alumno creado: ${created.alumnoId}` : 'Alumno creado ✅',
       );
+
       return created;
     } catch (e: any) {
       setFormError(e?.message ?? 'No se pudo crear el alumno.');
@@ -179,6 +210,8 @@ export function useAlumnoForm() {
     fechaIngreso,
     carreraRequired,
     carreraId,
+    pullPrevReceipts,
+    prevReceiptsNombre,
     alumnoCreate,
   ]);
 
@@ -191,6 +224,10 @@ export function useAlumnoForm() {
     plantelId,
     fechaIngreso,
 
+    // ✅ nuevos
+    pullPrevReceipts,
+    prevReceiptsNombre,
+
     // setters
     setNombreCompleto,
     setMatricula,
@@ -198,6 +235,10 @@ export function useAlumnoForm() {
     setCarreraId,
     setPlantelId,
     setFechaIngreso,
+
+    // ✅ nuevos
+    setPullPrevReceipts: togglePullPrevReceipts,
+    setPrevReceiptsNombre,
 
     // catalogs
     escolaridades,

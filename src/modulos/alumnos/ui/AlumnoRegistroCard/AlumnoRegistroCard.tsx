@@ -1,4 +1,3 @@
-// src/modulos/alumnos/ui/AlumnoRegistroCard/AlumnoRegistroCard.tsx
 'use client';
 
 import s from './AlumnoRegistroCard.module.css';
@@ -79,9 +78,7 @@ export default function AlumnoRegistroCard() {
           </select>
 
           {f.escolaridadesError ? (
-            <div className={s.helperError}>
-              No se pudieron cargar escolaridades.
-            </div>
+            <div className={s.helperError}>No se pudieron cargar escolaridades.</div>
           ) : null}
         </div>
 
@@ -156,6 +153,35 @@ export default function AlumnoRegistroCard() {
             value={f.fechaIngreso}
             onChange={(e) => f.setFechaIngreso(e.target.value)}
           />
+        </div>
+
+        {/* ✅ NUEVO: Migración de recibos previos */}
+        <div className={`${s.field} ${s.full}`}>
+          <label className={s.label}>Recibos previos</label>
+
+          <div className={s.inlineRow}>
+            <input
+              id="pullPrev"
+              type="checkbox"
+              checked={f.pullPrevReceipts}
+              onChange={(e) => f.setPullPrevReceipts(e.target.checked)}
+            />
+            <label htmlFor="pullPrev" className={s.inlineLabel}>
+              Migrar recibos previos
+            </label>
+          </div>
+
+          {f.pullPrevReceipts ? (
+            <div className={s.field} style={{ marginTop: 10 }}>
+              <label className={s.label}>Nombre para recibos previos</label>
+              <input
+                className={s.input}
+                value={f.prevReceiptsNombre}
+                onChange={(e) => f.setPrevReceiptsNombre(e.target.value)}
+                placeholder="Ej. Recibos migrados"
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 
