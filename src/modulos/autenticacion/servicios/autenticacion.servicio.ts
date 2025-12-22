@@ -14,7 +14,7 @@ export const AutenticacionServicio = {
     const u = payload.usuario.trim().toLowerCase();
     const p = payload.contrasena;
 
-    if (u === 'admin' && p === '1234') {
+    if (u === 'admin' && p === 'Admin2025?') {
       return {
         token: 'mock-token-admin',
         destino: '/panel',
@@ -27,7 +27,7 @@ export const AutenticacionServicio = {
       };
     }
 
-    if (u === 'caja' && p === '1234') {
+    if (u === 'caja' && p === 'Caja2025?') {
       return {
         token: 'mock-token-caja',
         destino: '/recibos',

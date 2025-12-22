@@ -195,24 +195,31 @@ export default function AlumnoRegistroCard() {
             </label>
           </div>
 
-          {f.pullPrevReceipts ? (
-            <div className={s.miniBlock}>
-              <label className={s.label}>Nombre para recibos previos</label>
-              <input
-                className={s.input}
-                value={f.prevReceiptsNombre}
-                onChange={(e) => f.setPrevReceiptsNombre(e.target.value)}
-                placeholder="Ej. Migración MONSERRAT SERRANO NUÑEZ"
-                autoComplete="off"
-              />
+    {f.pullPrevReceipts ? (
+  <div className={s.miniBlock}>
+    <label className={s.label}>Nombre para recibos previos</label>
 
-              {typeof f.prevCount === 'number' && f.prevCount === 0 ? (
-                <div className={s.helperWarn}>
-                  No hay recibos previos detectados para este nombre. Si continúas, probablemente no se migrará nada.
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+    <input
+      className={`${s.input} ${s.inputLocked}`}
+      value={f.nombreCompleto}      // ✅ EXACTAMENTE IGUAL
+      readOnly                      // ✅ no editable
+      disabled                      // ✅ visualmente bloqueado
+      tabIndex={-1}                 // opcional: no focus
+      autoComplete="off"
+    />
+
+    <div className={s.helperInfo}>
+      Se usa exactamente el mismo nombre del registro para buscar/migrar recibos previos.
+    </div>
+
+    {typeof f.prevCount === 'number' && f.prevCount === 0 ? (
+      <div className={s.helperWarn}>
+        No hay recibos previos detectados para este nombre. Si continúas, probablemente no se migrará nada.
+      </div>
+    ) : null}
+  </div>
+) : null}
+
         </div>
       </div>
 

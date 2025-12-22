@@ -155,7 +155,7 @@ export function useAlumnoForm() {
         if ((Number.isFinite(total) ? total : 0) > 0) {
           // si aún no escribió un nombre de migración, proponemos uno
           if (!prevReceiptsNombre.trim()) {
-            setPrevReceiptsNombre(`Migración ${nombre}`);
+            setPrevReceiptsNombre(`${nombre}`);
           }
         }
       } catch (e: any) {
