@@ -1,27 +1,29 @@
 // src/modulos/autenticacion/utils/sesion.utils.ts
-import type { RespuestaInicioSesion } from '../tipos/autenticacion.tipos';
+// ✅ Guarda en localStorage SOLO lo necesario para UI (usuario/roles/plantel).
+// ✅ NO guarda token porque el auth real vive en cookie httpOnly.
+// ✅ Esto evita re-llamar /me para cada render del sidebar (pero /me sigue siendo autoridad final).
 
-const KEY = 'usyc_sesion';
+import type { Sesion } from '../tipos/autenticacion.tipos';
 
-export function guardarSesion(s: RespuestaInicioSesion) {
-  if (typeof window === 'undefined') return;
+const KEY = 'usyc:sesion';
+
+export function guardarSesion(s: Sesion) {
   localStorage.setItem(KEY, JSON.stringify(s));
 }
 
-export function leerSesion(): RespuestaInicioSesion | null {
-  if (typeof window === 'undefined') return null;
+export function leerSesion(): Sesion | null {
   const raw = localStorage.getItem(KEY);
   if (!raw) return null;
 
   try {
-    return JSON.parse(raw) as RespuestaInicioSesion;
+    const s = JSON.parse(raw) as Sesion;
+    if (!s?.usuario) return null;
+    return s;
   } catch {
     return null;
   }
 }
 
 export function limpiarSesion() {
-  if (typeof window === 'undefined') return;
   localStorage.removeItem(KEY);
 }
-

@@ -1,6 +1,11 @@
+// src/app/layout.tsx
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
+
 import '@/shared/styles/globals.css';
+
+// ✅ Provider global (client component)
+import { AuthProvider } from '@/modulos/autenticacion/contexto/AuthContext';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -12,7 +17,10 @@ export const metadata: Metadata = { title: 'USYC • Control de Recibos' };
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={poppins.className}>{children}</body>
+      <body className={poppins.className}>
+        {/* ✅ Permite useAuth() en cualquier parte del app */}
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

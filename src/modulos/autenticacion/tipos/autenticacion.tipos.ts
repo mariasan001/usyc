@@ -1,6 +1,7 @@
 // src/modulos/autenticacion/tipos/autenticacion.tipos.ts
-
-export type RolUsuario = 'ADMIN' | 'CAJA';
+// ✅ Tipos reales, mínimos, alineados al Swagger.
+// ✅ NO asumimos token porque tu response de /login NO lo muestra.
+// ✅ Guardamos el user para UI (roles + plantel).
 
 export type CredencialesInicioSesion = {
   usuario: string;
@@ -8,14 +9,23 @@ export type CredencialesInicioSesion = {
 };
 
 export type UsuarioSesion = {
-  id: string;
-  nombre: string;
-  usuario: string;
-  rol: RolUsuario;
+  userId: number;
+  username: string;
+  fullName: string;
+  active: boolean;
+  roles: string[];
+
+  plantelId?: number;
+  plantelName?: string;
 };
 
-export type RespuestaInicioSesion = {
-  token: string;
+export type RespuestaLoginApi = {
+  message?: string;
+  user: UsuarioSesion;
+};
+
+// ✅ Sesión local (solo para UI)
+//    La autenticación real la sostiene el backend con cookie.
+export type Sesion = {
   usuario: UsuarioSesion;
-  destino: string; // ✅ para redirección según rol
 };

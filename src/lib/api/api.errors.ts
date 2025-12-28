@@ -1,7 +1,11 @@
+// src/lib/api/api.errors.ts
+// ✅ Tipado de errores del cliente HTTP.
+// ✅ Sin `any` (cumple eslint).
+
 export type ApiErrorPayload = {
   detail?: string;
   message?: string;
-  [k: string]: any;
+  [k: string]: unknown;
 };
 
 export class ApiError extends Error {

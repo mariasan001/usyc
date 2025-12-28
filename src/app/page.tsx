@@ -1,40 +1,44 @@
-
-
 'use client';
+
+// src/app/page.tsx
+// ✅ Página raíz (guard).
+// - Si cookie válida => /auth/me responde user => redirige por rol.
+// - Si cookie inválida/expirada => manda a iniciar sesión.
+// ✅ También sincroniza localStorage para pintar UI rápido.
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { leerSesion } from '@/modulos/autenticacion/utils/sesion.utils';
+
+import { AutenticacionServicio } from '@/modulos/autenticacion/servicios/autenticacion.servicio';
+import { destinoPorUsuario } from '@/modulos/autenticacion/utils/redireccion.utils';
+import { guardarSesion, limpiarSesion } from '@/modulos/autenticacion/utils/sesion.utils';
 
 export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    const sesion = leerSesion();
+    let cancelado = false;
 
-    // Sin sesión => login
-    if (!sesion?.token) {
-      router.replace('/iniciar-sesion');
-      return;
+    async function run() {
+      try {
+        const me = await AutenticacionServicio.me();
+        if (cancelado) return;
+
+        guardarSesion({ usuario: me });
+        router.replace(destinoPorUsuario(me));
+      } catch {
+        limpiarSesion();
+        router.replace('/iniciar-sesion');
+      }
     }
 
-    // Con sesión => redirección por rol
-    const rol = sesion.usuario.rol;
+    run();
 
-    if (rol === 'ADMIN') {
-      router.replace('/alumnos'); // o /inicio/dashboard si lo creas
-      return;
-    }
-
-    if (rol === 'CAJA') {
-      router.replace('/alumnos'); // o /caja/historial-pagos
-      return;
-    }
-
-    router.replace('/iniciar-sesion');
+    return () => {
+      cancelado = true;
+    };
   }, [router]);
 
-  // Pantalla mínima mientras decide
   return (
     <main style={{ padding: 24, color: 'var(--muted)' }}>
       Cargando…

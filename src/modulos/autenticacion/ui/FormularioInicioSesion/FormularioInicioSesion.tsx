@@ -1,21 +1,22 @@
 'use client';
 
+// src/modulos/autenticacion/ui/FormularioInicioSesion/FormularioInicioSesion.tsx
+// ✅ Formulario UI de login.
+// ✅ No toca el service directamente: usa AuthContext.login()
+// ✅ Maneja error con helper seguro (unknown -> string)
+
 import { useMemo, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 
 import { AlertTriangle, Lock, Eye, EyeOff, User, LogIn, Loader2 } from 'lucide-react';
 
 import s from './FormularioInicioSesion.module.css';
 
-import { AutenticacionServicio } from '../../servicios/autenticacion.servicio';
 import type { CredencialesInicioSesion } from '../../tipos/autenticacion.tipos';
-import { guardarSesion } from '../../utils/sesion.utils';
+import { useAuth } from '../../contexto/AuthContext';
 
-// ✅ Helper seguro: convierte unknown -> string sin usar any
 function obtenerMensajeError(err: unknown): string {
   if (err instanceof Error) return err.message;
 
-  // Por si algún servicio lanza { message: "..." }
   if (typeof err === 'object' && err !== null) {
     const maybe = err as { message?: unknown };
     if (typeof maybe.message === 'string') return maybe.message;
@@ -27,7 +28,7 @@ function obtenerMensajeError(err: unknown): string {
 }
 
 export default function FormularioInicioSesion() {
-  const router = useRouter();
+  const { login, cargando } = useAuth();
 
   const [form, setForm] = useState<CredencialesInicioSesion>({
     usuario: '',
@@ -35,7 +36,6 @@ export default function FormularioInicioSesion() {
   });
 
   const [verContrasena, setVerContrasena] = useState(false);
-  const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const deshabilitado = useMemo(() => {
@@ -45,20 +45,11 @@ export default function FormularioInicioSesion() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setCargando(true);
 
     try {
-      const res = await AutenticacionServicio.iniciarSesion(form);
-
-      // ✅ CLAVE: guarda sesión para que el sidebar lea rol y filtre menú
-      guardarSesion(res);
-
-      // ✅ redirect por rol (el servicio ya te regresa destino)
-      router.push(res.destino);
+      await login(form);
     } catch (err: unknown) {
       setError(obtenerMensajeError(err));
-    } finally {
-      setCargando(false);
     }
   }
 
@@ -153,7 +144,6 @@ export default function FormularioInicioSesion() {
 
             <div className={s.hint}>
               <span className={s.dot} />
-           
             </div>
           </form>
         </div>
