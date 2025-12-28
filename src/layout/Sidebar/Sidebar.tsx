@@ -7,18 +7,29 @@ import clsx from 'clsx';
 
 import s from './Sidebar.module.css';
 
-import { limpiarSesion } from '@/modulos/autenticacion/utils/sesion.utils';
-
 import { ITEMS_NAVEGACION } from './constants/navegacion.constants';
-import { agruparPorSeccion, filtrarPorRol } from './utils/navegacion.utils';
-
+import { agruparPorSeccion, filtrarPorRoles } from './utils/navegacion.utils';
 import { useSidebarColapso } from './hooks/useSidebarColapso';
-import { useRolSesion } from './hooks/useRolSesion';
 
 import SidebarBrand from './ui/SidebarBrand';
 import SidebarNavGroup from './ui/SidebarNavGroup';
 import SidebarCuenta from './ui/SidebarCuenta';
 import SidebarFooter from './ui/SidebarFooter';
+
+import { useAuth } from '@/modulos/autenticacion/contexto/AuthContext';
+import type { RolUsuario } from '@/modulos/autenticacion/tipos/autenticacion.tipos';
+
+const EMPTY_ROLES: RolUsuario[] = [];
+
+function normalizarRoles(input: unknown): RolUsuario[] {
+  // ✅ Esto evita el error de tipos y también cuida runtime
+  const allowed: RolUsuario[] = ['ADMIN', 'CAJA', 'CONSULTOR'];
+
+  if (!Array.isArray(input)) return EMPTY_ROLES;
+
+  const roles = input.filter((r): r is RolUsuario => typeof r === 'string' && allowed.includes(r as RolUsuario));
+  return roles.length ? roles : EMPTY_ROLES;
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -26,26 +37,30 @@ export default function Sidebar() {
 
   const { collapsed, animating, toggle } = useSidebarColapso();
 
-  // ✅ Hook que lee la sesión desde localStorage y entrega rolActual
-  const { sesion, rolActual } = useRolSesion();
+  // ✅ fuente única
+  const { usuario, isAutenticado, logout } = useAuth();
+
+  // ✅ roles estable (ya no se crea [] nuevo por render)
+  const roles = useMemo(() => normalizarRoles(usuario?.roles), [usuario?.roles]);
+
+  const groups = useMemo(() => {
+    if (!isAutenticado) return [];
+    const items = filtrarPorRoles(ITEMS_NAVEGACION, roles);
+    return agruparPorSeccion(items);
+  }, [isAutenticado, roles]);
 
   function cerrarSesion() {
-    limpiarSesion();
+    logout();
     router.push('/iniciar-sesion');
   }
 
-  // ✅ Filtra por rol + agrupa por sección
-  const groups = useMemo(() => {
-    const items = filtrarPorRol(ITEMS_NAVEGACION, rolActual);
-    return agruparPorSeccion(items);
-  }, [rolActual]);
-
-  const nombre = sesion?.usuario?.nombre ?? 'Sistema';
-  const meta = rolActual ? (rolActual === 'ADMIN' ? 'Administrador' : 'Caja') : 'Sin sesión';
+  const subtitle = usuario?.plantelName ? `Sede: ${usuario.plantelName}` : 'Control escolar';
+  const nombre = usuario?.fullName ?? 'Sistema';
+  const meta = usuario ? `${usuario.username} • ${roles.join(', ') || '—'}` : 'Sin sesión';
 
   return (
     <aside className={clsx(s.sidebar, collapsed && s.collapsed)}>
-      <SidebarBrand collapsed={collapsed} onToggle={toggle} />
+      <SidebarBrand collapsed={collapsed} onToggle={toggle} subtitle={subtitle} />
 
       <nav className={s.nav} aria-label="Navegación principal">
         {groups.map(([titulo, items]) => (
@@ -59,20 +74,10 @@ export default function Sidebar() {
           />
         ))}
 
-        {/* ✅ CUENTA siempre visible */}
-        <SidebarCuenta
-          collapsed={collapsed}
-          animating={animating}
-          onLogout={cerrarSesion}
-        />
+        <SidebarCuenta collapsed={collapsed} animating={animating} onLogout={cerrarSesion} />
       </nav>
 
-      <SidebarFooter
-        collapsed={collapsed}
-        animating={animating}
-        nombre={nombre}
-        meta={meta}
-      />
+      <SidebarFooter collapsed={collapsed} animating={animating} nombre={nombre} meta={meta} />
     </aside>
   );
 }

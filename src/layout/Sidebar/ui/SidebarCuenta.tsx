@@ -1,5 +1,4 @@
 // src/layout/Sidebar/ui/SidebarCuenta.tsx
-
 import clsx from 'clsx';
 import { LogOut } from 'lucide-react';
 import s from '../Sidebar.module.css';

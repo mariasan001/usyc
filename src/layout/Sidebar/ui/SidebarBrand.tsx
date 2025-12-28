@@ -1,5 +1,4 @@
 // src/layout/Sidebar/ui/SidebarBrand.tsx
-
 import Image from 'next/image';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import s from '../Sidebar.module.css';
@@ -7,9 +6,11 @@ import s from '../Sidebar.module.css';
 export default function SidebarBrand({
   collapsed,
   onToggle,
+  subtitle,
 }: {
   collapsed: boolean;
   onToggle: () => void;
+  subtitle: string;
 }) {
   return (
     <div className={s.top}>
@@ -28,7 +29,7 @@ export default function SidebarBrand({
         {!collapsed ? (
           <div className={s.brandText}>
             <div className={s.brandName}>USYC</div>
-            <div className={s.brandSub}>Control escolar • Caja</div>
+            <div className={s.brandSub}>{subtitle}</div>
           </div>
         ) : null}
       </div>

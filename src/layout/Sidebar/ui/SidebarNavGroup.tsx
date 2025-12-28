@@ -1,5 +1,4 @@
 // src/layout/Sidebar/ui/SidebarNavGroup.tsx
-
 import Link from 'next/link';
 import clsx from 'clsx';
 import type { ItemNavegacion } from '../types/navegacion.types';

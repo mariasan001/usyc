@@ -1,4 +1,6 @@
 // src/layout/Sidebar/hooks/useSidebarColapso.ts
+'use client';
+
 import { useEffect, useState } from 'react';
 import { STORAGE_KEY_SIDEBAR } from '../constants/navegacion.constants';
 
@@ -22,7 +24,6 @@ export function useSidebarColapso() {
 
   const [animating, setAnimating] = useState(false);
 
-  // persiste cuando cambia
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_SIDEBAR, collapsed ? '1' : '0');

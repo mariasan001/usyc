@@ -1,43 +1,54 @@
 'use client';
 
 // src/modulos/autenticacion/contexto/AuthContext.tsx
-// ✅ Estado global de autenticación para toda la app.
-// ✅ Evita leer localStorage en cada módulo.
-// ✅ Cookie-based auth: la verdad final vive en el backend.
-//    - login: inicia cookie
-//    - me: valida cookie
+// ✅ Estado global de autenticación para toda la app (UI).
+// ✅ Cookie-based auth: la verdad vive en backend.
+//    - login: setea cookie + devuelve user
+//    - me: valida cookie y devuelve user (o 401)
 //    - logout: destruye cookie
 //
-// Front sólo guarda el "usuario" en localStorage para UI (sidebar, rutas, etc).
+// Front guarda Sesion (usuario) en localStorage SOLO para UI (sidebar, rutas).
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { CredencialesInicioSesion, UsuarioSesion } from '../tipos/autenticacion.tipos';
+import type { CredencialesInicioSesion, RolUsuario, Sesion, UsuarioSesion } from '../tipos/autenticacion.tipos';
 import { AutenticacionServicio } from '../servicios/autenticacion.servicio';
 import { guardarSesion, leerSesion, limpiarSesion } from '../utils/sesion.utils';
 import { destinoPorUsuario } from '../utils/redireccion.utils';
 
-type AuthState = {
-  // ✅ listo: ya hidrató localStorage y puede pintar UI consistente
-  listo: boolean;
+/** Roles válidos hoy (si mañana crecen, agregas aquí y en tipos) */
+const ROLES_VALIDOS: RolUsuario[] = ['ADMIN', 'CAJA', 'CONSULTOR'];
 
-  // ✅ cargando: usado para deshabilitar botones / mostrar loading
+/** Normaliza roles: asegura RolUsuario[] aunque backend mande strings */
+function normalizarRoles(input: unknown): RolUsuario[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter(
+    (r): r is RolUsuario => typeof r === 'string' && ROLES_VALIDOS.includes(r as RolUsuario)
+  );
+}
+
+/** Normaliza usuario: evita basura en roles */
+function normalizarUsuario(u: UsuarioSesion): UsuarioSesion {
+  const rolesUnknown = (u as unknown as { roles?: unknown }).roles;
+  return {
+    ...u,
+    roles: normalizarRoles(rolesUnknown),
+  };
+}
+
+type AuthState = {
+  listo: boolean;
   cargando: boolean;
 
-  // ✅ usuario actual (para UI)
   usuario: UsuarioSesion | null;
-
-  // ✅ bandera de autenticación para UX rápida
   isAutenticado: boolean;
 
-  // ✅ acciones principales
   login: (cred: CredencialesInicioSesion) => Promise<void>;
   logout: () => Promise<void>;
   refrescar: () => Promise<void>;
 
-  // ✅ helpers para UI/guards
-  tieneRol: (rol: string) => boolean;
+  tieneRol: (rol: RolUsuario) => boolean;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -49,31 +60,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [cargando, setCargando] = useState(false);
   const [usuario, setUsuario] = useState<UsuarioSesion | null>(null);
 
-  // ✅ Hidratación inicial: solo para UI rápida (sidebar).
-  //    La verificación real de autenticación es con /auth/me (refrescar()).
+  /**
+   * ✅ Hidratación inicial (UI)
+   * - pinta sidebar rápido usando localStorage
+   * - la verificación real se hace con refrescar() ( /auth/me )
+   */
   useEffect(() => {
-    const s = leerSesion();
-    setUsuario(s?.usuario ?? null);
+    const s = leerSesion(); // Sesion | null
+    const u = s?.usuario ? normalizarUsuario(s.usuario) : null;
+    setUsuario(u);
     setListo(true);
   }, []);
 
-  // ✅ Helper: valida rol contra roles[] del backend
-  function tieneRol(rol: string) {
-    const roles = (usuario?.roles ?? []).map((r) => String(r).toUpperCase());
-    return roles.includes(String(rol).toUpperCase());
+  function tieneRol(rol: RolUsuario) {
+    return Boolean(usuario?.roles?.includes(rol));
   }
 
-  // ✅ Valida sesión real: si cookie expiró => backend responde 401 => limpiamos y mandamos a login
+  /**
+   * ✅ Refresca sesión REAL con backend
+   * - Si cookie expiró => 401 => limpiamos UI y redirigimos
+   */
   async function refrescar() {
     setCargando(true);
     try {
-      const me = await AutenticacionServicio.me();
+      const meRaw = await AutenticacionServicio.me(); // UsuarioSesion
+      const me = normalizarUsuario(meRaw);
 
-      // Guardamos para UI y sincronizamos estado
-      guardarSesion({ usuario: me });
+      const sesion: Sesion = { usuario: me };
+      guardarSesion(sesion);
+
       setUsuario(me);
     } catch {
-      // Cookie inválida/expirada
       limpiarSesion();
       setUsuario(null);
       router.replace('/iniciar-sesion');
@@ -82,23 +99,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // ✅ Login real: backend setea cookie.
-  //    Guardamos el user devuelto para UI (sidebar + redirección)
+  /**
+   * ✅ Login real
+   * - backend setea cookie
+   * - servicio devuelve Sesion ( { usuario } )
+   */
   async function login(cred: CredencialesInicioSesion) {
     setCargando(true);
     try {
-      const s = await AutenticacionServicio.iniciarSesion(cred);
-      guardarSesion(s);
-      setUsuario(s.usuario);
+      const s = await AutenticacionServicio.iniciarSesion(cred); // ✅ Sesion
+      const u = s?.usuario ? normalizarUsuario(s.usuario) : null;
 
-      // Redirección inicial por rol
-      router.replace(destinoPorUsuario(s.usuario));
+      if (!u) throw new Error('Respuesta inválida de inicio de sesión');
+
+      // Guardamos sesión UI + sincronizamos estado
+      const sesion: Sesion = { usuario: u };
+      guardarSesion(sesion);
+      setUsuario(u);
+
+      // redirect por rol
+      router.replace(destinoPorUsuario(u));
     } finally {
       setCargando(false);
     }
   }
 
-  // ✅ Logout: backend destruye cookie. Aunque falle red, limpiamos UI.
+  /**
+   * ✅ Logout
+   * - backend destruye cookie
+   * - aunque falle, limpiamos UI
+   */
   async function logout() {
     setCargando(true);
     try {
@@ -113,7 +143,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // ✅ Sin useMemo: evita warning de deps y no pasa nada (objeto pequeño)
   const value: AuthState = {
     listo,
     cargando,

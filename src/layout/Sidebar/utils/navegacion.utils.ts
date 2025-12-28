@@ -7,13 +7,12 @@ export function esActivo(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-export function filtrarPorRol(items: ItemNavegacion[], rolActual: RolUsuario | null) {
-  // ✅ si no hay rol (sin sesión), no mostramos el menú
-  if (!rolActual) return [];
+export function filtrarPorRoles(items: ItemNavegacion[], rolesActuales: RolUsuario[]) {
+  if (!rolesActuales || rolesActuales.length === 0) return [];
 
   return items.filter((it) => {
     if (!it.roles || it.roles.length === 0) return true;
-    return it.roles.includes(rolActual);
+    return it.roles.some((r) => rolesActuales.includes(r));
   });
 }
 

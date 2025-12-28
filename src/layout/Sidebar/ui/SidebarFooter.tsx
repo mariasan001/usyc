@@ -1,5 +1,4 @@
 // src/layout/Sidebar/ui/SidebarFooter.tsx
-
 import clsx from 'clsx';
 import { UserRound } from 'lucide-react';
 import s from '../Sidebar.module.css';
