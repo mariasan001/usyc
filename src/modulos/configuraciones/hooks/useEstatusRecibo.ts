@@ -1,113 +1,104 @@
-// src/modules/configuraciones/catalogos/hooks/useEstatusRecibo.ts
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { EstatusReciboService } from '../services/estatusRecibo.service';
+import { useCallback, useEffect, useState } from 'react';
 import type {
   EstatusRecibo,
   EstatusReciboCreate,
   EstatusReciboUpdate,
 } from '../types/estatusRecibo.types';
+import { estatusReciboService } from '../services/estatusRecibo.service';
+import { ApiError } from '@/lib/api/api.errors';
 
-type ListParams = { soloActivos?: boolean };
+function isAbortError(e: unknown) {
+  return e instanceof DOMException && e.name === 'AbortError';
+}
 
-export function useEstatusRecibo(initialParams: ListParams = { soloActivos: true }) {
+function debugApiError(e: unknown) {
+  if (e instanceof ApiError) {
+    // eslint-disable-next-line no-console
+    console.groupCollapsed('[EstatusRecibo] ApiError');
+    // eslint-disable-next-line no-console
+    console.log('status:', e.status);
+    // eslint-disable-next-line no-console
+    console.log('url:', e.url);
+    // eslint-disable-next-line no-console
+    console.log('message:', e.message);
+    // eslint-disable-next-line no-console
+    console.log('payload:', e.payload);
+    // eslint-disable-next-line no-console
+    console.groupEnd();
+  }
+}
+
+export function useEstatusRecibo() {
   const [items, setItems] = useState<EstatusRecibo[]>([]);
-  const [params, setParams] = useState<ListParams>(initialParams);
-
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const reload = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     setError(null);
+
     try {
-      const data = await EstatusReciboService.list(params);
+      const data = await estatusReciboService.list({ signal });
+      if (signal?.aborted) return;
       setItems(data);
     } catch (e) {
+      if (isAbortError(e)) return;
+      debugApiError(e);
       setError(e);
     } finally {
+      if (signal?.aborted) return;
       setIsLoading(false);
     }
-  }, [params]);
+  }, []);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    const ctrl = new AbortController();
+    void load(ctrl.signal);
+    return () => ctrl.abort();
+  }, [load]);
 
-  const create = useCallback(async (payload: EstatusReciboCreate) => {
+  async function create(payload: EstatusReciboCreate) {
     setIsSaving(true);
     setError(null);
+
     try {
-      const created = await EstatusReciboService.create(payload);
-      await reload();
-      return created;
+      await estatusReciboService.create(payload);
+      await load();
     } catch (e) {
+      debugApiError(e);
       setError(e);
       throw e;
     } finally {
       setIsSaving(false);
     }
-  }, [reload]);
+  }
 
-  const update = useCallback(async (id: number, payload: EstatusReciboUpdate) => {
+  async function update(id: number, payload: EstatusReciboUpdate) {
     setIsSaving(true);
     setError(null);
+
     try {
-      const updated = await EstatusReciboService.update(id, payload);
-      await reload();
-      return updated;
+      await estatusReciboService.update(id, payload);
+      await load();
     } catch (e) {
+      debugApiError(e);
       setError(e);
       throw e;
     } finally {
       setIsSaving(false);
     }
-  }, [reload]);
+  }
 
-  const activar = useCallback(async (id: number) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      await EstatusReciboService.activar(id);
-      await reload();
-    } catch (e) {
-      setError(e);
-      throw e;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reload]);
-
-  const desactivar = useCallback(async (id: number) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      await EstatusReciboService.desactivar(id);
-      await reload();
-    } catch (e) {
-      setError(e);
-      throw e;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reload]);
-
-  return useMemo(
-    () => ({
-      items,
-      params,
-      isLoading,
-      isSaving,
-      error,
-      reload,
-      setParams,
-      create,
-      update,
-      activar,
-      desactivar,
-    }),
-    [items, params, isLoading, isSaving, error, reload, setParams, create, update, activar, desactivar],
-  );
+  return {
+    items,
+    isLoading,
+    isSaving,
+    error,
+    reload: () => load(),
+    create,
+    update,
+  };
 }

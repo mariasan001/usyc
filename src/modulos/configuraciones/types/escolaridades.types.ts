@@ -9,10 +9,10 @@ export type Escolaridad = {
 export type EscolaridadCreate = {
   codigo: string;
   nombre: string;
-  activo?: boolean; // opcional por si el back default = true
+  // NO lo mandes si el back default = true
+  // activo?: boolean;
 };
 
 export type EscolaridadUpdate = {
   nombre: string;
-  activo: boolean;
 };

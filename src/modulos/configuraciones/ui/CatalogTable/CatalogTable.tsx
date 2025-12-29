@@ -1,3 +1,4 @@
+// src/modulos/configuraciones/ui/CatalogTable/CatalogTable.tsx
 'use client';
 
 import { Edit3, RefreshCw, Power, CheckCircle2, XCircle } from 'lucide-react';
@@ -16,30 +17,51 @@ type CatalogRowLike = Record<string, unknown> & {
 
   // conceptos pago
   conceptoId?: number;
+  tipoMonto?: string;
 
-  // tipos de pago / planteles (swagger)
+  // swagger
   code?: string;
   name?: string;
   address?: string;
   active?: boolean;
+
+  // carreras extras
+  escolaridadNombre?: string;
+  montoMensual?: number;
+  montoInscripcion?: number;
+  duracionAnios?: number;
+  duracionMeses?: number;
 };
 
+function hasDefined(it: CatalogRowLike, key: keyof CatalogRowLike) {
+  return Object.prototype.hasOwnProperty.call(it, key) && it[key] !== undefined;
+}
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+
+  // por si tu api.client lanza objetos tipo { message: '...' }
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const msg = (error as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) return msg;
+  }
+
+  // por si lanza string directo
+  if (typeof error === 'string' && error.trim()) return error;
+
+  return 'Error desconocido';
+}
+
 function guessColumns(item: CatalogRowLike) {
-  // PLANTELES (code + name + address + active)
-  if ('address' in item) return ['code', 'name', 'address', 'active'];
+  // ✅ 1) Conceptos (más específico)
+  if (hasDefined(item, 'conceptoId')) {
+    const cols = ['codigo', 'nombre', 'tipoMonto'];
+    if (hasDefined(item, 'activo')) cols.push('activo');
+    return cols;
+  }
 
-  // TIPOS DE PAGO
-  if ('code' in item) return ['code', 'name', 'active'];
-
-  // CONCEPTOS PAGO
-  if ('conceptoId' in item) return ['codigo', 'nombre', 'tipoMonto', 'activo'];
-
-  // ESCOLARIDADES / ESTATUS
-  if ('codigo' in item) return ['codigo', 'nombre', 'activo'];
-
-  // CARRERAS
-  if ('carreraId' in item)
-    return [
+  // ✅ 2) Carreras
+  if (hasDefined(item, 'carreraId')) {
+    const cols = [
       'carreraId',
       'nombre',
       'escolaridadNombre',
@@ -47,15 +69,40 @@ function guessColumns(item: CatalogRowLike) {
       'montoInscripcion',
       'duracionAnios',
       'duracionMeses',
-      'activo',
     ];
+    if (hasDefined(item, 'activo')) cols.push('activo');
+    return cols;
+  }
 
+  // ✅ 3) Español (Escolaridades / EstatusRecibo)
+  if (hasDefined(item, 'codigo')) {
+    const cols = ['codigo', 'nombre'];
+    // EstatusRecibo no trae activo -> no lo pintes si no existe
+    if (hasDefined(item, 'activo')) cols.push('activo');
+    return cols;
+  }
+
+  // ✅ 4) Swagger Planteles
+  if (hasDefined(item, 'address')) {
+    const cols = ['code', 'name', 'address'];
+    if (hasDefined(item, 'active')) cols.push('active');
+    return cols;
+  }
+
+  // ✅ 5) Swagger TiposPago
+  if (hasDefined(item, 'code')) {
+    const cols = ['code', 'name'];
+    if (hasDefined(item, 'active')) cols.push('active');
+    return cols;
+  }
+
+  // fallback
   return Object.keys(item).slice(0, 4);
 }
 
 function rowKey(it: CatalogRowLike): string {
   const k = it.id ?? it.conceptoId ?? it.code ?? it.codigo ?? it.carreraId;
-  return String(k ?? crypto.randomUUID());
+  return String(k ?? Math.random());
 }
 
 function titleCaseHeader(key: string) {
@@ -71,7 +118,6 @@ function titleCaseHeader(key: string) {
 
     carreraId: 'ID',
     escolaridadNombre: 'Escolaridad',
-
     montoMensual: 'Mensualidad',
     montoInscripcion: 'Inscripción',
     duracionAnios: 'Años',
@@ -89,7 +135,12 @@ function titleCaseHeader(key: string) {
 }
 
 function isActiveRow(it: CatalogRowLike) {
-  return Boolean(it.active ?? it.activo);
+  return Boolean((it.active ?? it.activo) === true);
+}
+
+function hasActiveField(it: CatalogRowLike) {
+  // ✅ Solo consideramos “toggeable” si viene alguno
+  return hasDefined(it, 'active') || hasDefined(it, 'activo');
 }
 
 function renderCellValue(key: string, v: unknown, it: CatalogRowLike) {
@@ -103,7 +154,7 @@ function renderCellValue(key: string, v: unknown, it: CatalogRowLike) {
     );
   }
 
-  if (v === null || v === undefined) return '—';
+  if (v === null || v === undefined || v === '') return '—';
 
   if (typeof v === 'number' && /monto|mensual|inscripcion/i.test(key)) {
     try {
@@ -128,6 +179,7 @@ export default function CatalogTable({
   onReload,
   onEdit,
   onToggleActive,
+  canToggleActive,
 }: {
   title: string;
   items: CatalogRowLike[];
@@ -136,9 +188,15 @@ export default function CatalogTable({
   error?: unknown;
   onReload: () => void;
   onEdit: (item: CatalogRowLike) => void;
-  onToggleActive: (item: CatalogRowLike) => void;
+
+  // ✅ opcional
+  onToggleActive?: (item: CatalogRowLike) => void | Promise<void>;
+  canToggleActive?: (item: CatalogRowLike) => boolean;
 }) {
   const cols = items[0] ? guessColumns(items[0]) : [];
+
+  // ✅ Power existe solo si hay handler
+  const showPower = Boolean(onToggleActive);
 
   return (
     <section className={s.card}>
@@ -152,12 +210,7 @@ export default function CatalogTable({
         </div>
 
         <div className={s.headerActions}>
-          <button
-            className={s.btnGhost}
-            onClick={onReload}
-            disabled={isLoading}
-            type="button"
-          >
+          <button className={s.btnGhost} onClick={onReload} disabled={isLoading} type="button">
             <RefreshCw size={16} />
             Recargar
           </button>
@@ -167,11 +220,10 @@ export default function CatalogTable({
       {error ? (
         <div className={s.error}>
           <div className={s.errorTitle}>Ocurrió un error</div>
-          <div className={s.errorText}>
-            {String((error as any)?.message ?? 'Error desconocido')}
-          </div>
+          <div className={s.errorText}>{getErrorMessage(error)}</div>
         </div>
       ) : null}
+
 
       <div className={s.tableWrap}>
         <table className={s.table}>
@@ -201,6 +253,12 @@ export default function CatalogTable({
               items.map((it) => {
                 const active = isActiveRow(it);
 
+                // ✅ Si no trae active/activo, ni aunque exista handler pintamos el power
+                const rowSupportsToggle = showPower && hasActiveField(it);
+
+                const allowToggle =
+                  rowSupportsToggle && (canToggleActive ? canToggleActive(it) : true);
+
                 return (
                   <tr key={rowKey(it)}>
                     {cols.map((c) => (
@@ -210,8 +268,8 @@ export default function CatalogTable({
                           c === 'nombre' || c === 'name'
                             ? s.tdStrong
                             : c === 'address'
-                            ? s.tdMuted
-                            : ''
+                              ? s.tdMuted
+                              : ''
                         }
                       >
                         {renderCellValue(c, it[c], it)}
@@ -230,18 +288,18 @@ export default function CatalogTable({
                         <Edit3 size={16} />
                       </button>
 
-                      <button
-                        className={`${s.iconBtn} ${
-                          active ? s.iconDanger : s.iconOk
-                        }`}
-                        onClick={() => onToggleActive(it)}
-                        disabled={isSaving}
-                        type="button"
-                        title={active ? 'Desactivar' : 'Activar'}
-                        aria-label={active ? 'Desactivar' : 'Activar'}
-                      >
-                        <Power size={16} />
-                      </button>
+                      {allowToggle ? (
+                        <button
+                          className={`${s.iconBtn} ${active ? s.iconDanger : s.iconOk}`}
+                          onClick={() => onToggleActive?.(it)}
+                          disabled={isSaving}
+                          type="button"
+                          title={active ? 'Desactivar' : 'Activar'}
+                          aria-label={active ? 'Desactivar' : 'Activar'}
+                        >
+                          <Power size={16} />
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 );

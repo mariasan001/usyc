@@ -48,20 +48,20 @@ export function useEscolaridades(initialParams: ListParams = { soloActivos: true
     }
   }, [reload]);
 
-  const update = useCallback(async (id: number, payload: EscolaridadUpdate) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      const updated = await EscolaridadesService.update(id, payload);
-      await reload();
-      return updated;
-    } catch (e) {
-      setError(e);
-      throw e;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reload]);
+const update = useCallback(async (id: number, payload: EscolaridadUpdate) => {
+  setIsSaving(true);
+  setError(null);
+  try {
+    const updated = await EscolaridadesService.update(id, payload);
+    await reload();
+    return updated;
+  } catch (e) {
+    setError(e);
+    throw e;
+  } finally {
+    setIsSaving(false);
+  }
+}, [reload]);
 
   const activar = useCallback(async (id: number) => {
     setIsSaving(true);

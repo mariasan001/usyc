@@ -22,14 +22,17 @@ type Props = {
 
 type FormState = Record<string, unknown>;
 
-function asObj(v: unknown): Record<string, any> {
-  if (v && typeof v === 'object') return v as any;
+function asObj(v: unknown): Record<string, unknown> {
+  if (v !== null && typeof v === 'object') {
+    return v as Record<string, unknown>;
+  }
   return {};
 }
 
+
 /* ────────────────────────────────────────────────────────────
    Dinero MXN
-   - Mientras escribes NO formatea (permite 408, 1200, etc.)
+   - Mientras escribes NO formatea
    - En blur formatea a MXN (1,200.00)
    - El estado SIEMPRE guarda number real
 ──────────────────────────────────────────────────────────── */
@@ -43,21 +46,21 @@ function formatMXNInput(n: number) {
 }
 
 function parseMXNInput(raw: string) {
-  let s = raw.trim();
-  s = s.replace(/[^\d.,-]/g, '');
+  let str = raw.trim();
+  str = str.replace(/[^\d.,-]/g, '');
 
-  const hasDot = s.includes('.');
-  const hasComma = s.includes(',');
+  const hasDot = str.includes('.');
+  const hasComma = str.includes(',');
 
   if (hasComma && !hasDot) {
-    s = s.replace(',', '.');
+    str = str.replace(',', '.');
   } else {
-    s = s.replace(/,/g, '');
+    str = str.replace(/,/g, '');
   }
 
-  if (!s || s === '-') return 0;
+  if (!str || str === '-') return 0;
 
-  const n = Number.parseFloat(s);
+  const n = Number.parseFloat(str);
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -114,14 +117,14 @@ export default function CatalogModal({
       catalog === 'escolaridades'
         ? 'Escolaridad'
         : catalog === 'carreras'
-        ? 'Carrera'
-        : catalog === 'conceptosPago'
-        ? 'Concepto de Pago'
-        : catalog === 'tiposPago'
-        ? 'Tipo de pago'
-        : catalog === 'planteles'
-        ? 'Plantel'
-        : 'Estatus Recibo';
+          ? 'Carrera'
+          : catalog === 'conceptosPago'
+            ? 'Concepto de Pago'
+            : catalog === 'tiposPago'
+              ? 'Tipo de pago'
+              : catalog === 'planteles'
+                ? 'Plantel'
+                : 'Estatus Recibo';
 
     return mode === 'create' ? `Crear ${name}` : `Editar ${name}`;
   }, [catalog, mode]);
@@ -133,14 +136,17 @@ export default function CatalogModal({
   }, [escolaridadesOptions]);
 
   const [form, setForm] = useState<FormState>(() => {
+    // ✅ ESCOLARIDADES
+    // create: codigo + nombre
+    // edit: SOLO nombre (activo se gestiona por PATCH en la tabla)
     if (catalog === 'escolaridades') {
       return {
         codigo: init.codigo ?? '',
         nombre: init.nombre ?? '',
-        activo: init.activo ?? true,
       };
     }
 
+    // ✅ CARRERAS
     if (catalog === 'carreras') {
       const fallbackEscolaridadId =
         typeof init.escolaridadId === 'number'
@@ -159,6 +165,7 @@ export default function CatalogModal({
       };
     }
 
+    // ✅ CONCEPTOS DE PAGO
     if (catalog === 'conceptosPago') {
       return {
         codigo: init.codigo ?? '',
@@ -169,6 +176,7 @@ export default function CatalogModal({
       };
     }
 
+    // ✅ TIPOS DE PAGO (swagger: code, name, active)
     if (catalog === 'tiposPago') {
       return {
         code: init.code ?? '',
@@ -177,7 +185,7 @@ export default function CatalogModal({
       };
     }
 
-    // ✅ PLANTELES (Swagger: code, name, address, active)
+    // ✅ PLANTELES (swagger: code, name, address, active)
     if (catalog === 'planteles') {
       return {
         code: init.code ?? '',
@@ -187,6 +195,7 @@ export default function CatalogModal({
       };
     }
 
+    // ✅ ESTATUS RECIBO (swagger: id, codigo, nombre) -> SIN activo
     return {
       codigo: init.codigo ?? '',
       nombre: init.nombre ?? '',
@@ -197,7 +206,17 @@ export default function CatalogModal({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  const showActivo = catalog !== 'estatusRecibo';
+  const isTiposPago = catalog === 'tiposPago';
+  const isPlanteles = catalog === 'planteles';
+  const isEstatusRecibo = catalog === 'estatusRecibo';
+
+  const nameKey = isTiposPago || isPlanteles ? 'name' : 'nombre';
+  const activeKey = isTiposPago || isPlanteles ? 'active' : 'activo';
+
+  // ✅ Activo:
+  // - Escolaridades NO (se gestiona en tabla)
+  // - EstatusRecibo NO (swagger no lo trae)
+  const showActivo = catalog !== 'escolaridades' && !isEstatusRecibo;
 
   const showCarreraId = catalog === 'carreras' && mode === 'create';
   const showEscolaridadSelect = catalog === 'carreras';
@@ -208,7 +227,6 @@ export default function CatalogModal({
 
   const showTipoPagoCode = catalog === 'tiposPago' && mode === 'create';
 
-  // ✅ PLANTELES
   const showPlantelCode = catalog === 'planteles' && mode === 'create';
   const showPlantelAddress = catalog === 'planteles';
 
@@ -223,22 +241,22 @@ export default function CatalogModal({
     e.preventDefault();
     if (isSaving) return;
 
+    // ✅ ESCOLARIDADES
     if (catalog === 'escolaridades') {
       await onSave(
         mode === 'create'
           ? {
               codigo: String(form.codigo ?? '').trim(),
               nombre: String(form.nombre ?? '').trim(),
-              activo: !!form.activo,
             }
           : {
               nombre: String(form.nombre ?? '').trim(),
-              activo: !!form.activo,
             },
       );
       return;
     }
 
+    // ✅ CARRERAS
     if (catalog === 'carreras') {
       await onSave(
         mode === 'create'
@@ -265,6 +283,7 @@ export default function CatalogModal({
       return;
     }
 
+    // ✅ CONCEPTOS PAGO
     if (catalog === 'conceptosPago') {
       await onSave(
         mode === 'create'
@@ -285,6 +304,7 @@ export default function CatalogModal({
       return;
     }
 
+    // ✅ TIPOS DE PAGO
     if (catalog === 'tiposPago') {
       await onSave(
         mode === 'create'
@@ -320,23 +340,21 @@ export default function CatalogModal({
       return;
     }
 
-    await onSave(
-      mode === 'create'
-        ? {
-            codigo: String(form.codigo ?? '').trim(),
-            nombre: String(form.nombre ?? '').trim(),
-          }
-        : {
-            nombre: String(form.nombre ?? '').trim(),
-          },
-    );
+    // ✅ ESTATUS RECIBO (swagger SIN activo)
+    if (catalog === 'estatusRecibo') {
+      await onSave(
+        mode === 'create'
+          ? {
+              codigo: String(form.codigo ?? '').trim(),
+              nombre: String(form.nombre ?? '').trim(),
+            }
+          : {
+              nombre: String(form.nombre ?? '').trim(),
+            },
+      );
+      return;
+    }
   }
-
-  const isTiposPago = catalog === 'tiposPago';
-  const isPlanteles = catalog === 'planteles';
-
-  const nameKey = isTiposPago || isPlanteles ? 'name' : 'nombre';
-  const activeKey = isTiposPago || isPlanteles ? 'active' : 'activo';
 
   return (
     <div className={s.backdrop} role="dialog" aria-modal="true">
@@ -360,8 +378,14 @@ export default function CatalogModal({
             <div className={s.field}>
               <label>Código</label>
               <input
-                value={isTiposPago || isPlanteles ? String(form.code ?? '') : String(form.codigo ?? '')}
-                onChange={(e) => set(isTiposPago || isPlanteles ? 'code' : 'codigo', e.target.value)}
+                value={
+                  isTiposPago || isPlanteles
+                    ? String(form.code ?? '')
+                    : String(form.codigo ?? '')
+                }
+                onChange={(e) =>
+                  set(isTiposPago || isPlanteles ? 'code' : 'codigo', e.target.value)
+                }
                 placeholder={
                   catalog === 'conceptosPago'
                     ? 'INSCRIPCION, MENSUALIDAD...'
@@ -423,7 +447,7 @@ export default function CatalogModal({
             />
           </div>
 
-          {/* ✅ PLANTELES: address */}
+          {/* PLANTELES: address */}
           {showPlantelAddress && (
             <div className={s.field}>
               <label>Dirección</label>
@@ -503,7 +527,7 @@ export default function CatalogModal({
             </div>
           )}
 
-          {/* ACTIVO */}
+          {/* ACTIVO (NO escolaridades / NO estatusRecibo) */}
           {showActivo && (
             <label className={s.check}>
               <input
@@ -516,7 +540,12 @@ export default function CatalogModal({
           )}
 
           <div className={s.footer}>
-            <button type="button" className={s.secondary} onClick={onClose} disabled={isSaving}>
+            <button
+              type="button"
+              className={s.secondary}
+              onClick={onClose}
+              disabled={isSaving}
+            >
               Cancelar
             </button>
             <button type="submit" className={s.primary} disabled={isSaving}>

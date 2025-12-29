@@ -14,10 +14,10 @@ import s from './CatalogTabs.module.css';
 export type CatalogKey =
   | 'escolaridades'
   | 'carreras'
+  | 'planteles'
   | 'estatusRecibo'
   | 'conceptosPago'
-  | 'tiposPago'
-  | 'planteles';
+  | 'tiposPago';
 
 type Props = {
   value: CatalogKey;

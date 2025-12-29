@@ -1,3 +1,4 @@
+// src/modulos/configuraciones/hooks/useTiposPago.ts
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
@@ -60,6 +61,28 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
     }
   }
 
+  /**
+   * ✅ Toggle Active (NO DELETE)
+   * - Swagger: PUT /tipos-pago/{id} con { name, active }
+   */
+  async function toggleActive(item: TipoPago) {
+    return update(item.id, { name: item.name, active: !item.active });
+  }
+
+  async function activar(item: TipoPago) {
+    if (item.active) return;
+    return update(item.id, { name: item.name, active: true });
+  }
+
+  async function desactivar(item: TipoPago) {
+    if (!item.active) return;
+    return update(item.id, { name: item.name, active: false });
+  }
+
+  /**
+   * ✅ DELETE real (si algún día lo ocupas como borrado)
+   * Ojo: si el backend lo usa como “borrado lógico”, puedes mapearlo aquí.
+   */
   async function remove(id: number) {
     setIsSaving(true);
     setError(null);
@@ -80,8 +103,16 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
     isSaving,
     error,
     reload: () => load(),
+
     create,
     update,
+
+    // ✅ ahora existen
+    toggleActive,
+    activar,
+    desactivar,
+
+    // opcional
     remove,
   };
 }
