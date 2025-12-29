@@ -1,6 +1,6 @@
-// src/modulos/alumnos/ui/alumno-registro-card/AlumnoRegistroCard.tsx
 'use client';
 
+import { useCallback, useRef, useState } from 'react';
 import s from './AlumnoRegistroCard.module.css';
 
 import { useAlumnoForm } from '../../hooks/useAlumnoForm';
@@ -13,24 +13,39 @@ import MigracionRecibosPrevios from './partes/MigracionRecibosPrevios';
 import AvisoRecibosPrevios from './partes/visoRecibosPrevios';
 import VistaPreviaRegistro from './partes/vistaPreviaRegistro';
 
-
 function formatearMXNEntero(n: number): string {
-  // Mantiene el comportamiento: 1,200 (sin símbolo)
   return new Intl.NumberFormat('es-MX').format(Number.isFinite(n) ? n : 0);
 }
 
-/**
- * Card: Registro de alumno
- * - Componente 100% UI (composición).
- * - Toda la lógica vive en useAlumnoForm().
- * - Regla: SIEMPRE se elige un “programa” (campo `carreraId`),
- *   pero el label cambia: "Carrera" o "Nivel académico".
- * - Nombre: el hook lo normaliza y lo mantiene en MAYÚSCULAS.
- */
 export default function AlumnoRegistroCard() {
   const f = useAlumnoForm();
 
-  // Placeholder del selector de programa
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 2800);
+  }, []);
+
+  const handleSubmit = useCallback(async () => {
+    try {
+      const created = await f.submit();
+
+      // Mensaje bonito sin depender de successFlash
+      const msg =
+        created && typeof created === 'object' && 'alumnoId' in created && created.alumnoId
+          ? `Alumno creado: ${String(created.alumnoId)}`
+          : 'Alumno creado ✅';
+
+      showToast(msg);
+    } catch {
+      // el error ya lo pinta AlertasRegistro con f.formError
+    }
+  }, [f, showToast]);
+
   const placeholderPrograma = !f.escolaridadId
     ? 'Selecciona escolaridad…'
     : f.carrerasLoading
@@ -39,16 +54,25 @@ export default function AlumnoRegistroCard() {
 
   return (
     <section className={s.card}>
+      {toastMsg ? (
+        <div className={s.toast} role="status" aria-live="polite">
+          <span className={s.toastDot} aria-hidden="true" />
+          <span className={s.toastText}>{toastMsg}</span>
+          <button className={s.toastClose} onClick={() => setToastMsg(null)} type="button">
+            ✕
+          </button>
+        </div>
+      ) : null}
+
       <EncabezadoRegistro
         s={s}
         precioMensualLabel="Precio mensual"
         precioMensualValor={`$${formatearMXNEntero(f.precioMensual || 0)}`}
       />
 
-      <AlertasRegistro s={s} error={f.formError} ok={f.successFlash} />
+      <AlertasRegistro s={s} error={f.formError} ok={null} />
 
       <div className={s.grid}>
-        {/* 1) Nombre | Matrícula */}
         <CampoTexto
           s={s}
           label="Nombre (APELLIDOS NOMBRES)"
@@ -67,7 +91,6 @@ export default function AlumnoRegistroCard() {
           autoComplete="off"
         />
 
-        {/* Aviso recibos previos (por nombre) */}
         <AvisoRecibosPrevios
           s={s}
           nombre={f.nombreCompleto}
@@ -76,7 +99,6 @@ export default function AlumnoRegistroCard() {
           count={f.prevCount}
         />
 
-        {/* 2) Escolaridad FULL */}
         <SelectCatalogo
           s={s}
           full
@@ -86,13 +108,9 @@ export default function AlumnoRegistroCard() {
           disabled={f.escolaridadesLoading}
           placeholder={f.escolaridadesLoading ? 'Cargando…' : 'Selecciona…'}
           errorText={f.escolaridadesError ? 'No se pudieron cargar escolaridades.' : null}
-          options={f.escolaridades.map((x) => ({
-            value: String(x.id),
-            label: x.nombre,
-          }))}
+          options={f.escolaridades.map((x) => ({ value: String(x.id), label: x.nombre }))}
         />
 
-        {/* 2) Plantel FULL */}
         <SelectCatalogo
           s={s}
           full
@@ -102,19 +120,14 @@ export default function AlumnoRegistroCard() {
           disabled={f.plantelesLoading}
           placeholder={f.plantelesLoading ? 'Cargando…' : 'Selecciona…'}
           errorText={f.plantelesError ? 'No se pudieron cargar planteles.' : null}
-          options={f.planteles.map((p) => ({
-            value: String(p.id),
-            label: p.name,
-          }))}
+          options={f.planteles.map((p) => ({ value: String(p.id), label: p.name }))}
         />
 
-        {/* 3) Programa (Carrera/Nivel) | Fecha ingreso */}
         <SelectCatalogo
           s={s}
           label={
             <>
-              {f.etiquetaPrograma}{' '}
-              {f.programaObligatorio ? <span className={s.req}>*</span> : null}
+              {f.etiquetaPrograma} {f.programaObligatorio ? <span className={s.req}>*</span> : null}
             </>
           }
           value={f.carreraId ?? ''}
@@ -122,10 +135,7 @@ export default function AlumnoRegistroCard() {
           disabled={!f.escolaridadId || f.carrerasLoading}
           placeholder={placeholderPrograma}
           errorText={f.carrerasError ? 'No se pudieron cargar opciones.' : null}
-          options={f.carrerasFiltradas.map((c) => ({
-            value: String(c.carreraId),
-            label: c.nombre,
-          }))}
+          options={f.carrerasFiltradas.map((c) => ({ value: String(c.carreraId), label: c.nombre }))}
         />
 
         <CampoTexto
@@ -136,7 +146,6 @@ export default function AlumnoRegistroCard() {
           onChange={f.setFechaIngreso}
         />
 
-        {/* Migración de recibos previos */}
         <MigracionRecibosPrevios
           s={s}
           enabled={f.pullPrevReceipts}
@@ -157,7 +166,7 @@ export default function AlumnoRegistroCard() {
         <button
           className={s.primaryBtn}
           disabled={f.submitting}
-          onClick={f.submit}
+          onClick={handleSubmit}
           type="button"
         >
           {f.submitting ? 'Generando…' : 'Generar alumno'}

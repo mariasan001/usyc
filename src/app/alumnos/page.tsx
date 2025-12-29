@@ -1,5 +1,6 @@
-// src/app/alumnos/page.tsx
 'use client';
+
+import { useState } from 'react';
 
 import s from './alumnos.page.module.css';
 
@@ -9,20 +10,25 @@ import AlumnosTableCard from '@/modulos/alumnos/ui/AlumnosTableCard/AlumnosTable
 import AlumnoDrawer from '@/modulos/alumnos/ui/AlumnoDrawer/AlumnoDrawer';
 
 import { useAlumnos } from '@/modulos/alumnos/hooks/useAlumnos';
+import AlumnosTabs, { type AlumnosTabKey } from '@/modulos/alumnos/ui/AlumnosTabs/AlumnosTabs';
 
 export default function AlumnosPage() {
   const a = useAlumnos();
+  const [tab, setTab] = useState<AlumnosTabKey>('directorio');
 
   return (
     <AppShell>
       <div className={s.page}>
-        <div className={s.grid}>
-          <div className={s.left}>
-            <AlumnoRegistroCard />
-            {/* si tu registro debe usar a.crearAlumno, lo conectamos en el card */}
-          </div>
+        <div className={s.topBar}>
+          <AlumnosTabs value={tab} onChange={setTab} />
+        </div>
 
-          <div className={s.right}>
+        <div className={s.content}>
+          {tab === 'registro' ? (
+            <div className={s.centerPane}>
+              <AlumnoRegistroCard />
+            </div>
+          ) : (
             <AlumnosTableCard
               pageData={a.pageData}
               loading={a.loading}
@@ -33,7 +39,7 @@ export default function AlumnosPage() {
               onRefresh={a.refresh}
               onPageChange={a.onPageChange}
             />
-          </div>
+          )}
         </div>
 
         <AlumnoDrawer open={a.drawerOpen} alumno={a.selected} onClose={a.closeDrawer} />

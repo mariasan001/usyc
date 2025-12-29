@@ -277,11 +277,14 @@ export function useAlumnoForm() {
 
       const created = await alumnoCreate.create(payload);
 
-      setSuccessFlash(
-        created && typeof created === 'object' && 'alumnoId' in created && created.alumnoId
-          ? `Alumno creado: ${String(created.alumnoId)}`
-          : 'Alumno creado ✅',
-      );
+   setSuccessFlash(
+  created && typeof created === 'object' && 'alumnoId' in created && created.alumnoId
+    ? `Alumno creado: ${String(created.alumnoId)}`
+    : 'Alumno creado ✅',
+);
+
+// auto-hide
+setTimeout(() => setSuccessFlash(null), 2500);
 
       return created;
     } catch (e: unknown) {

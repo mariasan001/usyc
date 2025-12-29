@@ -332,3 +332,137 @@
   font-size: 12px;
   color: #5a667f;
 }
+/* ─────────────────────────────────────────
+   Recibos previos (aviso compacto y pro)
+───────────────────────────────────────── */
+
+.prevBox{
+  grid-column: 1 / -1; /* ✅ siempre full, pero bonito */
+  margin-top: -2px;
+}
+
+.prevInfo,
+.prevOk,
+.prevWarn{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  border-radius: 14px;
+  padding: 10px 12px;
+
+  border: 1px solid rgba(18, 31, 59, 0.10);
+  background: #ffffff;
+
+  color: #0b1530;
+  font-size: 12.5px;
+  line-height: 1.25;
+}
+
+.prevInfo::before,
+.prevOk::before,
+.prevWarn::before{
+  content: "";
+  flex: 0 0 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-top: 3px;
+}
+
+/* Estado info */
+.prevInfo::before{
+  background: rgba(20, 42, 82, .55); /* azul institucional */
+  box-shadow: 0 0 0 4px rgba(20, 42, 82, .12);
+}
+
+/* Estado ok */
+.prevOk{
+  border-color: rgba(34, 197, 94, .22);
+  background: rgba(34, 197, 94, .06);
+}
+.prevOk::before{
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, .14);
+}
+
+/* Estado warn */
+.prevWarn{
+  border-color: rgba(239, 68, 68, .22);
+  background: rgba(239, 68, 68, .06);
+  color: #7b1f1f;
+}
+.prevWarn::before{
+  background: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, .14);
+}
+
+.prevHint{
+  display: block;
+  margin-top: 4px;
+  color: rgba(11, 21, 48, .62);
+  font-size: 12px;
+}
+/* ─────────────────────────────────────────
+   Toast éxito (Alumno creado ✅)
+───────────────────────────────────────── */
+.toast{
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  max-width: min(520px, calc(100% - 24px));
+  padding: 10px 12px;
+
+  border-radius: 14px;
+  border: 1px solid rgba(34, 197, 94, .22);
+  background: rgba(255, 255, 255, .88);
+  backdrop-filter: blur(10px);
+
+  box-shadow: 0 14px 34px rgba(20, 30, 60, .14);
+}
+
+.toastDot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, .14);
+  flex: 0 0 10px;
+}
+
+.toastText{
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #0b1530;
+  line-height: 1.15;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toastClose{
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(11, 21, 48, .55);
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 10px;
+}
+
+.toastClose:hover{
+  background: rgba(11, 21, 48, .06);
+  color: rgba(11, 21, 48, .85);
+}
+
+/* importante: el card debe ser contenedor relativo */
+.card{
+  position: relative;
+}

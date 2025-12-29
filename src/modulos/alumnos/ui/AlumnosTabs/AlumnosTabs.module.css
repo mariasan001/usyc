@@ -1,0 +1,49 @@
+.wrap{
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid #e7ebf3;
+  background: #ffffff;
+}
+
+.tab{
+  flex: 1;
+  height: 40px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+
+  cursor: pointer;
+  user-select: none;
+
+  font-size: 13px;          /* ✅ más acorde al sistema */
+  font-weight: 600;
+  color: #334155;
+}
+
+.icon{
+  opacity: .75;
+}
+
+.tab:hover{
+  background: #f7f9fd;
+}
+
+.active{
+  background: #eef2ff;      /* ✅ ligero, moderno */
+  border-color: #c7d2fe;
+
+  color: #1e3a8a;
+}
+
+.active .icon{
+  opacity: 1;
+}
