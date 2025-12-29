@@ -1,176 +1,23 @@
-// src/modulos/configuraciones/ui/CatalogTable/CatalogTable.tsx
+// src/modulos/configuraciones/ui/catalogo-tabla/CatalogoTabla.tsx
 'use client';
 
-import { Edit3, RefreshCw, Power, CheckCircle2, XCircle } from 'lucide-react';
+import { Edit3, RefreshCw, Power } from 'lucide-react';
 import s from './CatalogTable.module.css';
 
-type CatalogRowLike = Record<string, unknown> & {
-  id?: number | string;
+import type { CatalogoTablaProps } from './types/catalogoTabla.types';
 
-  // español
-  codigo?: string;
-  nombre?: string;
-  activo?: boolean;
+import { getMensajeError, tituloColumna } from './utils/catalogoTabla.texto';
+import { adivinarColumnas } from './utils/catalogoTabla.columnas';
+import { filaActiva, keyFila, soportaToggleActivo } from './utils/catalogoTabla.filas';
+import { renderValorCelda } from './utils/catalogoTabla.formato';
 
-  // carreras
-  carreraId?: string;
-
-  // conceptos pago
-  conceptoId?: number;
-  tipoMonto?: string;
-
-  // swagger
-  code?: string;
-  name?: string;
-  address?: string;
-  active?: boolean;
-
-  // carreras extras
-  escolaridadNombre?: string;
-  montoMensual?: number;
-  montoInscripcion?: number;
-  duracionAnios?: number;
-  duracionMeses?: number;
-};
-
-function hasDefined(it: CatalogRowLike, key: keyof CatalogRowLike) {
-  return Object.prototype.hasOwnProperty.call(it, key) && it[key] !== undefined;
-}
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-
-  // por si tu api.client lanza objetos tipo { message: '...' }
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const msg = (error as { message?: unknown }).message;
-    if (typeof msg === 'string' && msg.trim()) return msg;
-  }
-
-  // por si lanza string directo
-  if (typeof error === 'string' && error.trim()) return error;
-
-  return 'Error desconocido';
-}
-
-function guessColumns(item: CatalogRowLike) {
-  // ✅ 1) Conceptos (más específico)
-  if (hasDefined(item, 'conceptoId')) {
-    const cols = ['codigo', 'nombre', 'tipoMonto'];
-    if (hasDefined(item, 'activo')) cols.push('activo');
-    return cols;
-  }
-
-  // ✅ 2) Carreras
-  if (hasDefined(item, 'carreraId')) {
-    const cols = [
-      'carreraId',
-      'nombre',
-      'escolaridadNombre',
-      'montoMensual',
-      'montoInscripcion',
-      'duracionAnios',
-      'duracionMeses',
-    ];
-    if (hasDefined(item, 'activo')) cols.push('activo');
-    return cols;
-  }
-
-  // ✅ 3) Español (Escolaridades / EstatusRecibo)
-  if (hasDefined(item, 'codigo')) {
-    const cols = ['codigo', 'nombre'];
-    // EstatusRecibo no trae activo -> no lo pintes si no existe
-    if (hasDefined(item, 'activo')) cols.push('activo');
-    return cols;
-  }
-
-  // ✅ 4) Swagger Planteles
-  if (hasDefined(item, 'address')) {
-    const cols = ['code', 'name', 'address'];
-    if (hasDefined(item, 'active')) cols.push('active');
-    return cols;
-  }
-
-  // ✅ 5) Swagger TiposPago
-  if (hasDefined(item, 'code')) {
-    const cols = ['code', 'name'];
-    if (hasDefined(item, 'active')) cols.push('active');
-    return cols;
-  }
-
-  // fallback
-  return Object.keys(item).slice(0, 4);
-}
-
-function rowKey(it: CatalogRowLike): string {
-  const k = it.id ?? it.conceptoId ?? it.code ?? it.codigo ?? it.carreraId;
-  return String(k ?? Math.random());
-}
-
-function titleCaseHeader(key: string) {
-  const map: Record<string, string> = {
-    codigo: 'Código',
-    nombre: 'Nombre',
-    activo: 'Activo',
-
-    code: 'Código',
-    name: 'Nombre',
-    address: 'Dirección',
-    active: 'Activo',
-
-    carreraId: 'ID',
-    escolaridadNombre: 'Escolaridad',
-    montoMensual: 'Mensualidad',
-    montoInscripcion: 'Inscripción',
-    duracionAnios: 'Años',
-    duracionMeses: 'Meses',
-
-    tipoMonto: 'Tipo de monto',
-  };
-
-  return (
-    map[key] ??
-    key
-      .replace(/([a-z])([A-Z])/g, '$1 $2')
-      .replace(/^./, (m) => m.toUpperCase())
-  );
-}
-
-function isActiveRow(it: CatalogRowLike) {
-  return Boolean((it.active ?? it.activo) === true);
-}
-
-function hasActiveField(it: CatalogRowLike) {
-  // ✅ Solo consideramos “toggeable” si viene alguno
-  return hasDefined(it, 'active') || hasDefined(it, 'activo');
-}
-
-function renderCellValue(key: string, v: unknown, it: CatalogRowLike) {
-  if (key === 'activo' || key === 'active') {
-    const ok = isActiveRow(it);
-    return (
-      <span className={`${s.badge} ${ok ? s.badgeOk : s.badgeOff}`}>
-        {ok ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-        {ok ? 'Activo' : 'Inactivo'}
-      </span>
-    );
-  }
-
-  if (v === null || v === undefined || v === '') return '—';
-
-  if (typeof v === 'number' && /monto|mensual|inscripcion/i.test(key)) {
-    try {
-      return new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-      }).format(v);
-    } catch {
-      return String(v);
-    }
-  }
-
-  return String(v);
-}
-
-export default function CatalogTable({
+/**
+ * Tabla genérica de catálogos.
+ * - Renderiza columnas “inteligentes” según el primer item.
+ * - Permite editar y (opcional) activar/desactivar.
+ * - Sin librerías extra, TS estricto, comportamiento incremental.
+ */
+export default function CatalogoTabla({
   title,
   items,
   isLoading,
@@ -180,22 +27,10 @@ export default function CatalogTable({
   onEdit,
   onToggleActive,
   canToggleActive,
-}: {
-  title: string;
-  items: CatalogRowLike[];
-  isLoading?: boolean;
-  isSaving?: boolean;
-  error?: unknown;
-  onReload: () => void;
-  onEdit: (item: CatalogRowLike) => void;
+}: CatalogoTablaProps) {
+  const cols = items[0] ? adivinarColumnas(items[0]) : [];
 
-  // ✅ opcional
-  onToggleActive?: (item: CatalogRowLike) => void | Promise<void>;
-  canToggleActive?: (item: CatalogRowLike) => boolean;
-}) {
-  const cols = items[0] ? guessColumns(items[0]) : [];
-
-  // ✅ Power existe solo si hay handler
+  // Power solo existe si hay handler
   const showPower = Boolean(onToggleActive);
 
   return (
@@ -210,7 +45,12 @@ export default function CatalogTable({
         </div>
 
         <div className={s.headerActions}>
-          <button className={s.btnGhost} onClick={onReload} disabled={isLoading} type="button">
+          <button
+            className={s.btnGhost}
+            onClick={onReload}
+            disabled={isLoading}
+            type="button"
+          >
             <RefreshCw size={16} />
             Recargar
           </button>
@@ -220,17 +60,16 @@ export default function CatalogTable({
       {error ? (
         <div className={s.error}>
           <div className={s.errorTitle}>Ocurrió un error</div>
-          <div className={s.errorText}>{getErrorMessage(error)}</div>
+          <div className={s.errorText}>{getMensajeError(error)}</div>
         </div>
       ) : null}
-
 
       <div className={s.tableWrap}>
         <table className={s.table}>
           <thead>
             <tr>
               {cols.map((c) => (
-                <th key={c}>{titleCaseHeader(c)}</th>
+                <th key={c}>{tituloColumna(c)}</th>
               ))}
               <th className={s.thActions}>Acciones</th>
             </tr>
@@ -251,16 +90,16 @@ export default function CatalogTable({
               </tr>
             ) : (
               items.map((it) => {
-                const active = isActiveRow(it);
+                const active = filaActiva(it);
 
-                // ✅ Si no trae active/activo, ni aunque exista handler pintamos el power
-                const rowSupportsToggle = showPower && hasActiveField(it);
+                // Si no trae active/activo, ni aunque exista handler pintamos el power
+                const rowSupportsToggle = showPower && soportaToggleActivo(it);
 
                 const allowToggle =
                   rowSupportsToggle && (canToggleActive ? canToggleActive(it) : true);
 
                 return (
-                  <tr key={rowKey(it)}>
+                  <tr key={keyFila(it)}>
                     {cols.map((c) => (
                       <td
                         key={c}
@@ -272,7 +111,16 @@ export default function CatalogTable({
                               : ''
                         }
                       >
-                        {renderCellValue(c, it[c], it)}
+                        {renderValorCelda({
+                          key: c,
+                          value: it[c],
+                          fila: it,
+                          clases: {
+                            badge: s.badge,
+                            badgeOk: s.badgeOk,
+                            badgeOff: s.badgeOff,
+                          },
+                        })}
                       </td>
                     ))}
 

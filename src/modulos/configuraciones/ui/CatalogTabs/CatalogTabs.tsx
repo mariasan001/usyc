@@ -1,47 +1,30 @@
 'use client';
 
-import {
-  GraduationCap,
-  BookOpen,
-  BadgeCheck,
-  Receipt,
-  CreditCard,
-  School,
-} from 'lucide-react';
-
 import s from './CatalogTabs.module.css';
 
-export type CatalogKey =
-  | 'escolaridades'
-  | 'carreras'
-  | 'planteles'
-  | 'estatusRecibo'
-  | 'conceptosPago'
-  | 'tiposPago';
+import { TABS_CATALOGOS } from './data/catalogoTabs.data';
+import type { CatalogKey } from './types/catalogoTabs.types';
 
 type Props = {
+  /** Catálogo actualmente seleccionado */
   value: CatalogKey;
+  /** Cambia el tab activo */
   onChange: (k: CatalogKey) => void;
 };
 
-const TABS: Array<{
-  key: CatalogKey;
-  label: string;
-  Icon: React.ComponentType<{ size?: number; className?: string }>;
-}> = [
-  { key: 'escolaridades', label: 'Escolaridades', Icon: GraduationCap },
-  { key: 'carreras', label: 'Carreras', Icon: BookOpen },
-  { key: 'planteles', label: 'Planteles', Icon: School },
-  { key: 'estatusRecibo', label: 'Estatus de recibo', Icon: BadgeCheck },
-  { key: 'conceptosPago', label: 'Conceptos de pago', Icon: Receipt },
-  { key: 'tiposPago', label: 'Tipos de pago', Icon: CreditCard },
-];
-
-export default function CatalogTabs({ value, onChange }: Props) {
+/**
+ * Tabs de Configuraciones → Catálogos
+ *
+ * Reglas:
+ * - UI pura (sin lógica de negocio).
+ * - Las pestañas viven en `data/catalogoTabs.data.ts`.
+ * - Si mañana agregas un catálogo, solo editas el array TABS_CATALOGOS.
+ */
+export default function CatalogoTabs({ value, onChange }: Props) {
   return (
     <div className={s.wrap} aria-label="Catálogos">
       <div className={s.tabs} role="tablist">
-        {TABS.map(({ key, label, Icon }) => {
+        {TABS_CATALOGOS.map(({ key, label, Icon }) => {
           const isActive = value === key;
 
           return (

@@ -1,7 +1,7 @@
 // src/modulos/configuraciones/ui/catalogo-modal/utils/catalogoModal.formulario.ts
-import type { CatalogKey } from '../../CatalogTabs/CatalogTabs';
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
 import type { FormState, ModoModal } from '../types/catalogoModal.types';
+import { CatalogKey } from '../../CatalogTabs/types/catalogoTabs.types';
 
 /**
  * Normaliza un "initialValue" desconocido a objeto para lectura segura.

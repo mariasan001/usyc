@@ -9,7 +9,7 @@ import {
   etiquetarTipoMonto,
 } from "./utils/catalogoModal.tipoMonto";
 import type { CatalogoModalProps } from "./types/catalogoModal.types";
-import InputMontoMXN from "./partes/InputMontoMXN";
+import InputMontoMXN from "./inputs/InputMontoMXN";
 import { useCatalogoModal } from "./hook/useCatalogoModal";
 
 /**

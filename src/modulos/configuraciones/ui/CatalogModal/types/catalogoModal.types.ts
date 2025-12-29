@@ -1,6 +1,6 @@
 // src/modulos/configuraciones/ui/catalogo-modal/types/catalogoModal.types.ts
-import type { CatalogKey } from '../../CatalogTabs/CatalogTabs';
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
+import { CatalogKey } from '../../CatalogTabs/types/catalogoTabs.types';
 
 /**
  * Estado genérico del formulario.

@@ -1,5 +1,5 @@
 // src/modulos/configuraciones/ui/catalogo-modal/utils/catalogoModal.payload.ts
-import type { CatalogKey } from '../../CatalogTabs/CatalogTabs';
+import { CatalogKey } from '../../CatalogTabs/types/catalogoTabs.types';
 import type { FormState, ModoModal } from '../types/catalogoModal.types';
 import { calcularTipoMontoConcepto } from './catalogoModal.tipoMonto';
 

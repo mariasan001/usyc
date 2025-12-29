@@ -1,5 +1,5 @@
 // src/modulos/configuraciones/ui/catalogo-modal/utils/catalogoModal.titulo.ts
-import type { CatalogKey } from '../../CatalogTabs/CatalogTabs';
+import { CatalogKey } from '../../CatalogTabs/types/catalogoTabs.types';
 import type { ModoModal } from '../types/catalogoModal.types';
 
 /**
