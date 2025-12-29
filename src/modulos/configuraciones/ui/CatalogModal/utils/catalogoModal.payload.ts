@@ -1,6 +1,7 @@
 // src/modulos/configuraciones/ui/catalogo-modal/utils/catalogoModal.payload.ts
 import type { CatalogKey } from '../../CatalogTabs/CatalogTabs';
 import type { FormState, ModoModal } from '../types/catalogoModal.types';
+import { calcularTipoMontoConcepto } from './catalogoModal.tipoMonto';
 
 /**
  * Convierte el estado del formulario al payload exacto que consume onSave,
@@ -56,23 +57,28 @@ export function buildPayloadCatalogo(args: {
   }
 
   // ✅ CONCEPTOS PAGO
-  if (catalog === 'conceptosPago') {
-    return mode === 'create'
-      ? {
-          codigo: String(form.codigo ?? '').trim(),
-          nombre: String(form.nombre ?? '').trim(),
-          descripcion: String(form.descripcion ?? '').trim(),
-          tipoMonto: String(form.tipoMonto ?? '').trim(),
-          activo: !!form.activo,
-        }
-      : {
-          nombre: String(form.nombre ?? '').trim(),
-          descripcion: String(form.descripcion ?? '').trim(),
-          tipoMonto: String(form.tipoMonto ?? '').trim(),
-          activo: !!form.activo,
-        };
-  }
+    if (catalog === 'conceptosPago') {
+    const codigo = String(form.codigo ?? '').trim().toUpperCase();
+    const tipoMonto = calcularTipoMontoConcepto({
+        codigo,
+        nombre: form.nombre,
+    });
 
+    return mode === 'create'
+        ? {
+            codigo,
+            nombre: String(form.nombre ?? '').trim(),
+            descripcion: String(form.descripcion ?? '').trim(),
+            tipoMonto,
+            activo: !!form.activo,
+        }
+        : {
+            nombre: String(form.nombre ?? '').trim(),
+            descripcion: String(form.descripcion ?? '').trim(),
+            tipoMonto,
+            activo: !!form.activo,
+        };
+    }
   // ✅ TIPOS DE PAGO
   if (catalog === 'tiposPago') {
     return mode === 'create'

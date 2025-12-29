@@ -1,13 +1,16 @@
 // src/modulos/configuraciones/ui/catalogo-modal/CatalogoModal.tsx
-'use client';
+"use client";
 
-import { X, Save } from 'lucide-react';
+import { X, Save } from "lucide-react";
 
-import s from './CatalogModal.module.css';
-
-import type { CatalogoModalProps } from './types/catalogoModal.types';
-import InputMontoMXN from './partes/InputMontoMXN';
-import { useCatalogoModal } from './hook/useCatalogoModal';
+import s from "./CatalogModal.module.css";
+import {
+  calcularTipoMontoConcepto,
+  etiquetarTipoMonto,
+} from "./utils/catalogoModal.tipoMonto";
+import type { CatalogoModalProps } from "./types/catalogoModal.types";
+import InputMontoMXN from "./partes/InputMontoMXN";
+import { useCatalogoModal } from "./hook/useCatalogoModal";
 
 /**
  * Modal genérico para Catálogos.
@@ -18,7 +21,8 @@ import { useCatalogoModal } from './hook/useCatalogoModal';
 export default function CatalogoModal(props: CatalogoModalProps) {
   const { onClose, isSaving, catalog } = props;
 
-  const { titulo, escolaridadesOrdenadas, form, setCampo, flags, submit } = useCatalogoModal(props);
+  const { titulo, escolaridadesOrdenadas, form, setCampo, flags, submit } =
+    useCatalogoModal(props);
 
   return (
     <div className={s.backdrop} role="dialog" aria-modal="true">
@@ -45,18 +49,23 @@ export default function CatalogoModal(props: CatalogoModalProps) {
               <input
                 value={
                   flags.isTiposPago || flags.isPlanteles
-                    ? String(form.code ?? '')
-                    : String(form.codigo ?? '')
+                    ? String(form.code ?? "")
+                    : String(form.codigo ?? "")
                 }
                 onChange={(e) =>
-                  setCampo(flags.isTiposPago || flags.isPlanteles ? 'code' : 'codigo', e.target.value)
+                  setCampo(
+                    flags.isTiposPago || flags.isPlanteles ? "code" : "codigo",
+                    e.target.value
+                  )
                 }
                 placeholder={flags.placeholderCodigo}
                 required
               />
 
-              {(catalog === 'tiposPago' || catalog === 'planteles') ? (
-                <small className={s.help}>Recomendado: MAYÚSCULAS y sin espacios.</small>
+              {catalog === "tiposPago" || catalog === "planteles" ? (
+                <small className={s.help}>
+                  Recomendado: MAYÚSCULAS y sin espacios.
+                </small>
               ) : null}
             </div>
           )}
@@ -66,12 +75,14 @@ export default function CatalogoModal(props: CatalogoModalProps) {
             <div className={s.field}>
               <label>Código de Carrera</label>
               <input
-                value={String(form.carreraId ?? '')}
-                onChange={(e) => setCampo('carreraId', e.target.value)}
+                value={String(form.carreraId ?? "")}
+                onChange={(e) => setCampo("carreraId", e.target.value)}
                 placeholder="01, 10…"
                 required
               />
-              <small className={s.help}>Es un string (tipo código). Ej: 01, 10.</small>
+              <small className={s.help}>
+                Es un string (tipo código). Ej: 01, 10.
+              </small>
             </div>
           )}
 
@@ -81,7 +92,9 @@ export default function CatalogoModal(props: CatalogoModalProps) {
               <label>Escolaridad</label>
               <select
                 value={String(form.escolaridadId ?? 0)}
-                onChange={(e) => setCampo('escolaridadId', Number(e.target.value))}
+                onChange={(e) =>
+                  setCampo("escolaridadId", Number(e.target.value))
+                }
                 required
               >
                 {escolaridadesOrdenadas.map((esc) => (
@@ -97,7 +110,7 @@ export default function CatalogoModal(props: CatalogoModalProps) {
           <div className={s.field}>
             <label>Nombre</label>
             <input
-              value={String(form[flags.nameKey] ?? '')}
+              value={String(form[flags.nameKey] ?? "")}
               onChange={(e) => setCampo(flags.nameKey, e.target.value)}
               required
             />
@@ -109,8 +122,8 @@ export default function CatalogoModal(props: CatalogoModalProps) {
               <label>Dirección</label>
               <textarea
                 className={s.textarea}
-                value={String(form.address ?? '')}
-                onChange={(e) => setCampo('address', e.target.value)}
+                value={String(form.address ?? "")}
+                onChange={(e) => setCampo("address", e.target.value)}
                 placeholder="Dirección del plantel…"
                 rows={3}
               />
@@ -123,8 +136,8 @@ export default function CatalogoModal(props: CatalogoModalProps) {
               <label>Descripción</label>
               <textarea
                 className={s.textarea}
-                value={String(form.descripcion ?? '')}
-                onChange={(e) => setCampo('descripcion', e.target.value)}
+                value={String(form.descripcion ?? "")}
+                onChange={(e) => setCampo("descripcion", e.target.value)}
                 placeholder="Detalle del concepto…"
                 rows={4}
               />
@@ -132,26 +145,36 @@ export default function CatalogoModal(props: CatalogoModalProps) {
           )}
 
           {/* CONCEPTOS PAGO: tipoMonto */}
-          {flags.showConceptoTipoMonto && (
-            <div className={s.field}>
-              <label>Tipo de monto</label>
-              <input
-                value={String(form.tipoMonto ?? '')}
-                onChange={(e) => setCampo('tipoMonto', e.target.value)}
-                placeholder="FIJO, VARIABLE, PORCENTAJE…"
-                required
-              />
-            </div>
-          )}
+          {catalog === 'conceptosPago' && (
+          <div className={s.field}>
+            <label>Tipo de monto</label>
+
+            {(() => {
+              const tipoMontoReal = calcularTipoMontoConcepto({
+                codigo: form.codigo,
+                nombre: form.nombre,
+              });
+
+              return (
+                <>
+                  <input value={etiquetarTipoMonto(tipoMontoReal)} disabled />
+                  <small className={s.help}>
+                    Se enviará como: <strong>{tipoMontoReal}</strong>
+                  </small>
+                </>
+              );
+            })()}
+          </div>
+        )}
 
           {/* CARRERAS: grid de montos y duración */}
-          {catalog === 'carreras' && (
+          {catalog === "carreras" && (
             <div className={s.grid2}>
               <div className={s.field}>
                 <label>Monto mensual</label>
                 <InputMontoMXN
                   value={Number(form.montoMensual ?? 0)}
-                  onChange={(n) => setCampo('montoMensual', n)}
+                  onChange={(n) => setCampo("montoMensual", n)}
                 />
               </div>
 
@@ -159,7 +182,7 @@ export default function CatalogoModal(props: CatalogoModalProps) {
                 <label>Monto inscripción</label>
                 <InputMontoMXN
                   value={Number(form.montoInscripcion ?? 0)}
-                  onChange={(n) => setCampo('montoInscripcion', n)}
+                  onChange={(n) => setCampo("montoInscripcion", n)}
                 />
               </div>
 
@@ -168,7 +191,9 @@ export default function CatalogoModal(props: CatalogoModalProps) {
                 <input
                   type="number"
                   value={Number(form.duracionAnios ?? 0)}
-                  onChange={(e) => setCampo('duracionAnios', Number(e.target.value))}
+                  onChange={(e) =>
+                    setCampo("duracionAnios", Number(e.target.value))
+                  }
                 />
               </div>
 
@@ -177,7 +202,9 @@ export default function CatalogoModal(props: CatalogoModalProps) {
                 <input
                   type="number"
                   value={Number(form.duracionMeses ?? 0)}
-                  onChange={(e) => setCampo('duracionMeses', Number(e.target.value))}
+                  onChange={(e) =>
+                    setCampo("duracionMeses", Number(e.target.value))
+                  }
                 />
               </div>
             </div>
@@ -207,7 +234,7 @@ export default function CatalogoModal(props: CatalogoModalProps) {
 
             <button type="submit" className={s.primary} disabled={isSaving}>
               <Save size={16} />
-              {isSaving ? 'Guardando…' : 'Guardar'}
+              {isSaving ? "Guardando…" : "Guardar"}
             </button>
           </div>
 
