@@ -1,241 +1,157 @@
+// src/modulos/alumnos/ui/alumno-registro-card/AlumnoRegistroCard.tsx
 'use client';
 
 import s from './AlumnoRegistroCard.module.css';
+
 import { useAlumnoForm } from '../../hooks/useAlumnoForm';
 
-function formatMXN(n: number) {
+import EncabezadoRegistro from './partes/EncabezadoRegistro';
+import AlertasRegistro from './partes/AlertasRegistro';
+import CampoTexto from './partes/CampoTexto';
+import SelectCatalogo from './partes/SelectCatalogo';
+import MigracionRecibosPrevios from './partes/MigracionRecibosPrevios';
+import AvisoRecibosPrevios from './partes/visoRecibosPrevios';
+import VistaPreviaRegistro from './partes/vistaPreviaRegistro';
+
+
+function formatearMXNEntero(n: number): string {
+  // Mantiene el comportamiento: 1,200 (sin símbolo)
   return new Intl.NumberFormat('es-MX').format(Number.isFinite(n) ? n : 0);
 }
 
+/**
+ * Card: Registro de alumno
+ * - Componente 100% UI (composición).
+ * - Toda la lógica vive en useAlumnoForm().
+ * - Regla: SIEMPRE se elige un “programa” (campo `carreraId`),
+ *   pero el label cambia: "Carrera" o "Nivel académico".
+ * - Nombre: el hook lo normaliza y lo mantiene en MAYÚSCULAS.
+ */
 export default function AlumnoRegistroCard() {
   const f = useAlumnoForm();
 
+  // Placeholder del selector de programa
+  const placeholderPrograma = !f.escolaridadId
+    ? 'Selecciona escolaridad…'
+    : f.carrerasLoading
+      ? 'Cargando…'
+      : 'Selecciona…';
+
   return (
     <section className={s.card}>
-      <header className={s.header}>
-        <div className={s.headText}>
-          <h2 className={s.title}>Registro de alumno</h2>
-          <p className={s.subtitle}>
-            Captura rápida + cálculo automático (término y precio).
-          </p>
-        </div>
+      <EncabezadoRegistro
+        s={s}
+        precioMensualLabel="Precio mensual"
+        precioMensualValor={`$${formatearMXNEntero(f.precioMensual || 0)}`}
+      />
 
-        <div className={s.kpi}>
-          <span className={s.kpiLabel}>Precio mensual</span>
-          <span className={s.kpiValue}>${formatMXN(f.precioMensual || 0)}</span>
-        </div>
-      </header>
-
-      {f.formError ? <div className={s.alertError}>{f.formError}</div> : null}
-      {f.successFlash ? <div className={s.alertOk}>{f.successFlash}</div> : null}
+      <AlertasRegistro s={s} error={f.formError} ok={f.successFlash} />
 
       <div className={s.grid}>
         {/* 1) Nombre | Matrícula */}
-        <div className={s.field}>
-          <label className={s.label}>Nombre</label>
-          <input
-            className={s.input}
-            value={f.nombreCompleto}
-            onChange={(e) => f.setNombreCompleto(e.target.value)}
-            placeholder="Nombre completo"
-            autoComplete="name"
-          />
-        </div>
+        <CampoTexto
+          s={s}
+          label="Nombre (APELLIDOS NOMBRES)"
+          value={f.nombreCompleto}
+          onChange={f.setNombreCompleto}
+          placeholder="PÉREZ LÓPEZ JUAN CARLOS"
+          autoComplete="name"
+        />
 
-        <div className={s.field}>
-          <label className={s.label}>Matrícula</label>
-          <input
-            className={s.input}
-            value={f.matricula}
-            onChange={(e) => f.setMatricula(e.target.value)}
-            placeholder="SYC-0003"
-            autoComplete="off"
-          />
-        </div>
+        <CampoTexto
+          s={s}
+          label="Matrícula"
+          value={f.matricula}
+          onChange={f.setMatricula}
+          placeholder="SYC-0003"
+          autoComplete="off"
+        />
 
-        {/* ✅ Aviso recibos previos (por nombre) */}
-        {f.nombreCompleto.trim().length >= 6 ? (
-          <div className={`${s.full} ${s.prevBox}`}>
-            {f.prevCountLoading ? (
-              <div className={s.prevInfo}>Buscando recibos previos…</div>
-            ) : f.prevCountError ? (
-              <div className={s.prevWarn}>{f.prevCountError}</div>
-            ) : typeof f.prevCount === 'number' ? (
-              f.prevCount > 0 ? (
-                <div className={s.prevOk}>
-                  Se encontraron <b>{f.prevCount}</b> recibos previos para este nombre.
-                  <span className={s.prevHint}>
-                    Si deseas, activa “Migrar recibos previos” para vincular el historial.
-                  </span>
-                </div>
-              ) : (
-                <div className={s.prevInfo}>
-                  No se encontraron recibos previos para este nombre.
-                </div>
-              )
-            ) : null}
-          </div>
-        ) : null}
+        {/* Aviso recibos previos (por nombre) */}
+        <AvisoRecibosPrevios
+          s={s}
+          nombre={f.nombreCompleto}
+          loading={f.prevCountLoading}
+          error={f.prevCountError}
+          count={f.prevCount}
+        />
 
         {/* 2) Escolaridad FULL */}
-        <div className={`${s.field} ${s.full}`}>
-          <label className={s.label}>Escolaridad</label>
+        <SelectCatalogo
+          s={s}
+          full
+          label="Escolaridad"
+          value={f.escolaridadId ?? ''}
+          onChange={(raw) => f.setEscolaridadId(raw ? Number(raw) : null)}
+          disabled={f.escolaridadesLoading}
+          placeholder={f.escolaridadesLoading ? 'Cargando…' : 'Selecciona…'}
+          errorText={f.escolaridadesError ? 'No se pudieron cargar escolaridades.' : null}
+          options={f.escolaridades.map((x) => ({
+            value: String(x.id),
+            label: x.nombre,
+          }))}
+        />
 
-          <select
-            className={s.select}
-            value={f.escolaridadId ?? ''}
-            onChange={(e) => {
-              const v = e.target.value;
-              f.setEscolaridadId(v ? Number(v) : null);
-            }}
-            disabled={f.escolaridadesLoading}
-          >
-            <option value="">
-              {f.escolaridadesLoading ? 'Cargando…' : 'Selecciona…'}
-            </option>
+        {/* 2) Plantel FULL */}
+        <SelectCatalogo
+          s={s}
+          full
+          label="Plantel"
+          value={f.plantelId ?? ''}
+          onChange={(raw) => f.setPlantelId(raw ? Number(raw) : null)}
+          disabled={f.plantelesLoading}
+          placeholder={f.plantelesLoading ? 'Cargando…' : 'Selecciona…'}
+          errorText={f.plantelesError ? 'No se pudieron cargar planteles.' : null}
+          options={f.planteles.map((p) => ({
+            value: String(p.id),
+            label: p.name,
+          }))}
+        />
 
-            {f.escolaridades.map((x) => (
-              <option key={x.id} value={String(x.id)}>
-                {x.nombre}
-              </option>
-            ))}
-          </select>
+        {/* 3) Programa (Carrera/Nivel) | Fecha ingreso */}
+        <SelectCatalogo
+          s={s}
+          label={
+            <>
+              {f.etiquetaPrograma}{' '}
+              {f.programaObligatorio ? <span className={s.req}>*</span> : null}
+            </>
+          }
+          value={f.carreraId ?? ''}
+          onChange={(raw) => f.setCarreraId(raw || null)}
+          disabled={!f.escolaridadId || f.carrerasLoading}
+          placeholder={placeholderPrograma}
+          errorText={f.carrerasError ? 'No se pudieron cargar opciones.' : null}
+          options={f.carrerasFiltradas.map((c) => ({
+            value: String(c.carreraId),
+            label: c.nombre,
+          }))}
+        />
 
-          {f.escolaridadesError ? (
-            <div className={s.helperError}>No se pudieron cargar escolaridades.</div>
-          ) : null}
-        </div>
+        <CampoTexto
+          s={s}
+          label="Fecha de ingreso"
+          type="date"
+          value={f.fechaIngreso}
+          onChange={f.setFechaIngreso}
+        />
 
-        {/* ✅ Plantel FULL */}
-        <div className={`${s.field} ${s.full}`}>
-          <label className={s.label}>Plantel</label>
-
-          <select
-            className={s.select}
-            value={f.plantelId ?? ''}
-            onChange={(e) => {
-              const v = e.target.value;
-              f.setPlantelId(v ? Number(v) : null);
-            }}
-            disabled={f.plantelesLoading}
-          >
-            <option value="">
-              {f.plantelesLoading ? 'Cargando…' : 'Selecciona…'}
-            </option>
-
-            {f.planteles.map((p) => (
-              <option key={p.id} value={String(p.id)}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-
-          {f.plantelesError ? (
-            <div className={s.helperError}>No se pudieron cargar planteles.</div>
-          ) : null}
-        </div>
-
-        {/* 3) Carrera | Fecha ingreso */}
-        <div className={s.field}>
-          <label className={s.label}>
-            Carrera {f.carreraRequired ? <span className={s.req}>*</span> : null}
-          </label>
-
-          <select
-            className={s.select}
-            value={f.carreraId ?? ''}
-            onChange={(e) => f.setCarreraId(e.target.value || null)}
-            disabled={!f.carreraRequired || !f.escolaridadId || f.carrerasLoading}
-          >
-            <option value="">
-              {!f.escolaridadId
-                ? 'Selecciona escolaridad…'
-                : !f.carreraRequired
-                ? 'No aplica'
-                : f.carrerasLoading
-                ? 'Cargando…'
-                : 'Selecciona…'}
-            </option>
-
-            {f.carrerasFiltradas.map((c) => (
-              <option key={c.carreraId} value={String(c.carreraId)}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-
-          {f.carrerasError ? (
-            <div className={s.helperError}>No se pudieron cargar carreras.</div>
-          ) : null}
-        </div>
-
-        <div className={s.field}>
-          <label className={s.label}>Fecha de ingreso</label>
-          <input
-            className={s.input}
-            type="date"
-            value={f.fechaIngreso}
-            onChange={(e) => f.setFechaIngreso(e.target.value)}
-          />
-        </div>
-
-        {/* ✅ Migración de recibos previos */}
-        <div className={`${s.field} ${s.full}`}>
-          <label className={s.label}>Recibos previos</label>
-
-          <div className={s.inlineRow}>
-            <input
-              id="pullPrev"
-              type="checkbox"
-              checked={f.pullPrevReceipts}
-              onChange={(e) => f.setPullPrevReceipts(e.target.checked)}
-            />
-            <label htmlFor="pullPrev" className={s.inlineLabel}>
-              Migrar recibos previos
-            </label>
-          </div>
-
-    {f.pullPrevReceipts ? (
-  <div className={s.miniBlock}>
-    <label className={s.label}>Nombre para recibos previos</label>
-
-    <input
-      className={`${s.input} ${s.inputLocked}`}
-      value={f.nombreCompleto}      // ✅ EXACTAMENTE IGUAL
-      readOnly                      // ✅ no editable
-      disabled                      // ✅ visualmente bloqueado
-      tabIndex={-1}                 // opcional: no focus
-      autoComplete="off"
-    />
-
-    <div className={s.helperInfo}>
-      Se usa exactamente el mismo nombre del registro para buscar/migrar recibos previos.
-    </div>
-
-    {typeof f.prevCount === 'number' && f.prevCount === 0 ? (
-      <div className={s.helperWarn}>
-        No hay recibos previos detectados para este nombre. Si continúas, probablemente no se migrará nada.
-      </div>
-    ) : null}
-  </div>
-) : null}
-
-        </div>
+        {/* Migración de recibos previos */}
+        <MigracionRecibosPrevios
+          s={s}
+          enabled={f.pullPrevReceipts}
+          onToggle={f.setPullPrevReceipts}
+          nombre={f.nombreCompleto}
+          prevCount={f.prevCount}
+        />
       </div>
 
-      <div className={s.preview}>
-        <div className={s.previewItem}>
-          <span className={s.previewLabel}>Duración</span>
-          <span className={s.previewValue}>
-            {f.carreraRequired ? `${f.duracionMeses} meses` : '—'}
-          </span>
-        </div>
-
-        <div className={s.previewItem}>
-          <span className={s.previewLabel}>Término</span>
-          <span className={s.previewValue}>{f.fechaTermino}</span>
-        </div>
-      </div>
+      <VistaPreviaRegistro
+        s={s}
+        programaObligatorio={f.programaObligatorio}
+        duracionMeses={f.duracionMeses}
+        fechaTermino={f.fechaTermino}
+      />
 
       <footer className={s.footer}>
         <button

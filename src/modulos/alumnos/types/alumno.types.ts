@@ -1,18 +1,13 @@
 export type Alumno = {
   alumnoId: string;
-
   nombreCompleto: string;
   matricula: string;
-
   escolaridadId: number;
   escolaridadNombre: string;
-
   carreraId?: string | null;
   carreraNombre?: string | null;
-
   plantelId: number;
   plantelNombre: string;
-
   fechaIngreso: string;            // YYYY-MM-DD
   fechaTermino?: string | null;    // puede venir null
   activo: boolean;

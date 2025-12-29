@@ -1,219 +1,291 @@
+// src/modulos/alumnos/hooks/useAlumnoForm.ts
 'use client';
 
-import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
-import { useEscolaridades, useCarreras, usePlanteles } from '@/modulos/configuraciones/hooks';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useEscolaridades, useCarreras, usePlanteles } from '@/modulos/configuraciones/hooks';
 import { useAlumnoCreate } from './useAlumnoCreate';
 import { AlumnosService } from '../services/alumnos.service';
 
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
+import type { Carrera } from '@/modulos/configuraciones/types/carreras.types';
+import type { Plantel } from '@/modulos/configuraciones/types/planteles.types';
 import type { AlumnoCreate } from '../types/alumno.types';
 
-function pad2(n: number) {
-  return String(n).padStart(2, '0');
-}
+import { hoyISO, sumarMesesISO } from './utils/fechasISO';
+import { nombreMinimoParaBuscar } from './utils/nombre';
+import { etiquetaProgramaPorEscolaridad } from './utils/escolaridadReglas';
+import { leerNumeroOpcional } from './utils/extraerCampo';
+import { normalizarNombreMayusculas } from './utils/nombreAlumno';
 
-function todayISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
+type ConteoRecibosPrevios = {
+  totalRecibosPrevios?: number;
+};
 
-function addMonthsISO(iso: string, months: number) {
-  const [y, m, d] = iso.split('-').map(Number);
-  const base = new Date(y, (m - 1) + months, d);
-  const daysInTargetMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
-  const safe = new Date(base.getFullYear(), base.getMonth(), Math.min(d, daysInTargetMonth));
-  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(safe.getDate())}`;
-}
+/**
+ * Payload extendido SOLO para este flujo (sin romper tu AlumnoCreate base).
+ * - Backend sigue recibiendo `carreraId` como hoy.
+ * - Migración: se manda `prevReceiptsNombre` cuando aplica.
+ */
+type AlumnoCreateConMigracion = AlumnoCreate & {
+  pullPrevReceipts: boolean;
+  prevReceiptsNombre?: string;
+};
 
-function normalize(s?: string | null) {
-  return (s ?? '').trim().toLowerCase();
-}
-
-function carreraEsRequerida(esc?: Escolaridad | null) {
-  const nombre = normalize(esc?.nombre);
-  const codigo = normalize((esc as any)?.codigo); // por si tu type no trae codigo
-
-  const noAplica =
-    nombre.includes('primaria') ||
-    nombre.includes('secundaria') ||
-    nombre.includes('bach') ||
-    codigo === 'pri' ||
-    codigo === 'sec' ||
-    codigo === 'bac';
-
-  return !noAplica;
-}
-
-function nombreMinOk(nombre: string) {
-  // evita spamear API con "lu" o espacios
-  const t = (nombre ?? '').trim();
-  return t.length >= 6; // ajustable (6-8 suele ir bien)
-}
-
+/**
+ * Hook del formulario de registro de alumno.
+ *
+ * Objetivos:
+ * - Mantener comportamiento actual (mismos endpoints, mismo payload).
+ * - Sin `any`, sin eslint-disable, sin hacks.
+ * - Regla nueva: SIEMPRE se selecciona un “programa” que vive en `carreraId`.
+ *   - Para primaria/secundaria/bach => UI lo llama “Nivel académico”
+ *   - Para el resto => UI lo llama “Carrera”
+ *
+ * Nombre:
+ * - Siempre se captura y se muestra en MAYÚSCULAS.
+ * - Validación: formato APELLIDOS NOMBRES (homologación).
+ *
+ * Migración:
+ * - El usuario NO escribe el nombre para recibos previos.
+ * - Se usa exactamente `nombreCompleto` (ya normalizado).
+ */
 export function useAlumnoForm() {
+  // Catálogos (solo activos)
   const escolaridadesApi = useEscolaridades({ soloActivos: true });
   const carrerasApi = useCarreras({ soloActivos: true });
   const plantelesApi = usePlanteles({ soloActivos: true });
 
+  // Acción de creación (hook existente)
   const alumnoCreate = useAlumnoCreate();
 
+  // Campos del formulario
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [matricula, setMatricula] = useState('');
   const [escolaridadId, setEscolaridadIdState] = useState<number | null>(null);
+
+  /**
+   * NOTA:
+   * - Se mantiene `carreraId` como nombre por compatibilidad (backend/DTO).
+   * - En UI este campo se mostrará como “Carrera” o “Nivel académico”.
+   */
   const [carreraId, setCarreraId] = useState<string | null>(null);
-  const [fechaIngreso, setFechaIngreso] = useState<string>(todayISO());
+
+  const [fechaIngreso, setFechaIngreso] = useState<string>(hoyISO());
   const [plantelId, setPlantelId] = useState<number | null>(null);
 
-  // ✅ NUEVO: migración recibos previos
+  // Migración recibos previos
   const [pullPrevReceipts, setPullPrevReceipts] = useState(false);
-  const [prevReceiptsNombre, setPrevReceiptsNombre] = useState('');
 
-  // ✅ NUEVO: count recibos previos por nombre
+  // Conteo recibos previos por nombre
   const [prevCount, setPrevCount] = useState<number | null>(null);
   const [prevCountLoading, setPrevCountLoading] = useState(false);
   const [prevCountError, setPrevCountError] = useState<string | null>(null);
 
-  const lastQueryRef = useRef<string>('');
-  const debounceRef = useRef<number | null>(null);
-
+  // UI
   const [formError, setFormError] = useState<string | null>(null);
   const [successFlash, setSuccessFlash] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const escolaridades = useMemo(() => escolaridadesApi.items ?? [], [escolaridadesApi.items]);
-  const planteles = useMemo(() => plantelesApi.items ?? [], [plantelesApi.items]);
+  // Debounce + control de obsolescencia de requests
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
+  const ultimoNombreConsultadoRef = useRef<string>('');
 
-  const escolaridadSel = useMemo(() => {
+  /**
+   * Setter oficial de nombre:
+   * - Siempre en MAYÚSCULAS
+   * - Normalizado (trim / espacios)
+   */
+  const setNombreCompletoUpper = useCallback((v: string) => {
+    setNombreCompleto(normalizarNombreMayusculas(v));
+  }, []);
+
+  // Colecciones tipadas (evita null/undefined)
+  const escolaridades = useMemo<Escolaridad[]>(
+    () => (escolaridadesApi.items ?? []) as Escolaridad[],
+    [escolaridadesApi.items],
+  );
+
+  const planteles = useMemo<Plantel[]>(
+    () => (plantelesApi.items ?? []) as Plantel[],
+    [plantelesApi.items],
+  );
+
+  const carreras = useMemo<Carrera[]>(
+    () => (carrerasApi.items ?? []) as Carrera[],
+    [carrerasApi.items],
+  );
+
+  // Selecciones actuales
+  const escolaridadSel = useMemo<Escolaridad | null>(() => {
     if (!escolaridadId) return null;
     return escolaridades.find((e) => Number(e.id) === Number(escolaridadId)) ?? null;
   }, [escolaridadId, escolaridades]);
 
-  const carreraRequired = useMemo(() => carreraEsRequerida(escolaridadSel), [escolaridadSel]);
+  /**
+   * Etiqueta dinámica para el selector de “programa”:
+   * - Primaria/Secundaria/Bach => “Nivel académico”
+   * - Resto => “Carrera”
+   */
+  const etiquetaPrograma = useMemo(() => etiquetaProgramaPorEscolaridad(escolaridadSel), [escolaridadSel]);
 
-  const carrerasFiltradas = useMemo(() => {
-    const all = carrerasApi.items ?? [];
+  /**
+   * Regla: una vez seleccionada la escolaridad, el programa debe seleccionarse.
+   */
+  const programaObligatorio = useMemo<boolean>(() => Boolean(escolaridadId), [escolaridadId]);
+
+  /**
+   * Lista de programas disponibles para la escolaridad seleccionada.
+   * (Sigue siendo el mismo filtro por escolaridadId).
+   */
+  const carrerasFiltradas = useMemo<Carrera[]>(() => {
     if (!escolaridadId) return [];
-    return all.filter((c) => Number(c.escolaridadId) === Number(escolaridadId));
-  }, [carrerasApi.items, escolaridadId]);
+    return carreras.filter((c) => Number(c.escolaridadId) === Number(escolaridadId));
+  }, [carreras, escolaridadId]);
 
-  const carreraSel = useMemo(() => {
+  /**
+   * Programa seleccionado (por `carreraId`).
+   */
+  const carreraSel = useMemo<Carrera | null>(() => {
     if (!carreraId) return null;
     return carrerasFiltradas.find((c) => String(c.carreraId) === String(carreraId)) ?? null;
   }, [carreraId, carrerasFiltradas]);
 
-  const precioMensual = useMemo(() => {
-    if (!carreraRequired) return 0;
-    return Number((carreraSel as any)?.montoMensual ?? 0);
-  }, [carreraRequired, carreraSel]);
+  // Derivados (siempre desde el programa seleccionado)
+  const precioMensual = useMemo<number>(() => {
+    const directo = typeof carreraSel?.montoMensual === 'number' ? carreraSel.montoMensual : 0;
+    return directo || leerNumeroOpcional(carreraSel, 'montoMensual');
+  }, [carreraSel]);
 
-  const duracionMeses = useMemo(() => {
-    if (!carreraRequired) return 0;
-    const a = Number((carreraSel as any)?.duracionAnios ?? 0);
-    const m = Number((carreraSel as any)?.duracionMeses ?? 0);
-    return a * 12 + m;
-  }, [carreraRequired, carreraSel]);
+  const duracionMeses = useMemo<number>(() => {
+    const anios = typeof carreraSel?.duracionAnios === 'number' ? carreraSel.duracionAnios : 0;
+    const meses = typeof carreraSel?.duracionMeses === 'number' ? carreraSel.duracionMeses : 0;
 
-  const fechaTermino = useMemo(() => {
+    const aniosSafe = anios || leerNumeroOpcional(carreraSel, 'duracionAnios');
+    const mesesSafe = meses || leerNumeroOpcional(carreraSel, 'duracionMeses');
+
+    return aniosSafe * 12 + mesesSafe;
+  }, [carreraSel]);
+
+  const fechaTermino = useMemo<string>(() => {
     if (!fechaIngreso) return '—';
-    if (!carreraRequired || !duracionMeses) return '—';
-    return addMonthsISO(fechaIngreso, duracionMeses);
-  }, [fechaIngreso, carreraRequired, duracionMeses]);
+    if (!duracionMeses) return '—';
+    return sumarMesesISO(fechaIngreso, duracionMeses);
+  }, [fechaIngreso, duracionMeses]);
 
+  /**
+   * Setter “inteligente”:
+   * - Al cambiar escolaridad, reinicia el programa seleccionado.
+   */
   const setEscolaridadId = useCallback((id: number | null) => {
     setEscolaridadIdState(id);
     setCarreraId(null);
   }, []);
 
-  // ✅ Efecto: consultar recibos previos por nombre (debounce)
+  /**
+   * Efecto: consulta (debounce) de recibos previos por nombre.
+   * - Usa el nombre YA NORMALIZADO.
+   * - Ignora respuestas viejas (requestId).
+   * - Evita repetir consulta si el nombre no cambió.
+   */
   useEffect(() => {
-    const nombre = (nombreCompleto ?? '').trim();
+    const nombre = normalizarNombreMayusculas(nombreCompleto);
 
     setPrevCountError(null);
 
-    if (!nombreMinOk(nombre)) {
+    if (!nombreMinimoParaBuscar(nombre)) {
       setPrevCount(null);
-      // si el nombre aún no es “usable”, no mostramos nada
+      ultimoNombreConsultadoRef.current = '';
       return;
     }
 
-    if (lastQueryRef.current === nombre) return;
+    if (ultimoNombreConsultadoRef.current === nombre) return;
 
-    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    debounceRef.current = window.setTimeout(async () => {
-      lastQueryRef.current = nombre;
+    debounceRef.current = setTimeout(async () => {
+      ultimoNombreConsultadoRef.current = nombre;
+
+      const requestId = ++requestIdRef.current;
       setPrevCountLoading(true);
 
       try {
-        const r = await AlumnosService.countRecibosPreviosByNombre(nombre);
+        const r = (await AlumnosService.countRecibosPreviosByNombre(nombre)) as ConteoRecibosPrevios;
         const total = Number(r?.totalRecibosPrevios ?? 0);
-        setPrevCount(Number.isFinite(total) ? total : 0);
+        const safeTotal = Number.isFinite(total) ? total : 0;
 
-        // 🎯 UX: si hay recibos previos, sugerimos activar migración
-        // (no lo forzamos, solo ayudamos)
-        if ((Number.isFinite(total) ? total : 0) > 0) {
-          // si aún no escribió un nombre de migración, proponemos uno
-          if (!prevReceiptsNombre.trim()) {
-            setPrevReceiptsNombre(`${nombre}`);
-          }
-        }
-      } catch (e: any) {
+        if (requestIdRef.current !== requestId) return;
+        setPrevCount(safeTotal);
+      } catch (e: unknown) {
+        if (requestIdRef.current !== requestId) return;
+
         setPrevCount(null);
-        setPrevCountError(e?.message ?? 'No se pudo consultar recibos previos.');
+        setPrevCountError(e instanceof Error ? e.message : 'No se pudo consultar recibos previos.');
       } finally {
-        setPrevCountLoading(false);
+        if (requestIdRef.current === requestId) setPrevCountLoading(false);
       }
     }, 450);
 
     return () => {
-      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nombreCompleto]);
 
+  /**
+   * Submit:
+   * - Valida formato APELLIDOS NOMBRES.
+   * - Programa obligatorio si ya hay escolaridad.
+   * - Migración: prevReceiptsNombre = nombreCompleto (ya normalizado).
+   */
   const submit = useCallback(async () => {
     setFormError(null);
     setSuccessFlash(null);
 
-    if (!nombreCompleto.trim()) return setFormError('Falta el nombre.');
-    if (!matricula.trim()) return setFormError('Falta la matrícula.');
+    const nombreMayus = normalizarNombreMayusculas(nombreCompleto);
+    const matriculaTrim = matricula.trim();
+
+    if (!nombreMayus) return setFormError('Falta el nombre.');
+
+  
+    if (!matriculaTrim) return setFormError('Falta la matrícula.');
     if (!escolaridadId) return setFormError('Selecciona una escolaridad.');
     if (!plantelId) return setFormError('Selecciona un plantel.');
     if (!fechaIngreso) return setFormError('Selecciona fecha de ingreso.');
-    if (carreraRequired && !carreraId) return setFormError('Selecciona una carrera.');
 
-    // ✅ validación migración
-    if (pullPrevReceipts) {
-      if (prevReceiptsNombre.trim().length < 3) {
-        return setFormError('Escribe el nombre para recibos previos (mín. 3 letras).');
-      }
+    if (programaObligatorio && !carreraId) {
+      return setFormError(
+        `Selecciona un${etiquetaPrograma === 'Carrera' ? 'a' : ''} ${etiquetaPrograma.toLowerCase()}.`,
+      );
     }
+
+    const prevReceiptsNombre = nombreMayus;
 
     setSubmitting(true);
     try {
-      const payload: any = {
-        nombreCompleto: nombreCompleto.trim(),
-        matricula: matricula.trim(),
+      const payload: AlumnoCreateConMigracion = {
+        nombreCompleto: nombreMayus,
+        matricula: matriculaTrim,
         escolaridadId: Number(escolaridadId),
         plantelId: Number(plantelId),
         fechaIngreso,
-        ...(carreraRequired ? { carreraId: String(carreraId) } : {}),
+        ...(programaObligatorio ? { carreraId: String(carreraId) } : {}),
 
-        // ✅ mandar solo lo necesario
-        pullPrevReceipts: !!pullPrevReceipts,
-        ...(pullPrevReceipts ? { prevReceiptsNombre: prevReceiptsNombre.trim() } : {}),
-      } satisfies AlumnoCreate & {
-        pullPrevReceipts: boolean;
-        prevReceiptsNombre?: string;
+        pullPrevReceipts: Boolean(pullPrevReceipts),
+        ...(pullPrevReceipts ? { prevReceiptsNombre } : {}),
       };
 
       const created = await alumnoCreate.create(payload);
 
-      setSuccessFlash(created?.alumnoId ? `Alumno creado: ${created.alumnoId}` : 'Alumno creado ✅');
+      setSuccessFlash(
+        created && typeof created === 'object' && 'alumnoId' in created && created.alumnoId
+          ? `Alumno creado: ${String(created.alumnoId)}`
+          : 'Alumno creado ✅',
+      );
+
       return created;
-    } catch (e: any) {
-      setFormError(e?.message ?? 'No se pudo crear el alumno.');
+    } catch (e: unknown) {
+      setFormError(e instanceof Error ? e.message : 'No se pudo crear el alumno.');
       throw e;
     } finally {
       setSubmitting(false);
@@ -224,10 +296,10 @@ export function useAlumnoForm() {
     escolaridadId,
     plantelId,
     fechaIngreso,
-    carreraRequired,
+    programaObligatorio,
     carreraId,
+    etiquetaPrograma,
     pullPrevReceipts,
-    prevReceiptsNombre,
     alumnoCreate,
   ]);
 
@@ -240,33 +312,33 @@ export function useAlumnoForm() {
     plantelId,
     fechaIngreso,
 
-    // ✅ migración
-    pullPrevReceipts,
-    prevReceiptsNombre,
+    // UI del selector programa
+    etiquetaPrograma,
+    programaObligatorio,
 
-    // ✅ contador
+    // migración (acuerdo)
+    pullPrevReceipts,
+
+    // contador recibos previos
     prevCount,
     prevCountLoading,
     prevCountError,
 
     // setters
-    setNombreCompleto,
+    setNombreCompleto: setNombreCompletoUpper,
     setMatricula,
     setEscolaridadId,
     setCarreraId,
     setPlantelId,
     setFechaIngreso,
-
     setPullPrevReceipts,
-    setPrevReceiptsNombre,
 
-    // catalogs
+    // catálogos
     escolaridades,
     carrerasFiltradas,
     planteles,
 
-    // rules / computed
-    carreraRequired,
+    // computados
     precioMensual,
     duracionMeses,
     fechaTermino,
@@ -279,10 +351,10 @@ export function useAlumnoForm() {
     // actions
     submit,
 
-    // loading/error
+    // loading/error de catálogos (respeta el shape real de tus hooks)
     escolaridadesLoading: escolaridadesApi.isLoading,
     carrerasLoading: carrerasApi.isLoading,
-    plantelesLoading: plantelesApi.isLoading,
+    plantelesLoading: plantelesApi.loading,
 
     escolaridadesError: escolaridadesApi.error,
     carrerasError: carrerasApi.error,
