@@ -1,0 +1,16 @@
+/* src/modulos/configuraciones/ui/catalogo-modal/partes/InputMontoMXN.module.css */
+.input{
+  width: 100%;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #fff;
+  padding: 0 12px;
+  outline: none;
+  font: inherit;
+}
+
+.input:focus{
+  border-color: #cbd6ee;
+  box-shadow: 0 0 0 3px rgba(76, 120, 220, 0.12);
+}

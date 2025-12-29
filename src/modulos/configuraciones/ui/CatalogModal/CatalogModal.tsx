@@ -1,366 +1,31 @@
+// src/modulos/configuraciones/ui/catalogo-modal/CatalogoModal.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import { X, Save } from 'lucide-react';
-
-import type { CatalogKey } from '../CatalogTabs/CatalogTabs';
-import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
 
 import s from './CatalogModal.module.css';
 
-type Props = {
-  catalog: CatalogKey;
-  mode: 'create' | 'edit';
-  initialValue?: unknown;
-  isSaving?: boolean;
-  onClose: () => void;
-  onSave: (payload: unknown) => Promise<void>;
+import type { CatalogoModalProps } from './types/catalogoModal.types';
+import InputMontoMXN from './partes/InputMontoMXN';
+import { useCatalogoModal } from './hook/useCatalogoModal';
 
-  // para select en carreras
-  escolaridadesOptions?: Escolaridad[];
-};
+/**
+ * Modal genérico para Catálogos.
+ * Importante:
+ * - Este componente es principalmente UI.
+ * - Toda la lógica por catálogo vive en el hook + utils.
+ */
+export default function CatalogoModal(props: CatalogoModalProps) {
+  const { onClose, isSaving, catalog } = props;
 
-type FormState = Record<string, unknown>;
-
-function asObj(v: unknown): Record<string, unknown> {
-  if (v !== null && typeof v === 'object') {
-    return v as Record<string, unknown>;
-  }
-  return {};
-}
-
-
-/* ────────────────────────────────────────────────────────────
-   Dinero MXN
-   - Mientras escribes NO formatea
-   - En blur formatea a MXN (1,200.00)
-   - El estado SIEMPRE guarda number real
-──────────────────────────────────────────────────────────── */
-
-function formatMXNInput(n: number) {
-  if (!Number.isFinite(n)) return '';
-  return new Intl.NumberFormat('es-MX', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
-
-function parseMXNInput(raw: string) {
-  let str = raw.trim();
-  str = str.replace(/[^\d.,-]/g, '');
-
-  const hasDot = str.includes('.');
-  const hasComma = str.includes(',');
-
-  if (hasComma && !hasDot) {
-    str = str.replace(',', '.');
-  } else {
-    str = str.replace(/,/g, '');
-  }
-
-  if (!str || str === '-') return 0;
-
-  const n = Number.parseFloat(str);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function MoneyInput({
-  value,
-  onChange,
-  placeholder = '0.00',
-}: {
-  value: number;
-  onChange: (n: number) => void;
-  placeholder?: string;
-}) {
-  const [draft, setDraft] = useState<string>('');
-
-  useEffect(() => {
-    setDraft(value ? String(value) : '');
-  }, [value]);
-
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      placeholder={placeholder}
-      value={draft}
-      onChange={(e) => {
-        const next = e.target.value;
-        setDraft(next);
-        onChange(parseMXNInput(next));
-      }}
-      onBlur={() => {
-        const n = parseMXNInput(draft);
-        onChange(n);
-        setDraft(n ? formatMXNInput(n) : '');
-      }}
-    />
-  );
-}
-
-/* ──────────────────────────────────────────────────────────── */
-
-export default function CatalogModal({
-  catalog,
-  mode,
-  initialValue,
-  isSaving,
-  onClose,
-  onSave,
-  escolaridadesOptions = [],
-}: Props) {
-  const init = asObj(initialValue);
-
-  const title = useMemo(() => {
-    const name =
-      catalog === 'escolaridades'
-        ? 'Escolaridad'
-        : catalog === 'carreras'
-          ? 'Carrera'
-          : catalog === 'conceptosPago'
-            ? 'Concepto de Pago'
-            : catalog === 'tiposPago'
-              ? 'Tipo de pago'
-              : catalog === 'planteles'
-                ? 'Plantel'
-                : 'Estatus Recibo';
-
-    return mode === 'create' ? `Crear ${name}` : `Editar ${name}`;
-  }, [catalog, mode]);
-
-  const escolaridadesSorted = useMemo(() => {
-    return [...escolaridadesOptions].sort((a, b) =>
-      (a.nombre ?? '').localeCompare(b.nombre ?? ''),
-    );
-  }, [escolaridadesOptions]);
-
-  const [form, setForm] = useState<FormState>(() => {
-    // ✅ ESCOLARIDADES
-    // create: codigo + nombre
-    // edit: SOLO nombre (activo se gestiona por PATCH en la tabla)
-    if (catalog === 'escolaridades') {
-      return {
-        codigo: init.codigo ?? '',
-        nombre: init.nombre ?? '',
-      };
-    }
-
-    // ✅ CARRERAS
-    if (catalog === 'carreras') {
-      const fallbackEscolaridadId =
-        typeof init.escolaridadId === 'number'
-          ? init.escolaridadId
-          : escolaridadesSorted[0]?.id ?? 0;
-
-      return {
-        carreraId: init.carreraId ?? '',
-        escolaridadId: fallbackEscolaridadId,
-        nombre: init.nombre ?? '',
-        montoMensual: Number(init.montoMensual ?? 0),
-        montoInscripcion: Number(init.montoInscripcion ?? 0),
-        duracionAnios: Number(init.duracionAnios ?? 0),
-        duracionMeses: Number(init.duracionMeses ?? 0),
-        activo: init.activo ?? true,
-      };
-    }
-
-    // ✅ CONCEPTOS DE PAGO
-    if (catalog === 'conceptosPago') {
-      return {
-        codigo: init.codigo ?? '',
-        nombre: init.nombre ?? '',
-        descripcion: init.descripcion ?? '',
-        tipoMonto: init.tipoMonto ?? '',
-        activo: init.activo ?? true,
-      };
-    }
-
-    // ✅ TIPOS DE PAGO (swagger: code, name, active)
-    if (catalog === 'tiposPago') {
-      return {
-        code: init.code ?? '',
-        name: init.name ?? '',
-        active: init.active ?? true,
-      };
-    }
-
-    // ✅ PLANTELES (swagger: code, name, address, active)
-    if (catalog === 'planteles') {
-      return {
-        code: init.code ?? '',
-        name: init.name ?? '',
-        address: init.address ?? '',
-        active: init.active ?? true,
-      };
-    }
-
-    // ✅ ESTATUS RECIBO (swagger: id, codigo, nombre) -> SIN activo
-    return {
-      codigo: init.codigo ?? '',
-      nombre: init.nombre ?? '',
-    };
-  });
-
-  function set<K extends string>(key: K, value: unknown) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
-  const isTiposPago = catalog === 'tiposPago';
-  const isPlanteles = catalog === 'planteles';
-  const isEstatusRecibo = catalog === 'estatusRecibo';
-
-  const nameKey = isTiposPago || isPlanteles ? 'name' : 'nombre';
-  const activeKey = isTiposPago || isPlanteles ? 'active' : 'activo';
-
-  // ✅ Activo:
-  // - Escolaridades NO (se gestiona en tabla)
-  // - EstatusRecibo NO (swagger no lo trae)
-  const showActivo = catalog !== 'escolaridades' && !isEstatusRecibo;
-
-  const showCarreraId = catalog === 'carreras' && mode === 'create';
-  const showEscolaridadSelect = catalog === 'carreras';
-
-  const showConceptoCodigo = catalog === 'conceptosPago' && mode === 'create';
-  const showConceptoDescripcion = catalog === 'conceptosPago';
-  const showConceptoTipoMonto = catalog === 'conceptosPago';
-
-  const showTipoPagoCode = catalog === 'tiposPago' && mode === 'create';
-
-  const showPlantelCode = catalog === 'planteles' && mode === 'create';
-  const showPlantelAddress = catalog === 'planteles';
-
-  const showCodigo =
-    (catalog === 'escolaridades' && mode === 'create') ||
-    (catalog === 'estatusRecibo' && mode === 'create') ||
-    showConceptoCodigo ||
-    showTipoPagoCode ||
-    showPlantelCode;
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (isSaving) return;
-
-    // ✅ ESCOLARIDADES
-    if (catalog === 'escolaridades') {
-      await onSave(
-        mode === 'create'
-          ? {
-              codigo: String(form.codigo ?? '').trim(),
-              nombre: String(form.nombre ?? '').trim(),
-            }
-          : {
-              nombre: String(form.nombre ?? '').trim(),
-            },
-      );
-      return;
-    }
-
-    // ✅ CARRERAS
-    if (catalog === 'carreras') {
-      await onSave(
-        mode === 'create'
-          ? {
-              carreraId: String(form.carreraId ?? '').trim(),
-              escolaridadId: Number(form.escolaridadId ?? 0),
-              nombre: String(form.nombre ?? '').trim(),
-              montoMensual: Number(form.montoMensual ?? 0),
-              montoInscripcion: Number(form.montoInscripcion ?? 0),
-              duracionAnios: Number(form.duracionAnios ?? 0),
-              duracionMeses: Number(form.duracionMeses ?? 0),
-              activo: !!form.activo,
-            }
-          : {
-              escolaridadId: Number(form.escolaridadId ?? 0),
-              nombre: String(form.nombre ?? '').trim(),
-              montoMensual: Number(form.montoMensual ?? 0),
-              montoInscripcion: Number(form.montoInscripcion ?? 0),
-              duracionAnios: Number(form.duracionAnios ?? 0),
-              duracionMeses: Number(form.duracionMeses ?? 0),
-              activo: !!form.activo,
-            },
-      );
-      return;
-    }
-
-    // ✅ CONCEPTOS PAGO
-    if (catalog === 'conceptosPago') {
-      await onSave(
-        mode === 'create'
-          ? {
-              codigo: String(form.codigo ?? '').trim(),
-              nombre: String(form.nombre ?? '').trim(),
-              descripcion: String(form.descripcion ?? '').trim(),
-              tipoMonto: String(form.tipoMonto ?? '').trim(),
-              activo: !!form.activo,
-            }
-          : {
-              nombre: String(form.nombre ?? '').trim(),
-              descripcion: String(form.descripcion ?? '').trim(),
-              tipoMonto: String(form.tipoMonto ?? '').trim(),
-              activo: !!form.activo,
-            },
-      );
-      return;
-    }
-
-    // ✅ TIPOS DE PAGO
-    if (catalog === 'tiposPago') {
-      await onSave(
-        mode === 'create'
-          ? {
-              code: String(form.code ?? '').trim(),
-              name: String(form.name ?? '').trim(),
-              active: !!form.active,
-            }
-          : {
-              name: String(form.name ?? '').trim(),
-              active: !!form.active,
-            },
-      );
-      return;
-    }
-
-    // ✅ PLANTELES
-    if (catalog === 'planteles') {
-      await onSave(
-        mode === 'create'
-          ? {
-              code: String(form.code ?? '').trim(),
-              name: String(form.name ?? '').trim(),
-              address: String(form.address ?? '').trim(),
-              active: !!form.active,
-            }
-          : {
-              name: String(form.name ?? '').trim(),
-              address: String(form.address ?? '').trim(),
-              active: !!form.active,
-            },
-      );
-      return;
-    }
-
-    // ✅ ESTATUS RECIBO (swagger SIN activo)
-    if (catalog === 'estatusRecibo') {
-      await onSave(
-        mode === 'create'
-          ? {
-              codigo: String(form.codigo ?? '').trim(),
-              nombre: String(form.nombre ?? '').trim(),
-            }
-          : {
-              nombre: String(form.nombre ?? '').trim(),
-            },
-      );
-      return;
-    }
-  }
+  const { titulo, escolaridadesOrdenadas, form, setCampo, flags, submit } = useCatalogoModal(props);
 
   return (
     <div className={s.backdrop} role="dialog" aria-modal="true">
       <div className={s.modal}>
         <div className={s.head}>
-          <h3 className={s.h3}>{title}</h3>
+          <h3 className={s.h3}>{titulo}</h3>
+
           <button
             className={s.close}
             onClick={onClose}
@@ -374,31 +39,22 @@ export default function CatalogModal({
 
         <form className={s.form} onSubmit={submit}>
           {/* CÓDIGO */}
-          {showCodigo && (
+          {flags.showCodigo && (
             <div className={s.field}>
               <label>Código</label>
               <input
                 value={
-                  isTiposPago || isPlanteles
+                  flags.isTiposPago || flags.isPlanteles
                     ? String(form.code ?? '')
                     : String(form.codigo ?? '')
                 }
                 onChange={(e) =>
-                  set(isTiposPago || isPlanteles ? 'code' : 'codigo', e.target.value)
+                  setCampo(flags.isTiposPago || flags.isPlanteles ? 'code' : 'codigo', e.target.value)
                 }
-                placeholder={
-                  catalog === 'conceptosPago'
-                    ? 'INSCRIPCION, MENSUALIDAD...'
-                    : catalog === 'estatusRecibo'
-                      ? 'EMITIDO, PAGADO...'
-                      : catalog === 'tiposPago'
-                        ? 'EFECTIVO, TARJETA...'
-                        : catalog === 'planteles'
-                          ? 'PL01, PL02...'
-                          : 'SEC, LIC...'
-                }
+                placeholder={flags.placeholderCodigo}
                 required
               />
+
               {(catalog === 'tiposPago' || catalog === 'planteles') ? (
                 <small className={s.help}>Recomendado: MAYÚSCULAS y sin espacios.</small>
               ) : null}
@@ -406,12 +62,12 @@ export default function CatalogModal({
           )}
 
           {/* CARRERAS: carreraId */}
-          {showCarreraId && (
+          {flags.showCarreraId && (
             <div className={s.field}>
               <label>Código de Carrera</label>
               <input
                 value={String(form.carreraId ?? '')}
-                onChange={(e) => set('carreraId', e.target.value)}
+                onChange={(e) => setCampo('carreraId', e.target.value)}
                 placeholder="01, 10…"
                 required
               />
@@ -420,15 +76,15 @@ export default function CatalogModal({
           )}
 
           {/* CARRERAS: escolaridad select */}
-          {showEscolaridadSelect && (
+          {flags.showEscolaridadSelect && (
             <div className={s.field}>
               <label>Escolaridad</label>
               <select
                 value={String(form.escolaridadId ?? 0)}
-                onChange={(e) => set('escolaridadId', Number(e.target.value))}
+                onChange={(e) => setCampo('escolaridadId', Number(e.target.value))}
                 required
               >
-                {escolaridadesSorted.map((esc) => (
+                {escolaridadesOrdenadas.map((esc) => (
                   <option key={esc.id} value={esc.id}>
                     {esc.nombre} ({esc.codigo})
                   </option>
@@ -441,20 +97,20 @@ export default function CatalogModal({
           <div className={s.field}>
             <label>Nombre</label>
             <input
-              value={String(form[nameKey] ?? '')}
-              onChange={(e) => set(nameKey, e.target.value)}
+              value={String(form[flags.nameKey] ?? '')}
+              onChange={(e) => setCampo(flags.nameKey, e.target.value)}
               required
             />
           </div>
 
           {/* PLANTELES: address */}
-          {showPlantelAddress && (
+          {flags.showPlantelAddress && (
             <div className={s.field}>
               <label>Dirección</label>
               <textarea
                 className={s.textarea}
                 value={String(form.address ?? '')}
-                onChange={(e) => set('address', e.target.value)}
+                onChange={(e) => setCampo('address', e.target.value)}
                 placeholder="Dirección del plantel…"
                 rows={3}
               />
@@ -462,13 +118,13 @@ export default function CatalogModal({
           )}
 
           {/* CONCEPTOS PAGO: descripcion */}
-          {showConceptoDescripcion && (
+          {flags.showConceptoDescripcion && (
             <div className={s.field}>
               <label>Descripción</label>
               <textarea
                 className={s.textarea}
                 value={String(form.descripcion ?? '')}
-                onChange={(e) => set('descripcion', e.target.value)}
+                onChange={(e) => setCampo('descripcion', e.target.value)}
                 placeholder="Detalle del concepto…"
                 rows={4}
               />
@@ -476,12 +132,12 @@ export default function CatalogModal({
           )}
 
           {/* CONCEPTOS PAGO: tipoMonto */}
-          {showConceptoTipoMonto && (
+          {flags.showConceptoTipoMonto && (
             <div className={s.field}>
               <label>Tipo de monto</label>
               <input
                 value={String(form.tipoMonto ?? '')}
-                onChange={(e) => set('tipoMonto', e.target.value)}
+                onChange={(e) => setCampo('tipoMonto', e.target.value)}
                 placeholder="FIJO, VARIABLE, PORCENTAJE…"
                 required
               />
@@ -493,17 +149,17 @@ export default function CatalogModal({
             <div className={s.grid2}>
               <div className={s.field}>
                 <label>Monto mensual</label>
-                <MoneyInput
+                <InputMontoMXN
                   value={Number(form.montoMensual ?? 0)}
-                  onChange={(n) => set('montoMensual', n)}
+                  onChange={(n) => setCampo('montoMensual', n)}
                 />
               </div>
 
               <div className={s.field}>
                 <label>Monto inscripción</label>
-                <MoneyInput
+                <InputMontoMXN
                   value={Number(form.montoInscripcion ?? 0)}
-                  onChange={(n) => set('montoInscripcion', n)}
+                  onChange={(n) => setCampo('montoInscripcion', n)}
                 />
               </div>
 
@@ -512,7 +168,7 @@ export default function CatalogModal({
                 <input
                   type="number"
                   value={Number(form.duracionAnios ?? 0)}
-                  onChange={(e) => set('duracionAnios', Number(e.target.value))}
+                  onChange={(e) => setCampo('duracionAnios', Number(e.target.value))}
                 />
               </div>
 
@@ -521,19 +177,19 @@ export default function CatalogModal({
                 <input
                   type="number"
                   value={Number(form.duracionMeses ?? 0)}
-                  onChange={(e) => set('duracionMeses', Number(e.target.value))}
+                  onChange={(e) => setCampo('duracionMeses', Number(e.target.value))}
                 />
               </div>
             </div>
           )}
 
-          {/* ACTIVO (NO escolaridades / NO estatusRecibo) */}
-          {showActivo && (
+          {/* ACTIVO */}
+          {flags.showActivo && (
             <label className={s.check}>
               <input
                 type="checkbox"
-                checked={!!form[activeKey]}
-                onChange={(e) => set(activeKey, e.target.checked)}
+                checked={!!form[flags.activeKey]}
+                onChange={(e) => setCampo(flags.activeKey, e.target.checked)}
               />
               Activo
             </label>
@@ -548,11 +204,16 @@ export default function CatalogModal({
             >
               Cancelar
             </button>
+
             <button type="submit" className={s.primary} disabled={isSaving}>
               <Save size={16} />
               {isSaving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
+
+          {/* Debug mínimo opcional (se puede quitar):
+              <pre>{JSON.stringify({ catalog, mode, form }, null, 2)}</pre>
+          */}
         </form>
       </div>
     </div>
