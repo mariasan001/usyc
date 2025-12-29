@@ -1,9 +1,20 @@
-// src/modulos/configuraciones/hooks/useTiposPago.ts
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 import type { TipoPago, TipoPagoCreate, TipoPagoUpdate } from '../types/tiposPago.types';
 import { tiposPagoService } from '../services/tiposPago.service';
+
+function isAbortError(e: unknown) {
+  // fetch AbortController
+  if (e instanceof DOMException && e.name === 'AbortError') return true;
+
+  // por si tu service lanza un error con shape { name: 'AbortError' }
+  if (typeof e === 'object' && e !== null && 'name' in e) {
+    return (e as { name?: string }).name === 'AbortError';
+  }
+
+  return false;
+}
 
 export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
   const [items, setItems] = useState<TipoPago[]>([]);
@@ -15,10 +26,13 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
     async (signal?: AbortSignal) => {
       setIsLoading(true);
       setError(null);
+
       try {
         const data = await tiposPagoService.list({ soloActivos, signal });
         setItems(data);
       } catch (e) {
+        // ✅ abort = NO es error de UI
+        if (isAbortError(e)) return;
         setError(e);
       } finally {
         setIsLoading(false);
@@ -40,6 +54,7 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
       await tiposPagoService.create(payload);
       await load();
     } catch (e) {
+      if (isAbortError(e)) return;
       setError(e);
       throw e;
     } finally {
@@ -54,6 +69,7 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
       await tiposPagoService.update(id, payload);
       await load();
     } catch (e) {
+      if (isAbortError(e)) return;
       setError(e);
       throw e;
     } finally {
@@ -61,28 +77,6 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
     }
   }
 
-  /**
-   * ✅ Toggle Active (NO DELETE)
-   * - Swagger: PUT /tipos-pago/{id} con { name, active }
-   */
-  async function toggleActive(item: TipoPago) {
-    return update(item.id, { name: item.name, active: !item.active });
-  }
-
-  async function activar(item: TipoPago) {
-    if (item.active) return;
-    return update(item.id, { name: item.name, active: true });
-  }
-
-  async function desactivar(item: TipoPago) {
-    if (!item.active) return;
-    return update(item.id, { name: item.name, active: false });
-  }
-
-  /**
-   * ✅ DELETE real (si algún día lo ocupas como borrado)
-   * Ojo: si el backend lo usa como “borrado lógico”, puedes mapearlo aquí.
-   */
   async function remove(id: number) {
     setIsSaving(true);
     setError(null);
@@ -90,6 +84,7 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
       await tiposPagoService.remove(id);
       await load();
     } catch (e) {
+      if (isAbortError(e)) return;
       setError(e);
       throw e;
     } finally {
@@ -103,16 +98,8 @@ export function useTiposPago({ soloActivos }: { soloActivos: boolean }) {
     isSaving,
     error,
     reload: () => load(),
-
     create,
     update,
-
-    // ✅ ahora existen
-    toggleActive,
-    activar,
-    desactivar,
-
-    // opcional
     remove,
   };
 }
