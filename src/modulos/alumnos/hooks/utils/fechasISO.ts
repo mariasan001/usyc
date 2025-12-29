@@ -17,20 +17,15 @@ export function hoyISO(): string {
 }
 
 /**
- * Suma meses a una fecha ISO (YYYY-MM-DD).
- * - Corrige “desbordes” de día (ej: 31 + 1 mes → último día del mes siguiente).
+ * Suma N meses a una fecha ISO (YYYY-MM-DD).
+ * - Corrige meses con menos días (ej: 31 -> 30/28).
  */
-export function sumarMesesISO(iso: string, meses: number): string {
+export function sumarMesesISO(iso: string, months: number): string {
   const [y, m, d] = iso.split('-').map(Number);
+  const base = new Date(y, m - 1 + months, d);
 
-  const base = new Date(y, m - 1 + meses, d);
-  const diasEnMesObjetivo = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const daysInTargetMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const safe = new Date(base.getFullYear(), base.getMonth(), Math.min(d, daysInTargetMonth));
 
-  const segura = new Date(
-    base.getFullYear(),
-    base.getMonth(),
-    Math.min(d, diasEnMesObjetivo),
-  );
-
-  return `${segura.getFullYear()}-${pad2(segura.getMonth() + 1)}-${pad2(segura.getDate())}`;
+  return `${safe.getFullYear()}-${pad2(safe.getMonth() + 1)}-${pad2(safe.getDate())}`;
 }

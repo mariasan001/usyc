@@ -10,16 +10,7 @@ import AlumnoFiltersBar, {
 } from '../AlumnoFiltersBar/AlumnoFiltersBar';
 import AlumnoRow from '../AlumnoRow/AlumnoRow';
 
-export default function AlumnosTableCard({
-  pageData,
-  loading,
-  error,
-  filters,
-  onChangeFilters,
-  onOpen,
-  onRefresh,
-  onPageChange,
-}: {
+type Props = {
   pageData: Page<Alumno> | null;
   loading: boolean;
   error: string | null;
@@ -29,10 +20,28 @@ export default function AlumnosTableCard({
 
   onOpen: (alumnoId: string) => void;
   onRefresh: () => void;
-
-  // paginación
   onPageChange: (page: number) => void;
-}) {
+};
+
+/**
+ * Card: Directorio de alumnos
+ * - UI/composición: NO calcula término aquí.
+ * - Tabla: header fijo + body scrolleable.
+ * - Paginación: simple (prev/next).
+ *
+ * Nota:
+ * - “Término” se calcula en `AlumnoRow` porque depende de duración de carrera/programa.
+ */
+export default function AlumnosTableCard({
+  pageData,
+  loading,
+  error,
+  filters,
+  onChangeFilters,
+  onOpen,
+  onRefresh,
+  onPageChange,
+}: Props) {
   const items = pageData?.content ?? [];
   const total = pageData?.totalElements ?? 0;
   const page = pageData?.number ?? 0;
@@ -54,27 +63,23 @@ export default function AlumnosTableCard({
         </div>
       </header>
 
-      <AlumnoFiltersBar
-        filters={filters}
-        onChange={onChangeFilters}
-        onRefresh={onRefresh}
-      />
+      <AlumnoFiltersBar filters={filters} onChange={onChangeFilters} onRefresh={onRefresh} />
 
       {error ? <div className={s.alertError}>{error}</div> : null}
 
       <div className={s.tableWrap}>
-        {/* Head fijo */}
+        {/* Header fijo */}
         <div className={s.tableHead}>
           <div>Alumno</div>
           <div>Escolaridad</div>
-          <div>Carrera</div>
+          <div>Programa</div>
           <div>Ingreso</div>
           <div>Término</div>
           <div>Estado</div>
           <div className={s.actionsCol}>Acciones</div>
         </div>
 
-        {/* Scroll del body */}
+        {/* Body con scroll */}
         <div className={s.tableBodyScroll} role="region" aria-label="Tabla de alumnos">
           {loading ? (
             <div className={s.loading}>Cargando…</div>
@@ -83,11 +88,7 @@ export default function AlumnosTableCard({
           ) : (
             <div className={s.body}>
               {items.map((a) => (
-                <AlumnoRow
-                  key={a.alumnoId}
-                  alumno={a}
-                  onOpen={() => onOpen(a.alumnoId)}
-                />
+                <AlumnoRow key={a.alumnoId} alumno={a} onOpen={() => onOpen(a.alumnoId)} />
               ))}
 
               {hasRows ? <div className={s.bottomPad} /> : null}
@@ -95,12 +96,13 @@ export default function AlumnosTableCard({
           )}
         </div>
 
-        {/* Paginación simple */}
+        {/* Paginación */}
         <footer className={s.pager}>
           <button
             className={s.pagerBtn}
             onClick={() => onPageChange(Math.max(0, page - 1))}
             disabled={loading || page <= 0}
+            type="button"
           >
             ← Anterior
           </button>
@@ -113,6 +115,7 @@ export default function AlumnosTableCard({
             className={s.pagerBtn}
             onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
             disabled={loading || page >= totalPages - 1}
+            type="button"
           >
             Siguiente →
           </button>

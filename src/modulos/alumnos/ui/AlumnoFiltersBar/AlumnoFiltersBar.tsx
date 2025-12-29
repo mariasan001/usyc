@@ -1,15 +1,13 @@
 'use client';
 
-import s from './AlumnoFiltersBar.module.css';
-import { ESCOLARIDADES } from '../../constants/catalogos.constants';
-import type { ID } from '../../types/alumnos.tipos';
+import { useMemo } from 'react';
 
-export type AlumnoEstadoFilter = 'ALL' | 'ACTIVO' | 'POR_VENCER' | 'EGRESADO';
+import s from './AlumnoFiltersBar.module.css';
+import { useEscolaridades } from '@/modulos/configuraciones/hooks';
 
 export type AlumnoFilters = {
   q: string;
-  escolaridadId: ID | 'ALL';
-  estado: AlumnoEstadoFilter;
+  escolaridadId: number | 'ALL';
   fechaIngresoDesde?: string;
   fechaIngresoHasta?: string;
 };
@@ -18,58 +16,63 @@ export type AlumnoFiltersUpdater =
   | AlumnoFilters
   | ((prev: AlumnoFilters) => AlumnoFilters);
 
-export default function AlumnoFiltersBar({
-  filters,
-  onChange,
-  onRefresh,
-}: {
+type Props = {
   filters: AlumnoFilters;
   onChange: (next: AlumnoFiltersUpdater) => void;
   onRefresh: () => void;
-}) {
+};
+
+/**
+ * Barra de filtros: Directorio de alumnos
+ * - Búsqueda por nombre o matrícula
+ * - Filtro por escolaridad (API)
+ * - Rango de fecha de ingreso
+ * - Botón Refrescar
+ *
+ * Nota:
+ * - Aquí NO hacemos debounce. Debounce debe vivir en el hook que consulta (useAlumnos),
+ *   para evitar problemas de renders y mantener UI simple.
+ */
+export default function AlumnoFiltersBar({ filters, onChange, onRefresh }: Props) {
+  const escolaridadesApi = useEscolaridades({ soloActivos: true });
+
+  const escolaridadesOptions = useMemo(() => {
+    return (escolaridadesApi.items ?? []).map((e) => ({
+      value: e.id,
+      label: e.nombre,
+    }));
+  }, [escolaridadesApi.items]);
+
   return (
     <div className={s.bar}>
       <input
         className={s.search}
         placeholder="Buscar por nombre o matrícula…"
         value={filters.q}
-        onChange={(e) =>
-          onChange((prev) => ({ ...prev, q: e.target.value }))
-        }
+        onChange={(e) => onChange((prev) => ({ ...prev, q: e.target.value }))}
       />
 
       <select
         className={s.select}
-        value={filters.escolaridadId}
-        onChange={(e) =>
+        value={String(filters.escolaridadId)}
+        onChange={(e) => {
+          const v = e.target.value;
           onChange((prev) => ({
             ...prev,
-            escolaridadId: e.target.value as ID | 'ALL',
-          }))
-        }
+            escolaridadId: v === 'ALL' ? 'ALL' : Number(v),
+          }));
+        }}
+        disabled={escolaridadesApi.isLoading}
       >
-        <option value="ALL">Todas las escolaridades</option>
-        {ESCOLARIDADES.map((x) => (
-          <option key={x.id} value={x.id}>
-            {x.nombre}
+        <option value="ALL">
+          {escolaridadesApi.isLoading ? 'Cargando escolaridades…' : 'Todas las escolaridades'}
+        </option>
+
+        {escolaridadesOptions.map((x) => (
+          <option key={x.value} value={String(x.value)}>
+            {x.label}
           </option>
         ))}
-      </select>
-
-      <select
-        className={s.select}
-        value={filters.estado}
-        onChange={(e) =>
-          onChange((prev) => ({
-            ...prev,
-            estado: e.target.value as AlumnoEstadoFilter,
-          }))
-        }
-      >
-        <option value="ALL">Todos los estados</option>
-        <option value="ACTIVO">Activo</option>
-        <option value="POR_VENCER">Por vencer</option>
-        <option value="EGRESADO">Egresado</option>
       </select>
 
       <div className={s.dateWrap}>
@@ -98,7 +101,7 @@ export default function AlumnoFiltersBar({
         />
       </div>
 
-      <button className={s.refresh} onClick={onRefresh} title="Refrescar">
+      <button className={s.refresh} onClick={onRefresh} type="button" title="Refrescar">
         Refrescar
       </button>
     </div>
