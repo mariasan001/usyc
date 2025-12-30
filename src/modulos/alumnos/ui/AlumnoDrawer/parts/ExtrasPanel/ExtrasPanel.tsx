@@ -13,11 +13,45 @@ function todayISO() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function normalizeMoneyInput(v: string) {
+/**
+ * Normaliza el input de monto para guardarlo "crudo" (sin comas)
+ * - Solo dígitos y un punto
+ * - Máximo 2 decimales
+ * Ej: "1,242.50" -> "1242.50"
+ */
+function normalizeMoneyRaw(v: string) {
   const cleaned = v.replace(/[^\d.]/g, '');
+
+  // Solo 1 punto permitido
   const parts = cleaned.split('.');
-  if (parts.length <= 1) return cleaned;
-  return `${parts[0]}.${parts.slice(1).join('')}`;
+  const intPart = parts[0] ?? '';
+  const decPart = parts[1] ?? '';
+
+  // Máximo 2 decimales
+  const dec2 = decPart.slice(0, 2);
+
+  return parts.length > 1 ? `${intPart}.${dec2}` : intPart;
+}
+
+/**
+ * Formatea visualmente con separador de miles (MX)
+ * - Mantiene los decimales tal cual se van escribiendo (incluye "1242.")
+ * - El state sigue siendo crudo ("1242.5")
+ */
+function formatMoneyDisplay(raw: string) {
+  if (!raw) return '';
+
+  const [intRaw, decRaw] = raw.split('.');
+
+  const intNum = Number(intRaw || '0');
+  const intFormatted = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 }).format(
+    Number.isFinite(intNum) ? intNum : 0,
+  );
+
+  // Si el usuario ya tecleó punto, lo respetamos aunque no haya decimales aún
+  if (raw.includes('.')) return `${intFormatted}.${decRaw ?? ''}`;
+
+  return intFormatted;
 }
 
 function toNumber(v: string) {
@@ -113,8 +147,11 @@ export default function ExtrasPanel({
           <label className={s.label}>Monto</label>
           <input
             className={`${s.input} ${!amountOk && extraAmount ? s.inputInvalid : ''}`}
-            value={extraAmount}
-            onChange={(e) => setExtraAmount(normalizeMoneyInput(e.target.value))}
+            value={formatMoneyDisplay(extraAmount)}
+            onChange={(e) => {
+              const raw = normalizeMoneyRaw(e.target.value);
+              setExtraAmount(raw);
+            }}
             inputMode="decimal"
             placeholder="0.00"
           />

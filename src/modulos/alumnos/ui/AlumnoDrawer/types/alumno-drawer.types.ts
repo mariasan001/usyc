@@ -16,15 +16,30 @@ export type ProjectionRow = {
 export type PagoRealRow = {
   reciboId: number;
   folio: string;
+
+  fechaEmision: string;  // ✅ viene del back
   fechaPago: string;      // ISO
-  concepto: string;       // concepto/codigo/label
-  monto: number;
-  moneda: string;         // "MXN"
-  estatusCodigo?: string; // por si llega código
-  estatusNombre?: string; // por si llega label
-  cancelado: boolean;
+
+  alumnoId: string;      // ✅ viene del back
   alumnoNombre?: string;
+
+  concepto: string;
+  monto: number;
+  moneda: string;
+
+  estatusCodigo: string;
+  estatusNombre: string;
+
+  tipoPagoId: number;
+  tipoPagoCodigo: string;
+  tipoPagoNombre: string;
+
+  cancelado: boolean;
+
+  qrPayload: string;
+  qrPayLoad: string; // ✅ por inconsistencia del back
 };
+
 export type Totals = {
   totalPlan: number;
   totalPagado: number;

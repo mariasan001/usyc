@@ -1,6 +1,6 @@
 'use client';
 
-import type { Totals } from '../../types/alumno-drawer.types';
+import { Totals } from '../../types/alumno-drawer.types';
 import s from './StickySummary.module.css';
 
 function formatMXN(n: number) {

@@ -13,9 +13,18 @@ export type PagoRealDTO = {
   estatusCodigo: string;
   estatusNombre: string;
 
+  // ✅ vienen en tu JSON real
+  tipoPagoId: number;
+  tipoPagoCodigo: string;
+  tipoPagoNombre: string;
+
   cancelado: boolean;
+
+  // ✅ a veces llega como qrPayload o qrPayLoad (backend inconsistente)
   qrPayload: string;
+  qrPayLoad: string;
 };
+
 
 export type ProyeccionDTO = {
   periodo: string;

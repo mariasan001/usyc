@@ -2,25 +2,49 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Printer, Copy, ReceiptText } from 'lucide-react';
+import { Printer, Copy, ReceiptText, Calendar, QrCode } from 'lucide-react';
 
 import s from './PagosPanel.module.css';
 import type { PagoRealRow } from '../../types/alumno-drawer.types';
 
+/** ✅ Para soportar el backend inconsistente sin usar any */
+type MaybeQrPayLoad = { qrPayLoad?: string };
+
+function hasQrPayLoad(v: unknown): v is MaybeQrPayLoad {
+  return typeof v === 'object' && v !== null && 'qrPayLoad' in v;
+}
+
+function getQrPayload(p: PagoRealRow): string {
+  const a = (p.qrPayload ?? '').trim();
+  if (a) return a;
+
+  // si por alguna razón el mapper no lo normalizó y llega qrPayLoad
+  if (hasQrPayLoad(p)) {
+    const b = (p.qrPayLoad ?? '').trim();
+    if (b) return b;
+  }
+  return '';
+}
+
 function fmtMoney(n: number, currency = 'MXN') {
+  const value = Number.isFinite(n) ? n : 0;
   try {
-    return new Intl.NumberFormat('es-MX', {
+    const money = new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',
       maximumFractionDigits: 2,
-    }).format(n);
+    }).format(value);
+
+    // ✅ Moneda al lado del precio (MXN $2,500.00)
+    return `${currency} ${money}`;
   } catch {
-    return `$${Number.isFinite(n) ? n.toFixed(2) : '0.00'} ${currency}`;
+    return `${currency} $${value.toFixed(2)}`;
   }
 }
 
-function fmtDate(isoLike: string) {
+function fmtDate(isoLike?: string) {
+  if (!isoLike) return '—';
   const d = new Date(isoLike);
   if (Number.isNaN(d.getTime())) return isoLike;
 
@@ -31,13 +55,32 @@ function fmtDate(isoLike: string) {
   }).format(d);
 }
 
-function statusTone(estatusNombre: string, cancelado?: boolean) {
-  if (cancelado) return 'danger';
-  const t = (estatusNombre ?? '').toLowerCase();
+function normalizeStatusLabel(p: PagoRealRow) {
+  if (p.cancelado) return 'Cancelado';
+  return p.estatusNombre || p.estatusCodigo || '—';
+}
+
+function statusTone(p: PagoRealRow) {
+  if (p.cancelado) return 'danger';
+  const t = `${p.estatusNombre ?? ''} ${p.estatusCodigo ?? ''}`.toLowerCase();
   if (t.includes('pagado') || t.includes('aplicado') || t.includes('vigente')) return 'ok';
   if (t.includes('pend') || t.includes('por pagar')) return 'warn';
   if (t.includes('cancel')) return 'danger';
   return 'neutral';
+}
+
+async function copyText(v: string) {
+  if (!v) return;
+  try {
+    await navigator.clipboard.writeText(v);
+  } catch {
+    const el = document.createElement('textarea');
+    el.value = v;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  }
 }
 
 export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
@@ -56,29 +99,15 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
     router.push(`/recibos/print?reciboId=${reciboId}`);
   }
 
-  async function copyText(v: string) {
-    try {
-      await navigator.clipboard.writeText(v);
-    } catch {
-      // fallback ultra simple
-      const el = document.createElement('textarea');
-      el.value = v;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-    }
-  }
-
   return (
     <section className={s.panel}>
       <header className={s.header}>
         <div className={s.titleBlock}>
           <div className={s.titleRow}>
-            <ReceiptText size={16} />
-            <div className={s.title}>Pagos</div>
+            <span className={s.titleIcon}><ReceiptText size={16} /></span>
+            <div className={s.title}>Histórico de pagos</div>
           </div>
-          <div className={s.subtitle}>Historial de recibos registrados.</div>
+          <div className={s.subtitle}>Folio, fechas y QR del recibo.</div>
         </div>
 
         <div className={s.countPill}>
@@ -87,21 +116,28 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
       </header>
 
       {ordered.length === 0 ? (
-        <div className={s.empty}>Aún no hay pagos registrados.</div>
+        <div className={s.empty}>
+          <div className={s.emptyTitle}>Aún no hay pagos registrados</div>
+          <div className={s.emptyHint}>Cuando registres un pago, aquí aparecerá el recibo.</div>
+        </div>
       ) : (
         <div className={s.list}>
           {ordered.map((p) => {
-            const tone = statusTone(p.estatusNombre, p.cancelado);
+            const tone = statusTone(p);
+            const statusLabel = normalizeStatusLabel(p);
+
+            const tipoPagoTop = p.tipoPagoNombre || p.tipoPagoCodigo || '';
+            const qr = getQrPayload(p);
+            const hasQr = Boolean(qr);
+
             const canPrint = typeof p.reciboId === 'number' && p.reciboId > 0;
 
             return (
-              <article key={p.reciboId} className={s.card}>
+              <article key={`${p.reciboId}-${p.folio}`} className={s.card}>
                 <div className={s.cardMain}>
                   <div className={s.top}>
                     <div className={s.conceptWrap}>
-                      <div className={s.concept} title={p.concepto}>
-                        {p.concepto || '—'}
-                      </div>
+                      <div className={s.concept}>{p.concepto || '—'}</div>
 
                       <span
                         className={`${s.badge} ${
@@ -113,10 +149,15 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
                             ? s.badgeDanger
                             : s.badgeNeutral
                         }`}
-                        title={p.cancelado ? 'Recibo cancelado' : p.estatusNombre}
                       >
-                        {p.cancelado ? 'Cancelado' : p.estatusNombre}
+                        {statusLabel}
                       </span>
+
+                      {tipoPagoTop ? (
+                        <span className={`${s.badge} ${s.badgeNeutral}`} title="Tipo de pago">
+                          {tipoPagoTop}
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className={s.amount}>
@@ -124,14 +165,23 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
                     </div>
                   </div>
 
-                  <div className={s.meta}>
-                    <span className={s.metaLabel}>Folio</span>
-                    <span className={s.mono}>{p.folio || '—'}</span>
+                  {/* ✅ SOLO lo esencial (sin duplicar estatus/tipoPago) */}
+                  <div className={s.metaGridSimple}>
+                    <div className={s.metaPill}>
+                      <span className={s.metaIcon}><ReceiptText size={14} /></span>
+                      <span className={s.metaKey}>Folio</span>
+                      <span className={s.metaVal}>{p.folio || '—'}</span>
+                    </div>
 
-                    <span className={s.dot}>•</span>
+             
 
-                    <span className={s.metaLabel}>Fecha</span>
-                    <span className={s.mono}>{fmtDate(p.fechaPago)}</span>
+                    <div className={s.metaPill}>
+                      <span className={s.metaIcon}><Calendar size={14} /></span>
+                      <span className={s.metaKey}>Pago</span>
+                      <span className={s.metaVal}>{fmtDate(p.fechaPago)}</span>
+                    </div>
+
+                 
                   </div>
                 </div>
 
@@ -139,13 +189,12 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
                   <button
                     className={s.iconBtn}
                     type="button"
-                    onClick={() => copyText(String(p.folio || ''))}
-                    disabled={!p.folio}
-                    title={p.folio ? 'Copiar folio' : 'Sin folio'}
+                    onClick={() => canPrint && onPrint(p.reciboId)}
+                    disabled={!canPrint}
+                    title={canPrint ? 'Imprimir recibo' : 'No disponible'}
                   >
-                    <Copy size={16} />
+                    <Printer size={16} />
                   </button>
-
                 </div>
               </article>
             );
