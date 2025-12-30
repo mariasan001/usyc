@@ -8,7 +8,7 @@ import s from './AlumnoDrawer.module.css';
 
 import type { Alumno } from '../../types/alumno.types';
 import type { ProjectionRow } from './types/alumno-drawer.types';
-import type { ReciboDTO } from './types/recibos.types';
+import type { ReciboCreateDTO, ReciboDTO } from './types/recibos.types';
 
 import DrawerHeader from './parts/DrawerHeader/DrawerHeader';
 import IdentityPill from './parts/IdentityPill/IdentityPill';
@@ -24,7 +24,6 @@ import PayModal from './parts/PayModal/PayModal';
 
 import { useAlumnoDrawerData } from './hooks/useAlumnoDrawerData';
 import { RecibosService } from '../../services/recibos.service';
-import type { ReciboCreateDTO } from './types/recibos.types';
 
 function todayISO() {
   const d = new Date();
@@ -111,33 +110,51 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
     }
   }
 
-function cacheFromPagosReales(reciboId: number) {
-  try {
-    const p = d.pagosReales.find((x) => x.reciboId === reciboId);
-    if (!p) return;
+  /**
+   * Cachea un recibo a partir de pagos reales:
+   * - Normaliza qrPayload (por si llega como qrPayLoad)
+   * - Agrega matricula + carreraNombre para que el print page no quede en "—"
+   */
+  function cacheFromPagosReales(reciboId: number) {
+    try {
+      const p = d.pagosReales.find((x) => x.reciboId === reciboId);
+      if (!p) return;
 
-    const dto: ReciboDTO = {
-      reciboId: p.reciboId,
-      folio: p.folio,
-      fechaEmision: p.fechaEmision ?? p.fechaPago,
-      fechaPago: p.fechaPago,
-      alumnoId: d.alumnoId,
-      alumnoNombre: d.nombreCompleto,
-      concepto: p.concepto,
-      monto: p.monto,
-      moneda: p.moneda ?? 'MXN',
-      estatusCodigo: p.cancelado ? 'CANCELADO' : 'PAGADO',
-      estatusNombre: p.cancelado ? 'Cancelado' : 'Pagado',
-      cancelado: !!p.cancelado,
+      const qr =
+        (p.qrPayload ?? p.qrPayLoad ?? '').toString().trim() || undefined;
 
-      // ✅ si no lo tienes en pagos reales, se omite
-      qrPayload: (p.qrPayload ?? '').trim() || undefined,
-    };
+      const dto: ReciboDTO = {
+        reciboId: p.reciboId,
+        folio: p.folio,
 
-    cacheReciboForPrint(dto);
-  } catch {}
-}
+        fechaEmision: p.fechaEmision ?? p.fechaPago,
+        fechaPago: p.fechaPago,
 
+        alumnoId: d.alumnoId,
+        alumnoNombre: d.nombreCompleto,
+
+        concepto: String(p.concepto),
+        monto: p.monto,
+        moneda: p.moneda ?? 'MXN',
+
+        estatusCodigo: p.cancelado ? 'CANCELADO' : 'PAGADO',
+        estatusNombre: p.cancelado ? 'Cancelado' : 'Pagado',
+
+        cancelado: !!p.cancelado,
+
+        // ✅ extras para impresión
+        matricula: d.matricula,
+        carreraNombre: d.carNombre,
+
+        // ✅ normalizado
+        qrPayload: qr,
+      };
+
+      cacheReciboForPrint(dto);
+    } catch {
+      // ignore
+    }
+  }
 
   function openPrint(reciboId: number) {
     router.push(`/recibos/print?reciboId=${reciboId}`);
@@ -195,9 +212,6 @@ function cacheFromPagosReales(reciboId: number) {
     setExtraSaving(true);
 
     try {
-      // OJO: aquí es donde “se guarda como OTRO”
-      // porque lo mandas fijo. Si quieres que guarde el concepto real,
-      // cambiamos esto a un conceptoId o conceptoCodigo del catálogo.
       const payload: ReciboCreateDTO = {
         alumnoId: d.alumnoId,
         concepto: 'OTRO',
@@ -209,7 +223,15 @@ function cacheFromPagosReales(reciboId: number) {
 
       const created = await RecibosService.create(payload);
 
-      cacheReciboForPrint(created);
+      // ✅ created viene como ReciboDTO; ya trae alumnoNombre, etc.
+      //    Si el back no trae matricula/carrera, al menos esto cachea el recibo.
+      cacheReciboForPrint({
+        ...created,
+        matricula: created.matricula ?? d.matricula,
+        carreraNombre: created.carreraNombre ?? d.carNombre,
+        qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
+      });
+
       await d.reload();
 
       setExtraConcept('');
@@ -264,9 +286,7 @@ function cacheFromPagosReales(reciboId: number) {
         />
       ) : null}
 
-      {d.tab === 'PAGOS' ? (
-        <PagosPanel pagos={d.pagosReales} />
-      ) : null}
+      {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
 
       {d.tab === 'EXTRAS' ? (
         <>
@@ -300,7 +320,14 @@ function cacheFromPagosReales(reciboId: number) {
           setPaySaving(true);
           try {
             const created = await RecibosService.create(payload);
-            cacheReciboForPrint(created);
+
+            cacheReciboForPrint({
+              ...created,
+              matricula: created.matricula ?? d.matricula,
+              carreraNombre: created.carreraNombre ?? d.carNombre,
+              qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
+            });
+
             await d.reload();
 
             setPayOpen(false);

@@ -9,10 +9,11 @@ import Button from '@/shared/ui/Button/Button';
 import Card from '@/shared/ui/Card/Card';
 import Badge from '@/shared/ui/Badge/Badge';
 
-import ReceiptDocument from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
+import ReceiptDocument, {
+  type ReceiptPrint,
+} from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
 import { loadReceiptSettings } from '@/modules/receipts/utils/receipt-template.settings';
 
-import type { Receipt } from '@/modules/receipts/types/receipt.types';
 import type { ReciboDTO } from '@/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types';
 
 import s from './ReceiptPrintPage.module.css';
@@ -34,24 +35,22 @@ function readReciboFromSession(reciboId: number): ReciboDTO | null {
   }
 }
 
-function mapReciboToReceipt(dto: ReciboDTO): Receipt {
+function mapReciboToReceipt(dto: ReciboDTO): ReceiptPrint {
   return {
     folio: dto.folio,
-    alumno: {
-      nombre: dto.alumnoNombre ?? '—', // ✅ AQUÍ debe venir
-      matricula: dto.alumnoId ?? undefined,
-      carrera: '—',
-      duracionMeses: undefined,
-      fechaInicio: undefined,
-    },
+    fechaPago: dto.fechaPago,
+
     concepto: dto.concepto,
     monto: dto.monto ?? 0,
-    montoLetras: '—', // lo conviertes en ReceiptDocument o aquí
-    fechaPago: dto.fechaPago,
+
     status: dto.cancelado ? 'CANCELLED' : 'VALID',
     cancelReason: undefined,
-    createdAt: dto.fechaEmision,
-    updatedAt: dto.fechaEmision,
+
+    alumnoNombre: dto.alumnoNombre,
+    matricula: dto.matricula ?? dto.alumnoId,
+    carreraNombre: dto.carreraNombre ?? '—',
+
+    qrPayload: (dto.qrPayload ?? '').trim() || undefined,
   };
 }
 
@@ -60,7 +59,7 @@ export default function ReceiptPrintPage() {
   const settings = useMemo(() => loadReceiptSettings(), []);
   const reciboId = useMemo(() => parseReciboId(sp), [sp]);
 
-  const [item, setItem] = useState<Receipt | null>(null);
+  const [item, setItem] = useState<ReceiptPrint | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string>('');
 

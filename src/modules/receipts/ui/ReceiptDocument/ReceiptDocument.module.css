@@ -394,3 +394,26 @@
   /* size: letter landscape; */
   margin: 0;
 }
+.payloadBox{
+  margin-top: 14px;
+  border: 1px dashed #d6d9e5;
+  background: #fafbff;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.payloadTitle{
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  color: #2b2f3a;
+}
+
+.payloadText{
+  font-size: 11px;
+  line-height: 1.3;
+  word-break: break-all;
+  color: #222631;
+}

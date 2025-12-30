@@ -1,14 +1,12 @@
-// src/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types.ts
-
 export type ReciboConcepto = 'INSCRIPCION' | 'MENSUALIDAD' | 'OTRO';
 
 export type ReciboCreateDTO = {
   alumnoId: string;
   concepto: ReciboConcepto;
-  montoManual: number;     // ✅ requerido cuando concepto = 'OTRO'
-  fechaPago: string;       // YYYY-MM-DD
-  tipoPagoId: number;      // ✅ requerido
-  comentario?: string;     // ✅ aquí guardamos "Curso de verano"
+  montoManual: number;
+  fechaPago: string; // YYYY-MM-DD
+  tipoPagoId: number;
+  comentario?: string;
 };
 
 export type ReciboDTOApi = {
@@ -16,7 +14,7 @@ export type ReciboDTOApi = {
   folio: string;
 
   fechaEmision: string; // YYYY-MM-DD
-  fechaPago: string;    // YYYY-MM-DD
+  fechaPago: string; // YYYY-MM-DD
 
   alumnoId: string;
   alumnoNombre: string;
@@ -42,8 +40,10 @@ export type ReciboDTOApi = {
 export type ReciboDTO = {
   reciboId: number;
   folio: string;
+
   fechaEmision: string; // YYYY-MM-DD
-  fechaPago: string;    // YYYY-MM-DD
+  fechaPago: string; // YYYY-MM-DD
+
   alumnoId: string;
   alumnoNombre: string;
 
@@ -56,9 +56,10 @@ export type ReciboDTO = {
 
   cancelado: boolean;
 
-  // ✅ antes era string (obligatorio)
-  // qrPayload: string;
-
-  // ✅ ahora:
+  // ✅ opcional por inconsistencias
   qrPayload?: string;
+
+  // ✅ SOLO para impresión (se cachea desde el drawer)
+  matricula?: string;
+  carreraNombre?: string;
 };

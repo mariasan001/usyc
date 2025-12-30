@@ -7,22 +7,34 @@ import type { ReceiptTemplateSettings } from '@/modules/receipts/utils/receipt-t
 import { RecibosService } from '@/modulos/alumnos/services/recibos.service';
 
 import s from './ReceiptDocument.module.css';
-import type { Receipt } from '@/modules/receipts/types/receipt.types';
 
+/* ─────────────────────────────────────────
+  Tipos SOLO para impresión (sin depender del Receipt vacío)
+───────────────────────────────────────── */
+export type ReceiptPrint = {
+  folio: string;
+  fechaPago: string; // YYYY-MM-DD
+
+  concepto: string;
+  monto: number;
+
+  status: 'VALID' | 'CANCELLED';
+  cancelReason?: string;
+
+  alumnoNombre?: string;
+  matricula?: string;
+  carreraNombre?: string;
+
+  qrPayload?: string;
+};
+
+/* ─────────────────────────────────────────
+  Helpers
+───────────────────────────────────────── */
 function fmtMoney(n: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
     Number.isFinite(n) ? n : 0,
   );
-}
-
-function pad(n: string, size = 5) {
-  return (n ?? '').toString().padStart(size, '0');
-}
-
-function splitFolio(folio: string) {
-  const parts = (folio ?? '').split('-');
-  const raw = parts.length > 1 ? parts[parts.length - 1] : folio;
-  return pad(raw.replace(/\D/g, '') || raw);
 }
 
 function safeDate(v?: string) {
@@ -34,13 +46,10 @@ function safeText(v?: string | null, fallback = '—') {
   return t ? t : fallback;
 }
 
-/**
- * Convierte número a letras en MXN (simple y suficiente para recibos).
- * 1.20 -> "UN PESO 20/100 M.N."
- * 0 -> "CERO PESOS 00/100 M.N."
- *
- * Si luego quieres “PESOS” vs “PESO” exacto, lo ajustamos (ya lo hace).
- */
+function folioFull(folio?: string) {
+  return safeText(folio, '—');
+}
+
 function toMoneyWordsMXN(amount: number) {
   const n = Number.isFinite(amount) ? amount : 0;
 
@@ -54,24 +63,10 @@ function toMoneyWordsMXN(amount: number) {
   return `${letrasEntero} ${pesoWord} ${dec2}/100 M.N.`;
 }
 
-// Conversor básico a letras ES (0..999,999).
-// Para tu sistema escolar es más que suficiente.
-// Si luego manejas millones, lo extendemos.
 function numberToSpanishWords(num: number): string {
   if (num === 0) return 'cero';
 
-  const unidades = [
-    '',
-    'uno',
-    'dos',
-    'tres',
-    'cuatro',
-    'cinco',
-    'seis',
-    'siete',
-    'ocho',
-    'nueve',
-  ];
+  const unidades = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
   const especiales = [
     'diez',
     'once',
@@ -113,7 +108,7 @@ function numberToSpanishWords(num: number): string {
     if (n < 10) return unidades[n];
     if (n >= 10 && n < 20) return especiales[n - 10];
     if (n === 20) return 'veinte';
-    if (n > 20 && n < 30) return `veinti${unidades[n - 20]}`; // veintiuno, veintidós...
+    if (n > 20 && n < 30) return `veinti${unidades[n - 20]}`;
     const d = Math.floor(n / 10);
     const u = n % 10;
     return u ? `${decenas[d]} y ${unidades[u]}` : decenas[d];
@@ -127,29 +122,29 @@ function numberToSpanishWords(num: number): string {
     return rest ? `${centenas[c]} ${twoDigits(rest)}` : centenas[c];
   }
 
-  // miles
   if (num < 1000) return threeDigits(num);
 
   if (num < 1000000) {
     const miles = Math.floor(num / 1000);
     const rest = num % 1000;
-
     const milesText = miles === 1 ? 'mil' : `${threeDigits(miles)} mil`;
     const restText = rest ? ` ${threeDigits(rest)}` : '';
     return `${milesText}${restText}`.trim();
   }
 
-  // fallback simple (por si llega algo mayor)
   return String(num);
 }
 
 function QrImgApi({ src }: { src: string }) {
   return (
-    <img
+    <Image
       src={src}
       alt="QR del recibo"
+      width={120}
+      height={120}
       className={s.qrImg}
-      style={{ width: 120, height: 120, objectFit: 'contain' }}
+      unoptimized
+      priority
     />
   );
 }
@@ -159,116 +154,126 @@ export default function ReceiptDocument({
   settings,
   reciboId,
 }: {
-  receipt: Receipt;
+  receipt: ReceiptPrint;
   settings: ReceiptTemplateSettings;
   reciboId: number;
 }) {
-  const folioDisplay = useMemo(() => splitFolio(receipt.folio), [receipt.folio]);
-
-  // ✅ Solo el QR hace llamada (img src). Nada más.
+  const folioDisplay = useMemo(() => folioFull(receipt.folio), [receipt.folio]);
   const qrSrc = useMemo(() => RecibosService.qrUrl(reciboId), [reciboId]);
 
   const cancelled = receipt.status === 'CANCELLED';
+
   const concepto = safeText(receipt.concepto, 'Colegiatura');
   const fecha = safeDate(receipt.fechaPago);
 
-  // ✅ Nombre y letras desde front
-  const nombre = safeText(receipt.alumno?.nombre);
+  const nombre = safeText(receipt.alumnoNombre, '—');
+  const carreraNombre = safeText(receipt.carreraNombre, '—');
+  const qrPayload = safeText(receipt.qrPayload, '');
+
   const montoLetras = useMemo(() => toMoneyWordsMXN(receipt.monto ?? 0), [receipt.monto]);
 
-return (
-  <div className={s.page}>
-    <div className={s.sheet}>
-      {cancelled ? <div className={s.watermark}>CANCELADO</div> : null}
+  return (
+    <div className={s.page}>
+      <div className={s.sheet}>
+        {cancelled ? <div className={s.watermark}>CANCELADO</div> : null}
 
-      {/* Top bar + header */}
-      <header className={s.header}>
-        <div className={s.headerLeft}>
-          <div className={s.logoWrap}>
-            <Image
-              alt="Logo"
-              src="/img/USYC-logo.png"
-              width={92}
-              height={92}
-              className={s.logo}
-              priority
-            />
-          </div>
-
-          <div className={s.folioMini}>
-            <span className={s.folioPrefix}>N_</span>
-            <span className={s.folioNumMini}>{folioDisplay}</span>
-            <span className={s.folioLine} />
-          </div>
-        </div>
-
-        <div className={s.headerCenter}>
-          <div className={s.headerTitle}>RECIBO DE CAJA</div>
-          <div className={s.headerSub}>{settings.plantelName}</div>
-        </div>
-
-        <div className={s.headerRight}>
-          <div className={s.headerRightTitle}>CONTROL ESCOLAR</div>
-          <div className={s.headerRightRow}>
-            <span className={s.headerRightLabel}>FECHA:</span>
-            <span className={s.headerRightValue}>{fecha}</span>
-          </div>
-        </div>
-      </header>
-
-      <div className={s.divider} />
-
-      {/* Body: left form + right QR */}
-      <main className={s.body}>
-        <section className={s.form}>
-          <div className={s.fieldRow}>
-            <div className={s.label}>NOMBRE&nbsp;&nbsp;COMPLETO:</div>
-            <div className={s.lineValue}>{nombre}</div>
-          </div>
-
-          <div className={s.fieldRow}>
-            <div className={s.label}>CANTIDAD EN LETRAS :</div>
-            <div className={s.lineValue}>{montoLetras}</div>
-          </div>
-
-          <div className={s.fieldRow}>
-            <div className={s.label}>CONCEPTO:</div>
-            <div className={s.lineValue}>{concepto}</div>
-          </div>
-
-          <div className={s.totalRow}>
-            <div className={s.label}>TOTAL:</div>
-            <div className={s.totalPill}>{fmtMoney(receipt.monto)}</div>
-          </div>
-
-          <div className={s.sigs}>
-            <div className={s.sig}>
-              <div className={s.sigLine} />
-              <div className={s.sigLabel}>RECIBÍ CONFORME</div>
+        <header className={s.header}>
+          <div className={s.headerLeft}>
+            <div className={s.logoWrap}>
+              <Image
+                alt="Logo"
+                src="/img/USYC-logo.png"
+                width={92}
+                height={92}
+                className={s.logo}
+                priority
+              />
             </div>
 
-            <div className={s.sig}>
-              <div className={s.sigLine} />
-              <div className={s.sigLabel}>ENTREGUÉ CONFORME</div>
+            <div className={s.folioMini}>
+              <span className={s.folioPrefix}>FOLIO:</span>
+              <span className={s.folioNumMini}>{folioDisplay}</span>
+              <span className={s.folioLine} />
             </div>
           </div>
 
-          {cancelled ? (
-            <div className={s.cancelBox}>
-              <div className={s.cancelTitle}>Motivo de cancelación</div>
-              <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
-            </div>
-          ) : null}
-        </section>
-
-        <aside className={s.qrSide}>
-          <div className={s.qrFrame}>
-            <QrImgApi src={qrSrc} />
+          <div className={s.headerCenter}>
+            <div className={s.headerTitle}>RECIBO DE CAJA</div>
+            <div className={s.headerSub}>{settings.plantelName}</div>
           </div>
-        </aside>
-      </main>
+
+          <div className={s.headerRight}>
+            <div className={s.headerRightTitle}>CONTROL ESCOLAR</div>
+            <div className={s.headerRightRow}>
+              <span className={s.headerRightLabel}>FECHA:</span>
+              <span className={s.headerRightValue}>{fecha}</span>
+            </div>
+          </div>
+        </header>
+
+        <div className={s.divider} />
+
+        <main className={s.body}>
+          <section className={s.form}>
+            <div className={s.fieldRow}>
+              <div className={s.label}>NOMBRE&nbsp;&nbsp;COMPLETO:</div>
+              <div className={s.lineValue}>{nombre}</div>
+            </div>
+
+            <div className={s.fieldRow}>
+              <div className={s.label}>CARRERA:</div>
+              <div className={s.lineValue}>{carreraNombre}</div>
+            </div>
+
+            <div className={s.fieldRow}>
+              <div className={s.label}>CANTIDAD EN LETRAS :</div>
+              <div className={s.lineValue}>{montoLetras}</div>
+            </div>
+
+            <div className={s.fieldRow}>
+              <div className={s.label}>CONCEPTO:</div>
+              <div className={s.lineValue}>{concepto}</div>
+            </div>
+
+            <div className={s.totalRow}>
+              <div className={s.label}>TOTAL:</div>
+              <div className={s.totalPill}>{fmtMoney(receipt.monto)}</div>
+            </div>
+
+            <div className={s.sigs}>
+              <div className={s.sig}>
+                <div className={s.sigLine} />
+                <div className={s.sigLabel}>RECIBÍ CONFORME</div>
+              </div>
+
+              <div className={s.sig}>
+                <div className={s.sigLine} />
+                <div className={s.sigLabel}>ENTREGUÉ CONFORME</div>
+              </div>
+            </div>
+
+            {cancelled ? (
+              <div className={s.cancelBox}>
+                <div className={s.cancelTitle}>Motivo de cancelación</div>
+                <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
+              </div>
+            ) : null}
+
+            {qrPayload ? (
+              <div className={s.payloadBox}>
+                <div className={s.payloadTitle}>QR Payload</div>
+                <div className={s.payloadText}>{qrPayload}</div>
+              </div>
+            ) : null}
+          </section>
+
+          <aside className={s.qrSide}>
+            <div className={s.qrFrame}>
+              <QrImgApi src={qrSrc} />
+            </div>
+          </aside>
+        </main>
+      </div>
     </div>
-  </div>
-);
-
+  );
 }
