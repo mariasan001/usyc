@@ -1,0 +1,37 @@
+.page{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding: 18px;
+}
+
+.head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.h1{
+  font-size: 16px;
+  font-weight: 900;
+  color:#1f2a44;
+  margin:0;
+}
+
+.p{
+  margin: 4px 0 0;
+  color:#5a667f;
+  font-size:13px;
+}
+
+.totalPill{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid #e7ebf3;
+  background:#fbfcff;
+  font-weight:800;
+  color:#1f2a44;
+  font-size: 14px;
+  white-space:nowrap;
+}

@@ -82,4 +82,9 @@ export const API = {
   aux: {
     recibosPreviosCount: '/api/aux/recibos-previos/count',
   },
+  
+    historico: {
+    recibos: '/api/alumnos/filter', // ✅ GET (sin params)
+  },
+
 } as const;

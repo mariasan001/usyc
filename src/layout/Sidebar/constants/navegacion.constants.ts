@@ -1,6 +1,6 @@
 // src/layout/Sidebar/constants/navegacion.constants.ts
 
-import { Users, Receipt, QrCode, Settings, LayoutDashboard, FileText } from 'lucide-react';
+import { Users, Receipt, QrCode, Settings,  } from 'lucide-react';
 import type { ItemNavegacion } from '../types/navegacion.types';
 
 export const ITEMS_NAVEGACION: ItemNavegacion[] = [
@@ -10,11 +10,9 @@ export const ITEMS_NAVEGACION: ItemNavegacion[] = [
   // ✅ Gestión (todos ven, acciones se controlan aparte)
   { href: '/alumnos', label: 'Alumnos', icon: Users, grupo: 'GESTIÓN', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
 
-  // ✅ Recibos (si lo reactivas)
   // { href: '/recibos', label: 'Recibos', icon: Receipt, grupo: 'CAJA', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
+  { href: '/historico', label: 'Históricos', icon: Receipt, grupo: 'CAJA', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
 
-  // ✅ Reportes (si lo agregas más adelante)
-  // { href: '/reportes', label: 'Reportes', icon: FileText, grupo: 'GESTIÓN', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
 
   // ✅ Utilidades
   { href: '/verificar', label: 'Verificar QR', icon: QrCode, grupo: 'UTILIDADES', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
