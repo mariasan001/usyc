@@ -2,14 +2,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { AlumnosService } from '../services/alumnos.service';
-import type { Alumno, Page } from '../types/alumno.types';
+import type { Alumno, Page, AlumnoCreate } from '../types/alumno.types';
 import type { AlumnoFilters } from '../ui/AlumnoFiltersBar/AlumnoFiltersBar';
 
 const DEFAULT_FILTERS: AlumnoFilters = {
   q: '',
   escolaridadId: 'ALL',
-  estado: 'ALL',
+  plantelId: 'ALL',
   fechaIngresoDesde: undefined,
   fechaIngresoHasta: undefined,
 };
@@ -25,6 +26,39 @@ function inRange(dateISO: string, desde?: string, hasta?: string) {
   return true;
 }
 
+function getErrorMessage(e: unknown) {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'string') return e;
+  return 'Ocurrió un error inesperado.';
+}
+
+function toNumber(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * ✅ Plantel "tolerante" para que NO se te vaya el listado a 0.
+ * Ajusta aquí si tu API usa otra propiedad.
+ */
+function getPlantelId(a: Alumno): number | null {
+  const x = a as unknown as {
+    plantelId?: unknown;
+    sedeId?: unknown;
+    unidadId?: unknown;
+    idPlantel?: unknown;
+    plantel?: { id?: unknown } | null;
+  };
+
+  return (
+    toNumber(x.plantelId) ??
+    toNumber(x.sedeId) ??
+    toNumber(x.unidadId) ??
+    toNumber(x.idPlantel) ??
+    toNumber(x.plantel?.id)
+  );
+}
+
 export function useAlumnos() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +67,10 @@ export function useAlumnos() {
   const [page, setPage] = useState(0);
   const [size] = useState(20);
 
-  // data (puede ser null al inicio, tu tabla lo soporta)
+  // data
   const [pageData, setPageData] = useState<Page<Alumno> | null>(null);
 
-  // filtros (SIEMPRE definido)
+  // filtros
   const [filters, setFilters] = useState<AlumnoFilters>(DEFAULT_FILTERS);
 
   // drawer
@@ -47,15 +81,17 @@ export function useAlumnos() {
     async (p: number) => {
       setLoading(true);
       setError(null);
+
       try {
         const res = await AlumnosService.list({
           page: p,
           size,
           sort: 'nombreCompleto,asc',
         });
+
         setPageData(res);
-      } catch (e: any) {
-        setError(e?.message ?? 'No se pudo cargar el listado.');
+      } catch (e: unknown) {
+        setError(getErrorMessage(e) ?? 'No se pudo cargar el listado.');
         setPageData(null);
       } finally {
         setLoading(false);
@@ -64,7 +100,6 @@ export function useAlumnos() {
     [size],
   );
 
-  // primera carga + cuando cambie page
   useEffect(() => {
     fetchPage(page);
   }, [fetchPage, page]);
@@ -75,7 +110,7 @@ export function useAlumnos() {
     setPage(nextPage);
   }, []);
 
-  // ⚠️ filtros FE (no query al backend todavía)
+  // ✅ filtros FE
   const filteredPageData = useMemo<Page<Alumno> | null>(() => {
     if (!pageData) return null;
 
@@ -91,16 +126,19 @@ export function useAlumnos() {
         if (!hay) return false;
       }
 
-      // escolaridad
+      // escolaridad (tu filter ya es number|'ALL')
       if (filters.escolaridadId !== 'ALL') {
-        const id = Number(filters.escolaridadId);
-        if (Number(a.escolaridadId) !== id) return false;
+        const aEsc = toNumber((a as unknown as { escolaridadId?: unknown }).escolaridadId);
+        if (aEsc === null || aEsc !== filters.escolaridadId) return false;
       }
 
-      // estado
-      if (filters.estado === 'ACTIVO' && !a.activo) return false;
-      if (filters.estado === 'EGRESADO' && a.activo) return false; // si tu regla es distinta, ajustamos
-      // POR_VENCER depende de fechaTermino; si luego quieres lo calculamos
+      // plantel
+      if (filters.plantelId !== 'ALL') {
+        const aPl = getPlantelId(a);
+        // si el alumno no trae plantelId, NO lo escondas (para que no “desaparezca todo”)
+        // Si tú sí quieres esconderlos, cambia esto a: if (aPl === null || aPl !== filters.plantelId) return false;
+        if (aPl !== null && aPl !== filters.plantelId) return false;
+      }
 
       // rango fechas ingreso
       if (!inRange(a.fechaIngreso, filters.fechaIngresoDesde, filters.fechaIngresoHasta))
@@ -109,23 +147,19 @@ export function useAlumnos() {
       return true;
     });
 
-    return {
-      ...pageData,
-      content,
-      // ojo: totalElements/totalPages siguen siendo del backend (global),
-      // si quieres “total filtrado” real, lo mostramos aparte en UI.
-    };
+    return { ...pageData, content };
   }, [pageData, filters]);
 
   const openDrawer = useCallback(async (alumnoId: string) => {
     setDrawerOpen(true);
     setSelected(null);
     setError(null);
+
     try {
       const full = await AlumnosService.getById(alumnoId);
       setSelected(full);
-    } catch (e: any) {
-      setError(e?.message ?? 'No se pudo cargar el detalle.');
+    } catch (e: unknown) {
+      setError(getErrorMessage(e) ?? 'No se pudo cargar el detalle.');
     }
   }, []);
 
@@ -136,20 +170,22 @@ export function useAlumnos() {
       nombreCompleto: string;
       matricula: string;
       escolaridadId: number;
-      carreraId?: string | null;
+      plantelId: number;
       fechaIngreso: string;
+      carreraId?: string | null;
     }) => {
-      const body = {
+      // ✅ cuerpo tipado: adiós Record<string,unknown>, adiós TS2345
+      const body: AlumnoCreate = {
         nombreCompleto: payload.nombreCompleto,
         matricula: payload.matricula,
         escolaridadId: payload.escolaridadId,
+        plantelId: payload.plantelId,
         fechaIngreso: payload.fechaIngreso,
         ...(payload.carreraId ? { carreraId: payload.carreraId } : {}),
       };
 
       const created = await AlumnosService.create(body);
 
-      // después de crear: vuelve a página 0 y recarga
       setPage(0);
       await fetchPage(0);
 
@@ -158,34 +194,27 @@ export function useAlumnos() {
     [fetchPage],
   );
 
-  // totals (para badge si quieres que sea “filtrado local”)
   const totalFilteredLocal = filteredPageData?.content?.length ?? 0;
 
   return {
-    // pageData (la tabla ya lo espera)
     pageData: filteredPageData,
     loading,
     error,
 
-    // filtros
     filters,
     setFilters,
 
-    // paginado
     onPageChange,
     page,
 
-    // acciones
     refresh,
     crearAlumno,
 
-    // drawer
     drawerOpen,
     selected,
     openDrawer,
     closeDrawer,
 
-    // extras opcionales
     totalFilteredLocal,
   };
 }

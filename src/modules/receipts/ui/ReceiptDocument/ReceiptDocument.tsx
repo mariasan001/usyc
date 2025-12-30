@@ -1,3 +1,4 @@
+// src/modules/receipts/ui/ReceiptDocument/ReceiptDocument.tsx
 'use client';
 
 import { useMemo } from 'react';
@@ -8,15 +9,13 @@ import { RecibosService } from '@/modulos/alumnos/services/recibos.service';
 
 import s from './ReceiptDocument.module.css';
 
-/* ─────────────────────────────────────────
-  Tipos SOLO para impresión (sin depender del Receipt vacío)
-───────────────────────────────────────── */
 export type ReceiptPrint = {
   folio: string;
   fechaPago: string; // YYYY-MM-DD
 
   concepto: string;
   monto: number;
+  moneda?: string; // "MXN"
 
   status: 'VALID' | 'CANCELLED';
   cancelReason?: string;
@@ -136,17 +135,8 @@ function numberToSpanishWords(num: number): string {
 }
 
 function QrImgApi({ src }: { src: string }) {
-  return (
-    <Image
-      src={src}
-      alt="QR del recibo"
-      width={120}
-      height={120}
-      className={s.qrImg}
-      unoptimized
-      priority
-    />
-  );
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt="QR del recibo" className={s.qrImg} />;
 }
 
 export default function ReceiptDocument({
@@ -172,6 +162,8 @@ export default function ReceiptDocument({
 
   const montoLetras = useMemo(() => toMoneyWordsMXN(receipt.monto ?? 0), [receipt.monto]);
 
+  const moneda = safeText(receipt.moneda, 'MXN');
+
   return (
     <div className={s.page}>
       <div className={s.sheet}>
@@ -193,13 +185,12 @@ export default function ReceiptDocument({
             <div className={s.folioMini}>
               <span className={s.folioPrefix}>FOLIO:</span>
               <span className={s.folioNumMini}>{folioDisplay}</span>
-              <span className={s.folioLine} />
             </div>
           </div>
 
           <div className={s.headerCenter}>
             <div className={s.headerTitle}>RECIBO DE CAJA</div>
-            <div className={s.headerSub}>{settings.plantelName}</div>
+            <div className={s.headerSub}>{safeText(settings.plantelName, 'PLANTEL')}</div>
           </div>
 
           <div className={s.headerRight}>
@@ -226,7 +217,7 @@ export default function ReceiptDocument({
             </div>
 
             <div className={s.fieldRow}>
-              <div className={s.label}>CANTIDAD EN LETRAS :</div>
+              <div className={s.label}>CANTIDAD EN LETRAS:</div>
               <div className={s.lineValue}>{montoLetras}</div>
             </div>
 
@@ -237,7 +228,9 @@ export default function ReceiptDocument({
 
             <div className={s.totalRow}>
               <div className={s.label}>TOTAL:</div>
-              <div className={s.totalPill}>{fmtMoney(receipt.monto)}</div>
+              <div className={s.totalPill}>
+                {fmtMoney(receipt.monto)} <span className={s.currency}>{moneda}</span>
+              </div>
             </div>
 
             <div className={s.sigs}>
@@ -258,19 +251,20 @@ export default function ReceiptDocument({
                 <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
               </div>
             ) : null}
-
-            {qrPayload ? (
-              <div className={s.payloadBox}>
-                <div className={s.payloadTitle}>QR Payload</div>
-                <div className={s.payloadText}>{qrPayload}</div>
-              </div>
-            ) : null}
           </section>
 
           <aside className={s.qrSide}>
             <div className={s.qrFrame}>
               <QrImgApi src={qrSrc} />
             </div>
+
+            {/* ✅ QR Payload abajo del QR */}
+            {qrPayload ? (
+              <div className={s.payloadBox}>
+                <div className={s.payloadTitle}>QR PAYLOAD</div>
+                <div className={s.payloadText}>{qrPayload}</div>
+              </div>
+            ) : null}
           </aside>
         </main>
       </div>

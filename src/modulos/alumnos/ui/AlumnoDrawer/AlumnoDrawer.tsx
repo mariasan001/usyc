@@ -149,7 +149,6 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         // ✅ normalizado
         qrPayload: qr,
       };
-
       cacheReciboForPrint(dto);
     } catch {
       // ignore

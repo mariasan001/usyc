@@ -1,7 +1,10 @@
-'use client';
-
-import ReceiptPrintPage from '@/modules/receipts/ui/ReceiptPrint/ReceiptPrintPage';
+import { Suspense } from 'react';
+import ReceiptPrintClient from './ReceiptPrintClient';
 
 export default function Page() {
-  return <ReceiptPrintPage />;
+  return (
+    <Suspense fallback={<div style={{ padding: 24 }}>Cargando recibo…</div>}>
+      <ReceiptPrintClient />
+    </Suspense>
+  );
 }

@@ -1,3 +1,4 @@
+// src/app/recibos/print/page.tsx (o donde tengas tu print page)
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -12,6 +13,7 @@ import Badge from '@/shared/ui/Badge/Badge';
 import ReceiptDocument, {
   type ReceiptPrint,
 } from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
+
 import { loadReceiptSettings } from '@/modules/receipts/utils/receipt-template.settings';
 
 import type { ReciboDTO } from '@/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types';
@@ -42,12 +44,13 @@ function mapReciboToReceipt(dto: ReciboDTO): ReceiptPrint {
 
     concepto: dto.concepto,
     monto: dto.monto ?? 0,
+    moneda: dto.moneda ?? 'MXN',
 
     status: dto.cancelado ? 'CANCELLED' : 'VALID',
     cancelReason: undefined,
 
     alumnoNombre: dto.alumnoNombre,
-    matricula: dto.matricula ?? dto.alumnoId,
+    matricula: dto.matricula ?? dto.alumnoId, // si no hay matricula real, cae a alumnoId
     carreraNombre: dto.carreraNombre ?? '—',
 
     qrPayload: (dto.qrPayload ?? '').trim() || undefined,
@@ -109,11 +112,7 @@ export default function ReceiptPrintPage() {
         <div className={s.right}>
           <Badge tone="info">{reciboId ? `Recibo #${reciboId}` : '—'}</Badge>
 
-          <Button
-            onClick={() => window.print()}
-            leftIcon={<Printer size={16} />}
-            disabled={!item}
-          >
+          <Button onClick={() => window.print()} leftIcon={<Printer size={16} />} disabled={!item}>
             Imprimir
           </Button>
         </div>

@@ -37,15 +37,21 @@ export type ReciboDTOApi = {
   qrPayLoad?: string;
 };
 
+// src/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types.ts
+
 export type ReciboDTO = {
   reciboId: number;
   folio: string;
-
   fechaEmision: string; // YYYY-MM-DD
-  fechaPago: string; // YYYY-MM-DD
+  fechaPago: string;    // YYYY-MM-DD
 
   alumnoId: string;
   alumnoNombre: string;
+
+  // ✅ extras útiles para impresión (cache)
+  matricula?: string;
+  carreraNombre?: string;
+  plantelNombre?: string;
 
   concepto: string;
   monto: number;
@@ -56,10 +62,5 @@ export type ReciboDTO = {
 
   cancelado: boolean;
 
-  // ✅ opcional por inconsistencias
   qrPayload?: string;
-
-  // ✅ SOLO para impresión (se cachea desde el drawer)
-  matricula?: string;
-  carreraNombre?: string;
 };
