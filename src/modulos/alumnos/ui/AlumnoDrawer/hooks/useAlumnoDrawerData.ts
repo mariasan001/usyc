@@ -3,19 +3,14 @@
 import { useMemo, useState } from 'react';
 import type { Alumno } from '../../../types/alumno.types';
 
-
-import type {
-  DrawerTab,
-  ProjectionRow,
-  PagoRealRow,
-  Totals,
-} from '../types/alumno-drawer.types';
+import type { DrawerTab, ProjectionRow, PagoRealRow, Totals } from '../types/alumno-drawer.types';
+import type { AlumnoPagosResumenDTO } from '../types/alumno-pagos-resumen.types';
+import type { ReciboConcepto } from '../types/recibos.types';
 
 import { useAlumnoPagosResumen } from './useAlumnoPagosResumen';
-import { AlumnoPagosResumenDTO } from '../types/alumno-pagos-resumen.types';
 
 /* ─────────────────────────────────────────
-  Helpers (luego los movemos a utils/dates.ts)
+  Helpers
 ───────────────────────────────────────── */
 function cmpISO(a: string, b: string) {
   if (a === b) return 0;
@@ -29,18 +24,31 @@ function todayISO() {
 }
 
 function periodoFromISO(iso: string) {
-  // "2025-12-20" -> "2025-12"
   return (iso ?? '').slice(0, 7);
+}
+
+/** ✅ Convierte string del back a union ReciboConcepto */
+function toReciboConcepto(v: string): ReciboConcepto {
+  const x = String(v ?? '').toUpperCase().trim();
+  if (x === 'INSCRIPCION') return 'INSCRIPCION';
+  if (x === 'MENSUALIDAD') return 'MENSUALIDAD';
+  return 'OTRO';
+}
+
+/** ✅ Normaliza el QR (por inconsistencia qrPayload vs qrPayLoad) */
+function normalizeQr(p: { qrPayload?: string; qrPayLoad?: string }): string {
+  const a = (p.qrPayload ?? '').trim();
+  if (a) return a;
+  const b = (p.qrPayLoad ?? '').trim();
+  return b;
 }
 
 type Args = { alumno: Alumno };
 
 export function useAlumnoDrawerData({ alumno }: Args) {
   const [tab, setTab] = useState<DrawerTab>('RESUMEN');
-
   const alumnoId = alumno.alumnoId;
 
-  // ✅ Tipado explícito (para que no se cuelen types raros)
   const {
     data,
     loading,
@@ -62,10 +70,10 @@ export function useAlumnoDrawerData({ alumno }: Args) {
 
   const escNombre = alumno.escolaridadNombre ?? '—';
   const carNombre = data?.carreraNombre ?? alumno.carreraNombre ?? '—';
-  const plaNombre = '—'; // pendiente cuando haya plantel
+  const plaNombre = '—';
 
   /* ─────────────────────────────────────────
-    Plan (preferimos lo que venga del endpoint resumen)
+    Plan
   ────────────────────────────────────────── */
   const ingresoISO = data?.fechaIngreso ?? alumno.fechaIngreso ?? '—';
   const terminoISO = data?.fechaTermino ?? alumno.fechaTermino ?? '—';
@@ -73,55 +81,75 @@ export function useAlumnoDrawerData({ alumno }: Args) {
   const montoInscripcion = data?.montoInscripcion ?? 0;
 
   /* ─────────────────────────────────────────
-    Pagos reales -> UI
+    Pagos reales -> UI (✅ ahora sí llena todo PagoRealRow)
   ────────────────────────────────────────── */
   const pagosReales: PagoRealRow[] = useMemo(() => {
     const list = data?.pagosReales ?? [];
 
     return list
-      .filter((p) => !p.cancelado) // ✅ endpoint dice que no vienen cancelados, pero igual blindamos
       .slice()
       .sort((a, b) => cmpISO(b.fechaPago, a.fechaPago))
       .map((p) => ({
         reciboId: p.reciboId,
         folio: p.folio,
+
+        // ✅ si el back no manda fechaEmision, usamos fechaPago como fallback
+        fechaEmision: p.fechaEmision ?? p.fechaPago,
         fechaPago: p.fechaPago,
-        concepto: p.concepto,
+
+        // ✅ si el back no manda alumnoId aquí, usamos el del hook/alumno
+        alumnoId: p.alumnoId ?? alumnoId,
+        alumnoNombre: p.alumnoNombre ?? nombreCompleto,
+
+        // ✅ tipado fuerte
+        concepto: toReciboConcepto(String(p.concepto)),
         monto: p.monto,
         moneda: p.moneda,
+
+        // ✅ si no viene estatusCodigo, armamos uno razonable
+        estatusCodigo: p.estatusCodigo ?? (p.cancelado ? 'CANCELADO' : 'PAGADO'),
         estatusNombre: p.estatusNombre,
-        cancelado: p.cancelado,
-        alumnoNombre: p.alumnoNombre,
+
+        // ✅ si no vienen tipoPago*, fallback
+        tipoPagoId: p.tipoPagoId ?? 0,
+        tipoPagoCodigo: p.tipoPagoCodigo ?? '',
+        tipoPagoNombre: p.tipoPagoNombre ?? '',
+
+        cancelado: !!p.cancelado,
+
+        // ✅ normalizado
+        qrPayload: normalizeQr(p),
+        qrPayLoad: p.qrPayLoad,
       }));
-  }, [data?.pagosReales]);
+  }, [data?.pagosReales, alumnoId, nombreCompleto]);
 
   /* ─────────────────────────────────────────
     Proyección -> UI + reciboId “colgado”
+    (✅ conceptCode ahora es ReciboConcepto)
   ────────────────────────────────────────── */
   const projection: ProjectionRow[] = useMemo(() => {
     const list = data?.proyeccion ?? [];
     const pagosValidos = (data?.pagosReales ?? []).filter((p) => !p.cancelado);
 
-    // Mapa: "YYYY-MM|CONCEPTO" -> reciboId
     const paidMap = new Map<string, number>();
     for (const p of pagosValidos) {
       const per = periodoFromISO(p.fechaPago);
-      const concepto = String(p.concepto ?? '').toUpperCase();
+      const concepto = toReciboConcepto(String(p.concepto));
       paidMap.set(`${per}|${concepto}`, p.reciboId);
     }
 
     return list.map((x, i) => {
       const estadoUpper = String(x.estado ?? '').toUpperCase();
-      const conceptoUpper = String(x.conceptoCodigo ?? '').toUpperCase();
+      const concept = toReciboConcepto(String(x.conceptoCodigo));
 
-      const reciboId = paidMap.get(`${x.periodo}|${conceptoUpper}`);
+      const reciboId = paidMap.get(`${x.periodo}|${concept}`);
       const isPaid = estadoUpper === 'PAGADO' || typeof reciboId === 'number';
 
       return {
         idx: i + 1,
         periodo: x.periodo,
         dueDate: x.fechaVencimiento,
-        conceptCode: x.conceptoCodigo,
+        conceptCode: concept, // ✅ ya no string
         amount: x.monto,
         estado: x.estado,
         isPaid,
@@ -131,7 +159,7 @@ export function useAlumnoDrawerData({ alumno }: Args) {
   }, [data?.proyeccion, data?.pagosReales]);
 
   /* ─────────────────────────────────────────
-    Totales
+    Totales (deja solo lo que tu Totals define)
   ────────────────────────────────────────── */
   const totals: Totals = useMemo(() => {
     const totalPlan = data?.totalProyectado ?? 0;
@@ -142,57 +170,40 @@ export function useAlumnoDrawerData({ alumno }: Args) {
     const pendientes = projection.length - pagados;
 
     const t = todayISO();
-    const vencidos = projection.filter(
-      (x) => !x.isPaid && cmpISO(x.dueDate, t) < 0,
-    ).length;
-
-    // ✅ nextDue garantizado por fecha (no depende del orden del backend)
-    const nextDue =
-      projection
-        .filter((x) => !x.isPaid)
-        .slice()
-        .sort((a, b) => cmpISO(a.dueDate, b.dueDate))[0] ?? null;
+    const vencidos = projection.filter((x) => !x.isPaid && cmpISO(x.dueDate, t) < 0).length;
 
     return {
       totalPlan,
       totalPagado,
       saldo,
-      totalInscripcion: montoInscripcion,
       pagados,
       pendientes,
       vencidos,
-      nextDue,
     };
-  }, [data?.totalProyectado, data?.totalPagado, data?.saldoPendiente, projection, montoInscripcion]);
+  }, [data?.totalProyectado, data?.totalPagado, data?.saldoPendiente, projection]);
 
   return {
-    // ui
     tab,
     setTab,
 
-    // request state
     loading,
     error,
     reload,
 
-    // identity
     alumnoId,
     nombreCompleto,
     matricula,
     activo,
 
-    // plan
     ingresoISO,
     terminoISO,
     precioMensual,
     montoInscripcion,
 
-    // catalogs
     escNombre,
     carNombre,
     plaNombre,
 
-    // data
     projection,
     pagosReales,
     totals,
