@@ -5,7 +5,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import s from './AlumnoDrawer.module.css';
+
 import type { Alumno } from '../../types/alumno.types';
+import type { ProjectionRow } from './types/alumno-drawer.types';
+import type { ReciboDTO } from './types/recibos.types';
 
 import DrawerHeader from './parts/DrawerHeader/DrawerHeader';
 import IdentityPill from './parts/IdentityPill/IdentityPill';
@@ -20,10 +23,8 @@ import ExtrasPanel from './parts/ExtrasPanel/ExtrasPanel';
 import PayModal from './parts/PayModal/PayModal';
 
 import { useAlumnoDrawerData } from './hooks/useAlumnoDrawerData';
-import type { ProjectionRow } from './types/alumno-drawer.types';
-
 import { RecibosService } from '../../services/recibos.service';
-import type { ReciboDTO } from './types/recibos.types';
+import type { ReciboCreateDTO } from './types/recibos.types';
 
 function todayISO() {
   const d = new Date();
@@ -35,6 +36,16 @@ function toMoneyNumber(v: string) {
   const cleaned = String(v ?? '').replace(/,/g, '').trim();
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : NaN;
+}
+
+function safeMessage(err: unknown) {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return 'Error desconocido';
+  }
 }
 
 export default function AlumnoDrawer({
@@ -90,47 +101,48 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   const [extraError, setExtraError] = useState<string | null>(null);
 
   // =========================
-  // PRINT CACHE (RECIBOS)
+  // CACHE PARA PRINT (RECIBOS)
   // =========================
   function cacheReciboForPrint(dto: ReciboDTO) {
     try {
       sessionStorage.setItem(`recibo:${dto.reciboId}`, JSON.stringify(dto));
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 
-  function cacheFromPagosReales(reciboId: number) {
-    try {
-      const p = d.pagosReales.find((x) => x.reciboId === reciboId);
-      if (!p) return;
+function cacheFromPagosReales(reciboId: number) {
+  try {
+    const p = d.pagosReales.find((x) => x.reciboId === reciboId);
+    if (!p) return;
 
-      const dto: ReciboDTO = {
-        reciboId: p.reciboId,
-        folio: p.folio,
-        fechaEmision: p.fechaPago, // fallback
-        fechaPago: p.fechaPago,
-        alumnoId: d.alumnoId,
-        alumnoNombre: d.nombreCompleto,
-        concepto: p.concepto,
-        monto: p.monto,
-        moneda: p.moneda ?? 'MXN',
-        estatusCodigo: p.cancelado ? 'CANCELADO' : 'PAGADO',
-        estatusNombre: p.cancelado ? 'Cancelado' : 'Pagado',
-        cancelado: !!p.cancelado,
-        qrPayload: undefined,
-      };
+    const dto: ReciboDTO = {
+      reciboId: p.reciboId,
+      folio: p.folio,
+      fechaEmision: p.fechaEmision ?? p.fechaPago,
+      fechaPago: p.fechaPago,
+      alumnoId: d.alumnoId,
+      alumnoNombre: d.nombreCompleto,
+      concepto: p.concepto,
+      monto: p.monto,
+      moneda: p.moneda ?? 'MXN',
+      estatusCodigo: p.cancelado ? 'CANCELADO' : 'PAGADO',
+      estatusNombre: p.cancelado ? 'Cancelado' : 'Pagado',
+      cancelado: !!p.cancelado,
 
-      cacheReciboForPrint(dto);
-    } catch {}
-  }
+      // ✅ si no lo tienes en pagos reales, se omite
+      qrPayload: (p.qrPayload ?? '').trim() || undefined,
+    };
+
+    cacheReciboForPrint(dto);
+  } catch {}
+}
+
 
   function openPrint(reciboId: number) {
     router.push(`/recibos/print?reciboId=${reciboId}`);
   }
 
-  /**
-   * ✅ Unificado: siempre cachea primero y luego navega.
-   * Úsalo desde PROYECCIÓN y desde PAGOS.
-   */
   function openReceipt(reciboId: number) {
     if (d.loading) return;
     cacheFromPagosReales(reciboId);
@@ -138,31 +150,33 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   }
 
   // =========================
-  // EXPORT PDF PROYECCIÓN (SIN API / SIN POPUPS)
+  // EXPORT PDF PROYECCIÓN (CACHE + ROUTE)
   // =========================
-function cacheProjectionForPrint() {
-  try {
-    const payload = {
-      alumnoId: d.alumnoId,
-      alumnoNombre: d.nombreCompleto,
-      matricula: d.matricula,
-      generadoISO: new Date().toISOString(),
+  function exportProjectionPdf() {
+    if (d.loading) return;
+    if (!d.alumnoId) return;
 
-      rows: d.projection,
+    try {
+      const payload = {
+        alumnoId: d.alumnoId,
+        alumnoNombre: d.nombreCompleto,
+        matricula: d.matricula,
+        generadoISO: new Date().toISOString(),
+        rows: d.projection,
+        totals: d.totals,
+      };
 
-      // ✅ IMPORTANTÍSIMO: aquí va TODO lo que ya calcula tu hook
-      totals: d.totals,
-    };
+      sessionStorage.setItem(`projection:${d.alumnoId}`, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
 
-    sessionStorage.setItem(`projection:${d.alumnoId}`, JSON.stringify(payload));
-  } catch {}
-}
+    router.push(`/alumnos/proyeccion/print?alumnoId=${encodeURIComponent(d.alumnoId)}`);
+  }
 
-function openProjectionPrint() {
-  router.push(`/alumnos/proyeccion/print?alumnoId=${encodeURIComponent(d.alumnoId)}`);
-}
-
-
+  // =========================
+  // CREAR EXTRA
+  // =========================
   async function onAddExtra() {
     setExtraError(null);
 
@@ -179,8 +193,12 @@ function openProjectionPrint() {
     if (!d.alumnoId) return setExtraError('No hay alumno seleccionado.');
 
     setExtraSaving(true);
+
     try {
-      const payload = {
+      // OJO: aquí es donde “se guarda como OTRO”
+      // porque lo mandas fijo. Si quieres que guarde el concepto real,
+      // cambiamos esto a un conceptoId o conceptoCodigo del catálogo.
+      const payload: ReciboCreateDTO = {
         alumnoId: d.alumnoId,
         concepto: 'OTRO',
         montoManual: amountNum,
@@ -200,9 +218,8 @@ function openProjectionPrint() {
       setExtraError(null);
 
       d.setTab('PAGOS');
-    } catch (e: any) {
-      setExtraError(e?.message ?? 'No se pudo registrar el pago extra.');
-      throw e;
+    } catch (err) {
+      setExtraError(safeMessage(err) || 'No se pudo registrar el pago extra.');
     } finally {
       setExtraSaving(false);
     }
@@ -220,11 +237,10 @@ function openProjectionPrint() {
       <DrawerTabs tab={d.tab} onChange={d.setTab} />
 
       {d.loading ? <div className={s.mutedBox}>Cargando…</div> : null}
-      {d.error ? <div className={s.errorBox}>{String(d.error)}</div> : null}
+      {d.error ? <div className={s.errorBox}>{safeMessage(d.error)}</div> : null}
 
       {d.tab === 'RESUMEN' ? (
         <ResumenPanel
-          totals={d.totals}
           ingresoISO={d.ingresoISO}
           terminoISO={d.terminoISO}
           precioMensual={d.precioMensual}
@@ -236,47 +252,20 @@ function openProjectionPrint() {
         />
       ) : null}
 
-{d.tab === 'PROYECCION' ? (
-  <ProyeccionPanel
-    rows={d.projection}
-    onPay={(row) => {
-      setPayRow(row);
-      setPayOpen(true);
-    }}
-    onReceipt={(reciboId) => {
-      openReceipt(reciboId);
-    }}
-    onExportPdf={() => {
-      // ✅ sin API, sin popups, solo cache + route
-      if (d.loading) return;
-      if (!d.alumnoId) return;
-
-      try {
-        const payload = {
-          alumnoId: d.alumnoId,
-          alumnoNombre: d.nombreCompleto,
-          matricula: d.matricula,
-          generadoISO: new Date().toISOString(),
-          rows: d.projection,
-          totals: d.totals,
-        };
-
-        sessionStorage.setItem(`projection:${d.alumnoId}`, JSON.stringify(payload));
-      } catch {}
-
-      router.push(
-        `/alumnos/proyeccion/print?alumnoId=${encodeURIComponent(d.alumnoId)}`
-      );
-    }}
-  />
-) : null}
+      {d.tab === 'PROYECCION' ? (
+        <ProyeccionPanel
+          rows={d.projection}
+          onPay={(row) => {
+            setPayRow(row);
+            setPayOpen(true);
+          }}
+          onReceipt={(reciboId) => openReceipt(reciboId)}
+          onExportPdf={exportProjectionPdf}
+        />
+      ) : null}
 
       {d.tab === 'PAGOS' ? (
-        <PagosPanel
-          pagos={d.pagosReales}
-          // si luego quieres imprimir desde aquí:
-          // onPrint={(reciboId) => openReceipt(reciboId)}
-        />
+        <PagosPanel pagos={d.pagosReales} />
       ) : null}
 
       {d.tab === 'EXTRAS' ? (
@@ -311,7 +300,6 @@ function openProjectionPrint() {
           setPaySaving(true);
           try {
             const created = await RecibosService.create(payload);
-
             cacheReciboForPrint(created);
             await d.reload();
 
@@ -322,7 +310,6 @@ function openProjectionPrint() {
             setPaySaving(false);
           }
         }}
-        saving={paySaving}
       />
     </div>
   );

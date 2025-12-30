@@ -1,3 +1,6 @@
+// src/modulos/alumnos/ui/AlumnoDrawer/types/alumno-drawer.types.ts
+import type { ReciboConcepto } from './recibos.types';
+
 export type DrawerTab = 'RESUMEN' | 'PROYECCION' | 'PAGOS' | 'EXTRAS';
 
 export type PaymentMethod = 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA';
@@ -6,7 +9,7 @@ export type ProjectionRow = {
   idx: number;
   periodo: string;        // "2025-12"
   dueDate: string;        // "2025-12-01"
-  conceptCode: string;    // "INSCRIPCION" | "MENSUALIDAD" | "OTRO" ...
+  conceptCode: ReciboConcepto; // ✅ antes string -> ahora el union real del backend
   amount: number;
   estado: string;         // texto que venga del back
   isPaid: boolean;
@@ -17,13 +20,14 @@ export type PagoRealRow = {
   reciboId: number;
   folio: string;
 
-  fechaEmision: string;  // ✅ viene del back
+  fechaEmision: string;   // viene del back
   fechaPago: string;      // ISO
 
-  alumnoId: string;      // ✅ viene del back
+  alumnoId: string;       // viene del back
   alumnoNombre?: string;
 
-  concepto: string;
+  concepto: ReciboConcepto; // ✅ si el back manda string libre, aquí puedes dejar string,
+                            // pero lo ideal es alinear con ReciboConcepto
   monto: number;
   moneda: string;
 
@@ -36,8 +40,11 @@ export type PagoRealRow = {
 
   cancelado: boolean;
 
+  // ✅ normalizado (tu mapper debe llenar qrPayload)
   qrPayload: string;
-  qrPayLoad: string; // ✅ por inconsistencia del back
+
+  // ✅ por inconsistencia del back: que sea opcional (no obligues a tenerlo siempre)
+  qrPayLoad?: string;
 };
 
 export type Totals = {
@@ -49,6 +56,5 @@ export type Totals = {
   pendientes: number;
   vencidos: number;
 
-  // ✅ nuevo: extras (opcional)
   totalExtras?: number;
 };
