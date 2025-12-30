@@ -1,11 +1,9 @@
 // src/layout/Sidebar/constants/navegacion.constants.ts
 
-import { Users, Receipt, QrCode, Settings,  } from 'lucide-react';
+import { Users, Receipt, QrCode, Settings,Ban  } from 'lucide-react';
 import type { ItemNavegacion } from '../types/navegacion.types';
 
 export const ITEMS_NAVEGACION: ItemNavegacion[] = [
-  // ✅ Panel solo ADMIN (si luego lo usas)
-  // { href: '/panel', label: 'Inicio', icon: LayoutDashboard, grupo: 'GENERAL', roles: ['ADMIN'] },
 
   // ✅ Gestión (todos ven, acciones se controlan aparte)
   { href: '/alumnos', label: 'Alumnos', icon: Users, grupo: 'GESTIÓN', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
@@ -13,9 +11,10 @@ export const ITEMS_NAVEGACION: ItemNavegacion[] = [
   // { href: '/recibos', label: 'Recibos', icon: Receipt, grupo: 'CAJA', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
   { href: '/historico', label: 'Históricos', icon: Receipt, grupo: 'CAJA', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
 
+  { href: '/cancelados', label: 'Cancelar recibo', icon: Ban, grupo: 'CAJA', roles: ['ADMIN', 'CAJA'] },
 
   // ✅ Utilidades
-  { href: '/verificar', label: 'Verificar QR', icon: QrCode, grupo: 'UTILIDADES', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
+  { href: '/verificar', label: 'Verificar QR', icon: QrCode, grupo: 'UTILIDADES', roles: ['ADMIN', 'CAJA',] },
 
   // ✅ Sistema (solo ADMIN)
   { href: '/configuracion', label: 'Configuración', icon: Settings, grupo: 'SISTEMA', roles: ['ADMIN'] },

@@ -74,6 +74,9 @@ export const API = {
     qr: (id: number) => `/api/recibos/${id}/qr`,
     validarQr: (qrPayload: string) =>
       `/api/recibos/validar-qr?qrPayload=${encodeURIComponent(qrPayload)}`,
+    // ✅ NUEVO: cancelar recibo (Swagger: POST /api/recibos/{reciboId}/cancelar?motivo=...)
+    cancelar: (reciboId: number, motivo: string) =>
+      `/api/recibos/${reciboId}/cancelar?motivo=${encodeURIComponent(motivo)}`,
   },
 
   /* ─────────────────────────────────────────
@@ -82,9 +85,10 @@ export const API = {
   aux: {
     recibosPreviosCount: '/api/aux/recibos-previos/count',
   },
-  
+
     historico: {
     recibos: '/api/alumnos/filter', // ✅ GET (sin params)
   },
+  
 
 } as const;
