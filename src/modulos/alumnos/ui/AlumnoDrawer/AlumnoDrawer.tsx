@@ -1,7 +1,7 @@
 // src/modulos/alumnos/ui/AlumnoDrawer/AlumnoDrawer.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import s from './AlumnoDrawer.module.css';
@@ -51,10 +51,12 @@ export default function AlumnoDrawer({
   open,
   alumno,
   onClose,
+  readOnly = false,
 }: {
   open: boolean;
   alumno: Alumno | null;
   onClose: () => void;
+  readOnly?: boolean; // ✅ NUEVO
 }) {
   if (!open) return null;
 
@@ -71,16 +73,23 @@ export default function AlumnoDrawer({
         {!alumno ? (
           <div className={s.empty}>Sin selección.</div>
         ) : (
-          <AlumnoDrawerInner key={alumno.alumnoId} alumno={alumno} />
+          <AlumnoDrawerInner key={alumno.alumnoId} alumno={alumno} readOnly={readOnly} />
         )}
       </aside>
     </div>
   );
 }
 
-function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
+function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boolean }) {
   const d = useAlumnoDrawerData({ alumno });
   const router = useRouter();
+
+  const canWrite = !readOnly;
+
+  // ✅ CONSULTOR: si intenta caer en EXTRAS, lo regresamos
+  useEffect(() => {
+    if (!canWrite && d.tab === 'EXTRAS') d.setTab('PAGOS');
+  }, [canWrite, d]);
 
   // =========================
   // MODAL PAGO (PROYECCIÓN)
@@ -110,18 +119,14 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
     }
   }
 
-  /**
-   * Cachea un recibo a partir de pagos reales:
-   * - Normaliza qrPayload (por si llega como qrPayLoad)
-   * - Agrega matricula + carreraNombre para que el print page no quede en "—"
-   */
   function cacheFromPagosReales(reciboId: number) {
     try {
       const p = d.pagosReales.find((x) => x.reciboId === reciboId);
       if (!p) return;
 
-      const qr =
-        (p.qrPayload ?? p.qrPayLoad ?? '').toString().trim() || undefined;
+      const qr = (p.qrPayload ?? (p as unknown as { qrPayLoad?: unknown }).qrPayLoad ?? '')
+        .toString()
+        .trim() || undefined;
 
       const dto: ReciboDTO = {
         reciboId: p.reciboId,
@@ -142,13 +147,12 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
 
         cancelado: !!p.cancelado,
 
-        // ✅ extras para impresión
         matricula: d.matricula,
         carreraNombre: d.carNombre,
 
-        // ✅ normalizado
         qrPayload: qr,
       };
+
       cacheReciboForPrint(dto);
     } catch {
       // ignore
@@ -191,9 +195,14 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
   }
 
   // =========================
-  // CREAR EXTRA
+  // CREAR EXTRA (solo ADMIN/CAJA)
   // =========================
   async function onAddExtra() {
+    if (!canWrite) {
+      setExtraError('No tienes permisos para registrar pagos extras (solo lectura).');
+      return;
+    }
+
     setExtraError(null);
 
     const conceptOk = extraConcept.trim().length >= 3;
@@ -222,8 +231,6 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
 
       const created = await RecibosService.create(payload);
 
-      // ✅ created viene como ReciboDTO; ya trae alumnoNombre, etc.
-      //    Si el back no trae matricula/carrera, al menos esto cachea el recibo.
       cacheReciboForPrint({
         ...created,
         matricula: created.matricula ?? d.matricula,
@@ -255,6 +262,8 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
       />
 
       <StickySummary totals={d.totals} />
+
+      {/* ✅ puedes dejar tabs igual, pero CONSULTOR no entra a EXTRAS por el efecto */}
       <DrawerTabs tab={d.tab} onChange={d.setTab} />
 
       {d.loading ? <div className={s.mutedBox}>Cargando…</div> : null}
@@ -276,7 +285,9 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
       {d.tab === 'PROYECCION' ? (
         <ProyeccionPanel
           rows={d.projection}
+          // ✅ CONSULTOR: NO abre el modal
           onPay={(row) => {
+            if (!canWrite) return;
             setPayRow(row);
             setPayOpen(true);
           }}
@@ -287,7 +298,8 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
 
       {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
 
-      {d.tab === 'EXTRAS' ? (
+      {/* ✅ EXTRAS solo ADMIN/CAJA */}
+      {d.tab === 'EXTRAS' && canWrite ? (
         <>
           {extraError ? <div className={s.errorBox}>{extraError}</div> : null}
 
@@ -306,37 +318,40 @@ function AlumnoDrawerInner({ alumno }: { alumno: Alumno }) {
         </>
       ) : null}
 
-      <PayModal
-        open={payOpen}
-        row={payRow}
-        alumnoId={d.alumnoId}
-        onClose={() => {
-          if (paySaving) return;
-          setPayOpen(false);
-          setPayRow(null);
-        }}
-        onSubmit={async (payload) => {
-          setPaySaving(true);
-          try {
-            const created = await RecibosService.create(payload);
-
-            cacheReciboForPrint({
-              ...created,
-              matricula: created.matricula ?? d.matricula,
-              carreraNombre: created.carreraNombre ?? d.carNombre,
-              qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
-            });
-
-            await d.reload();
-
+      {/* ✅ PayModal solo ADMIN/CAJA */}
+      {canWrite ? (
+        <PayModal
+          open={payOpen}
+          row={payRow}
+          alumnoId={d.alumnoId}
+          onClose={() => {
+            if (paySaving) return;
             setPayOpen(false);
             setPayRow(null);
-            d.setTab('PAGOS');
-          } finally {
-            setPaySaving(false);
-          }
-        }}
-      />
+          }}
+          onSubmit={async (payload) => {
+            setPaySaving(true);
+            try {
+              const created = await RecibosService.create(payload);
+
+              cacheReciboForPrint({
+                ...created,
+                matricula: created.matricula ?? d.matricula,
+                carreraNombre: created.carreraNombre ?? d.carNombre,
+                qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
+              });
+
+              await d.reload();
+
+              setPayOpen(false);
+              setPayRow(null);
+              d.setTab('PAGOS');
+            } finally {
+              setPaySaving(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
