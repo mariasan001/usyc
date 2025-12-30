@@ -6,8 +6,7 @@
 // ✅ Sin `any`
 
 import { ApiError, type ApiErrorPayload } from './api.errors';
-
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+import { API_BASE_URL } from './api.config';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -58,7 +57,7 @@ function pickErrorMessage(payload: ApiErrorPayload | undefined, status: number, 
 }
 
 export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const url = joinUrl(BASE, path);
+  const url = joinUrl(API_BASE_URL, path);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -71,9 +70,7 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     signal: opts.signal,
     cache: 'no-store',
-
-    // ✅ CLAVE: cookies (login/me/logout)
-    credentials: 'include',
+    credentials: 'include', // ✅ cookies auth
   });
 
   if (!res.ok) {

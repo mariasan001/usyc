@@ -1,5 +1,7 @@
 import { api } from '@/lib/api/api.client';
 import { API } from '@/lib/api/api.routes';
+import { qs } from '@/lib/api/api.qs';
+
 import type { Alumno, AlumnoCreate, Page } from '../types/alumno.types';
 import type { RecibosPreviosCountResponse } from '../types/recibos-previos.types';
 
@@ -9,20 +11,6 @@ export type AlumnosListParams = {
   sort?: string | string[]; // ej "nombreCompleto,asc" o ["nombreCompleto,asc","matricula,desc"]
 };
 
-function qs(params?: Record<string, any>) {
-  const sp = new URLSearchParams();
-  if (!params) return '';
-
-  Object.entries(params).forEach(([k, v]) => {
-    if (v === undefined || v === null || v === '') return;
-    if (Array.isArray(v)) v.forEach((x) => sp.append(k, String(x)));
-    else sp.set(k, String(v));
-  });
-
-  const q = sp.toString();
-  return q ? `?${q}` : '';
-}
-
 export const AlumnosService = {
   // POST /api/alumnos
   create: (payload: AlumnoCreate) =>
@@ -30,9 +18,9 @@ export const AlumnosService = {
 
   // GET /api/alumnos/{alumnoId}
   getById: (alumnoId: string) =>
-    api<Alumno>(`${API.alumnos.base}/${encodeURIComponent(alumnoId)}`),
+    api<Alumno>(API.alumnos.byId(alumnoId)),
 
-  // GET /api/alumnos?page=0&size=20&sort=nombreCompleto,asc
+  // GET /api/alumnos?page=0&size=20&sort=...
   list: (params?: AlumnosListParams) => {
     const safe: AlumnosListParams = {
       page: params?.page ?? 0,
@@ -43,9 +31,9 @@ export const AlumnosService = {
     return api<Page<Alumno>>(`${API.alumnos.base}${qs(safe)}`);
   },
 
-  // ✅ GET /api/aux/recibos-previos/count?nombre=...
-  countRecibosPreviosByNombre: (nombreCompleto: string) => {
-    const url = `${API.aux.recibosPreviosCount}${qs({ nombre: nombreCompleto })}`;
-    return api<RecibosPreviosCountResponse>(url);
-  },
+  // GET /api/aux/recibos-previos/count?nombre=...
+  countRecibosPreviosByNombre: (nombreCompleto: string) =>
+    api<RecibosPreviosCountResponse>(
+      `${API.aux.recibosPreviosCount}${qs({ nombre: nombreCompleto })}`,
+    ),
 };

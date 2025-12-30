@@ -53,8 +53,8 @@ export default function AlumnoRow({
       <div className={`${s.cell} ${s.oneLine}`} data-label="Escolaridad" title={escolaridadNombre}>
         {escolaridadNombre}
       </div>
-
-      <div className={`${s.cell} ${s.twoLines}`} data-label="Programa" title={programaNombre}>
+      
+      <div className={`${s.cell} ${s.oneLine}`} data-label="Programa" title={programaNombre}>
         {programaNombre}
       </div>
 

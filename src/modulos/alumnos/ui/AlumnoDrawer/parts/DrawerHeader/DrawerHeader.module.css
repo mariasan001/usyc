@@ -1,98 +1,44 @@
 /* src/modulos/alumnos/ui/AlumnoDrawer/parts/DrawerHeader/DrawerHeader.module.css */
 
 .header{
-  position: sticky;
-  top: 0;
-  z-index: 20;
-
-  display: flex;
-  align-items: center;
+  display:flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
 
-  padding: 14px 14px 12px;
-  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid #eef1f7;
+  background: #fff;
 }
 
-.headerText{
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+.headerText{ min-width: 0; }
 
 .title{
   font-size: 14px;
-  font-weight: 750;
-  letter-spacing: -0.01em;
-  color: #0f172a;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  color:#0f172a;
 }
 
 .subtitle{
+  margin-top: 3px;
   font-size: 12px;
-  color: rgba(15, 23, 42, 0.70);
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color:#6b7280;
+  line-height: 1.25;
 }
 
 .close{
   width: 36px;
   height: 36px;
-  flex: 0 0 36px;
-
-  display: grid;
-  place-items: center;
-
   border-radius: 12px;
-  border: 1px solid rgba(17, 24, 39, 0.10);
-  background: rgba(255, 255, 255, 0.9);
-
-  color: rgba(15, 23, 42, 0.85);
-  font-size: 16px;
-  line-height: 1;
-
+  border: 1px solid #e7ebf3;
+  background: #fff;
   cursor: pointer;
-
-  transition: transform .12s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+  font-weight: 950;
+  color:#0f172a;
+  display:grid;
+  place-items:center;
 }
 
-.close:hover{
-  background: #ffffff;
-  border-color: rgba(17, 24, 39, 0.16);
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.10);
-  transform: translateY(-1px);
-}
-
-.close:active{
-  transform: translateY(0px) scale(0.98);
-  box-shadow: none;
-}
-
-.close:focus-visible{
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
-  border-color: rgba(99, 102, 241, 0.35);
-}
-
-/* Si el drawer es angosto, reduce un poco paddings */
-@media (max-width: 520px){
-  .header{
-    padding: 12px 12px 10px;
-  }
-  .close{
-    width: 34px;
-    height: 34px;
-    flex-basis: 34px;
-    border-radius: 11px;
-  }
-}
+.close:hover{ background:#f7f9fd; }
+.close:active{ transform: translateY(1px); }

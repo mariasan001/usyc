@@ -5,45 +5,37 @@
   grid-template-columns:
     minmax(220px, 1.4fr)  /* Alumno */
     minmax(120px, .9fr)   /* Escolaridad */
-    minmax(140px, 1fr)    /* Programa */
-    minmax(140px, .9fr)   /* Plantel */
+    minmax(220px, 1.3fr)  /* Programa */
+    minmax(160px, .9fr)   /* Plantel */
     minmax(105px, .7fr)   /* Ingreso */
     minmax(105px, .7fr)   /* Término */
     minmax(110px, .7fr)   /* Estado */
     88px;                 /* Acciones */
 
-  gap: 10px;
+  column-gap: 12px;
+  row-gap: 10px;
   padding: 10px 12px;
   border-top: 1px solid #eef1f7;
   align-items: center;
   min-width: 0;
 }
 
+/* Base cells */
 .cell,
 .cellMono{
-  font-size: 12px;
+  font-size: 11px;     /* 🔻 más pequeño */
   color:#111827;
   min-width: 0;
 }
 
-.cellMono{ font-variant-numeric: tabular-nums; }
-
-.oneLine{
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.cellMono{
+  font-variant-numeric: tabular-nums;
 }
 
-.twoLines{
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  word-break: break-word;
-}
-
+/* Asegura que el contenedor de Alumno recorte a fuerza */
 .cellMain{
   min-width: 0;
+  overflow: hidden;      /* ✅ CLAVE para que el ellipsis aparezca */
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -51,20 +43,96 @@
 
 .name{
   font-weight: 900;
-  font-size: 12px;
+  font-size: 11px;   /* 🔻 más pequeño */
   color:#111827;
 }
-
+/* Asegura que los textos “acepten” el recorte */
+.name,
 .matricula{
-  font-size: 11px;
+  display: block;        /* ✅ */
+  max-width: 100%;       /* ✅ */
+}
+.matricula{
+  font-size: 10px;   /* 🔻 más pequeño */
   color:#6b7280;
   font-variant-numeric: tabular-nums;
+}
+
+/* Ellipsis helpers */
+.oneLine{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Lo dejamos por si lo usas en móvil, pero en desktop "Programa" lo forzamos a 1 línea */
+.twoLines{
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  line-height: 1.2;
+  max-height: calc(1.2em * 2);
+}
+
+/* ─────────────────────────────────────────
+   Formato de texto por columnas (Desktop/Tablet)
+   Orden fijo de children en la row:
+   1 Alumno | 2 Escolaridad | 3 Programa | 4 Plantel | 5 Ingreso | 6 Término | 7 Estado | 8 Acciones
+───────────────────────────────────────── */
+
+/* Escolaridad: Capitalizado (aunque venga en MAYÚSCULAS) */
+.row > :nth-child(2){
+  text-transform: capitalize;
+}
+
+/* Programa: Capitalizado + 1 línea con "..." */
+.row > :nth-child(3){
+  text-transform: capitalize;
+
+  /* fuerza 1 línea con ... (aunque tenga clase twoLines) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  display: block;
+  max-height: none;
+}
+
+/* Plantel: Capitalizado + centrado */
+.row > :nth-child(4){
+  text-transform: capitalize;
+  text-align: center;
+  justify-self: center;
+  min-width: 0;
+}
+
+/* Ingreso y Término: centrados */
+.row > :nth-child(5),
+.row > :nth-child(6){
+  text-align: center;
+  justify-self: center;
+}
+
+/* Estado: centrado */
+.row > :nth-child(7){
+  text-align: center;
+  justify-self: center;
+}
+
+/* Acciones: centradas */
+.actions{
+  display: flex;
+  justify-content: center; /* ✅ antes estaba end */
+  min-width: 0;
 }
 
 /* Estado pill */
 .pill{
   display:inline-flex;
   align-items:center;
+  justify-content: center;
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 11px;
@@ -85,13 +153,7 @@
   color: #374151;
 }
 
-/* Acciones */
-.actions{
-  display: flex;
-  justify-content: flex-end;
-  min-width: 0;
-}
-
+/* Botón */
 .btn{
   height: 34px;
   border-radius: 12px;
@@ -110,13 +172,13 @@
 @media (max-width: 980px){
   .row{
     grid-template-columns:
-      minmax(220px, 1.6fr)
-      minmax(120px, 1fr)
-      minmax(140px, 1fr)
-      minmax(140px, 1fr)
-      minmax(105px, .8fr)
-      minmax(105px, .8fr)
-      88px;
+      minmax(220px, 1.6fr)   /* Alumno */
+      minmax(120px, 1fr)     /* Escolaridad */
+      minmax(220px, 1.2fr)   /* Programa */
+      minmax(160px, 1fr)     /* Plantel */
+      minmax(105px, .8fr)    /* Ingreso */
+      minmax(105px, .8fr)    /* Término */
+      88px;                  /* Acciones */
   }
 }
 
@@ -128,6 +190,15 @@
     padding: 12px;
     border-top: 0;
     border-bottom: 1px solid #eef1f7;
+  }
+
+  /* En móvil ya no centramos por columna */
+  .row > :nth-child(4),
+  .row > :nth-child(5),
+  .row > :nth-child(6),
+  .row > :nth-child(7){
+    text-align: left;
+    justify-self: auto;
   }
 
   .actions{
@@ -153,6 +224,15 @@
 
   .twoLines{
     -webkit-line-clamp: unset;
+    display: block;
+    max-height: none;
+  }
+
+  /* Programa en móvil sí puede ocupar varias líneas */
+  .row > :nth-child(3){
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
     display: block;
   }
 }

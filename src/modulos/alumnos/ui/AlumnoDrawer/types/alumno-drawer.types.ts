@@ -25,17 +25,15 @@ export type PagoRealRow = {
   cancelado: boolean;
   alumnoNombre?: string;
 };
-
 export type Totals = {
   totalPlan: number;
   totalPagado: number;
   saldo: number;
 
-  totalInscripcion: number;
-
   pagados: number;
   pendientes: number;
   vencidos: number;
 
-  nextDue: ProjectionRow | null;
+  // ✅ nuevo: extras (opcional)
+  totalExtras?: number;
 };

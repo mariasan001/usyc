@@ -1,150 +1,88 @@
-/* src/modulos/alumnos/ui/AlumnoDrawer/parts/panels/ResumenPanel.module.css */
+/* src/modulos/alumnos/ui/AlumnoDrawer/panels/ResumenPanel/ResumenPanel.module.css */
 
 .panel{
-  padding: 14px;
-  border-radius: 18px;
-
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  background: rgba(255, 255, 255, 0.80);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  margin-top: 32px;
 }
 
 .titleRow{
-  display: flex;
+  display:flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-
-  padding: 2px 2px 12px;
-  border-bottom: 1px dashed rgba(15, 23, 42, 0.10);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .title{
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  color: #0f172a;
+  font-size: 13px;
+  font-weight: 950;
+  color:#0f172a;
 }
 
 .hint{
   font-size: 12px;
-  font-weight: 650;
-  color: rgba(15, 23, 42, 0.64);
+  color:#6b7280;
 }
 
-/* Grid principal */
 .grid{
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-/* Cards internas */
 .card{
-  min-width: 0;
+  border: 1px solid #eef1f7;
+  background: #fff;
   border-radius: 16px;
-
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(15, 23, 42, 0.02);
-
-  padding: 12px;
-
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+  padding: 12px 12px;
+  min-width: 0;
 }
 
 .cardTitle{
-  font-size: 12px;
-  font-weight: 850;
-  letter-spacing: 0.02em;
+  font-size: 11px;
+  font-weight: 950;
+  color:#6b7280;
   text-transform: uppercase;
-  color: rgba(15, 23, 42, 0.72);
-
+  letter-spacing: .03em;
   margin-bottom: 10px;
 }
 
-/* Key/Value */
 .kv{
-  display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
   gap: 10px;
 
   padding: 7px 0;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-top: 1px dashed #eef1f7;
 }
 
-.kv:last-child{
-  border-bottom: none;
-}
+.kv:first-of-type{ border-top: 0; }
 
 .kv span{
   font-size: 12px;
-  font-weight: 650;
-  color: rgba(15, 23, 42, 0.62);
+  color:#6b7280;
+  font-weight: 800;
 }
 
 .kv b{
-  font-size: 12.5px;
-  font-weight: 850;
-  color: #0f172a;
+  max-width: 70%;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 950;
+  color:#0f172a;
 
-  min-width: 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* Monospace pill para números/fechas */
 .mono{
+  font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-weight: 850;
-
-  display: inline-flex;
-  align-items: center;
-
-  padding: 3px 8px;
-  border-radius: 999px;
-
-  background: rgba(15, 23, 42, 0.04);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-/* Responsive */
-@media (max-width: 900px){
-  .grid{
-    grid-template-columns: 1fr;
-  }
-
-  .kv{
-    grid-template-columns: 120px minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 520px){
-  .panel{
-    padding: 12px;
-  }
-
-  .titleRow{
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .kv{
-    grid-template-columns: 1fr;
-    gap: 6px;
-  }
-
-  .kv b{
-    white-space: normal;
-    word-break: break-word;
-  }
+/* responsive */
+@media (max-width: 980px){
+  .grid{ grid-template-columns: 1fr; }
+  .kv b{ max-width: 60%; }
 }
