@@ -3,11 +3,12 @@
 import { useMemo } from 'react';
 
 import s from './AlumnoFiltersBar.module.css';
-import { useEscolaridades } from '@/modulos/configuraciones/hooks';
+import { useEscolaridades, usePlanteles } from '@/modulos/configuraciones/hooks';
 
 export type AlumnoFilters = {
   q: string;
   escolaridadId: number | 'ALL';
+  plantelId: number | 'ALL';
   fechaIngresoDesde?: string;
   fechaIngresoHasta?: string;
 };
@@ -22,26 +23,39 @@ type Props = {
   onRefresh: () => void;
 };
 
-/**
- * Barra de filtros: Directorio de alumnos
- * - Búsqueda por nombre o matrícula
- * - Filtro por escolaridad (API)
- * - Rango de fecha de ingreso
- * - Botón Refrescar
- *
- * Nota:
- * - Aquí NO hacemos debounce. Debounce debe vivir en el hook que consulta (useAlumnos),
- *   para evitar problemas de renders y mantener UI simple.
- */
+/** Soporta hooks que expongan `isLoading` o `loading` */
+type LoadingShape = { isLoading?: boolean; loading?: boolean };
+
+function getLoading(x: LoadingShape): boolean {
+  if ('isLoading' in x && typeof x.isLoading === 'boolean') return x.isLoading;
+  if ('loading' in x && typeof x.loading === 'boolean') return x.loading;
+  return false;
+}
+
 export default function AlumnoFiltersBar({ filters, onChange, onRefresh }: Props) {
   const escolaridadesApi = useEscolaridades({ soloActivos: true });
+  const plantelesApi = usePlanteles({ soloActivos: true });
 
-  const escolaridadesOptions = useMemo(() => {
-    return (escolaridadesApi.items ?? []).map((e) => ({
-      value: e.id,
-      label: e.nombre,
-    }));
-  }, [escolaridadesApi.items]);
+  const escolaridadesLoading = getLoading(escolaridadesApi);
+  const plantelesLoading = getLoading(plantelesApi);
+
+  const escolaridadesOptions = useMemo(
+    () =>
+      (escolaridadesApi.items ?? []).map((e) => ({
+        value: Number(e.id),
+        label: e.nombre,
+      })),
+    [escolaridadesApi.items],
+  );
+
+  const plantelesOptions = useMemo(
+    () =>
+      (plantelesApi.items ?? []).map((p) => ({
+        value: Number(p.id),
+        label: p.name,
+      })),
+    [plantelesApi.items],
+  );
 
   return (
     <div className={s.bar}>
@@ -52,6 +66,7 @@ export default function AlumnoFiltersBar({ filters, onChange, onRefresh }: Props
         onChange={(e) => onChange((prev) => ({ ...prev, q: e.target.value }))}
       />
 
+      {/* Escolaridad */}
       <select
         className={s.select}
         value={String(filters.escolaridadId)}
@@ -62,10 +77,10 @@ export default function AlumnoFiltersBar({ filters, onChange, onRefresh }: Props
             escolaridadId: v === 'ALL' ? 'ALL' : Number(v),
           }));
         }}
-        disabled={escolaridadesApi.isLoading}
+        disabled={escolaridadesLoading}
       >
         <option value="ALL">
-          {escolaridadesApi.isLoading ? 'Cargando escolaridades…' : 'Todas las escolaridades'}
+          {escolaridadesLoading ? 'Cargando escolaridades…' : 'Todas las escolaridades'}
         </option>
 
         {escolaridadesOptions.map((x) => (
@@ -75,6 +90,31 @@ export default function AlumnoFiltersBar({ filters, onChange, onRefresh }: Props
         ))}
       </select>
 
+      {/* Plantel */}
+      <select
+        className={s.select}
+        value={String(filters.plantelId)}
+        onChange={(e) => {
+          const v = e.target.value;
+          onChange((prev) => ({
+            ...prev,
+            plantelId: v === 'ALL' ? 'ALL' : Number(v),
+          }));
+        }}
+        disabled={plantelesLoading}
+      >
+        <option value="ALL">
+          {plantelesLoading ? 'Cargando planteles…' : 'Todos los planteles'}
+        </option>
+
+        {plantelesOptions.map((x) => (
+          <option key={x.value} value={String(x.value)}>
+            {x.label}
+          </option>
+        ))}
+      </select>
+
+      {/* Rango fecha ingreso */}
       <div className={s.dateWrap}>
         <input
           className={s.date}

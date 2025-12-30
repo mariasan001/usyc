@@ -23,15 +23,6 @@ type Props = {
   onPageChange: (page: number) => void;
 };
 
-/**
- * Card: Directorio de alumnos
- * - UI/composición: NO calcula término aquí.
- * - Tabla: header fijo + body scrolleable.
- * - Paginación: simple (prev/next).
- *
- * Nota:
- * - “Término” se calcula en `AlumnoRow` porque depende de duración de carrera/programa.
- */
 export default function AlumnosTableCard({
   pageData,
   loading,
@@ -73,6 +64,7 @@ export default function AlumnosTableCard({
           <div>Alumno</div>
           <div>Escolaridad</div>
           <div>Programa</div>
+          <div>Plantel</div>
           <div>Ingreso</div>
           <div>Término</div>
           <div>Estado</div>

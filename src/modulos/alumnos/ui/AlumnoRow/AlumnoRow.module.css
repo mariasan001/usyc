@@ -3,20 +3,20 @@
 .row{
   display:grid;
   grid-template-columns:
-    minmax(220px, 1.4fr)
-    minmax(120px, .9fr)
-    minmax(140px, 1fr)
-    minmax(105px, .7fr)
-    minmax(105px, .7fr)
-    minmax(110px, .7fr)
-    88px;
+    minmax(220px, 1.4fr)  /* Alumno */
+    minmax(120px, .9fr)   /* Escolaridad */
+    minmax(140px, 1fr)    /* Programa */
+    minmax(140px, .9fr)   /* Plantel */
+    minmax(105px, .7fr)   /* Ingreso */
+    minmax(105px, .7fr)   /* Término */
+    minmax(110px, .7fr)   /* Estado */
+    88px;                 /* Acciones */
 
   gap: 10px;
   padding: 10px 12px;
   border-top: 1px solid #eef1f7;
   align-items: center;
-
-  min-width: 0; /* 🔥 clave */
+  min-width: 0;
 }
 
 .cell,
@@ -26,11 +26,8 @@
   min-width: 0;
 }
 
-.cellMono{
-  font-variant-numeric: tabular-nums;
-}
+.cellMono{ font-variant-numeric: tabular-nums; }
 
-/* ✅ helpers para textos largos */
 .oneLine{
   white-space: nowrap;
   overflow: hidden;
@@ -81,12 +78,8 @@
   border-color: #c8f0d2;
   color: #1f6b2d;
 }
-.pill_POR_VENCER{
-  background: #fff7ed;
-  border-color: #fed7aa;
-  color: #9a3412;
-}
-.pill_EGRESADO{
+
+.pill_INACTIVO{
   background: #f3f4f6;
   border-color: #e5e7eb;
   color: #374151;
@@ -94,7 +87,8 @@
 
 /* Acciones */
 .actions{
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
   min-width: 0;
 }
 
@@ -107,11 +101,10 @@
   cursor:pointer;
   font-weight: 900;
   font-size: 12px;
+  white-space: nowrap;
 }
 
-.btn:hover{
-  background: #f7f9fd;
-}
+.btn:hover{ background: #f7f9fd; }
 
 /* ✅ Tablet */
 @media (max-width: 980px){
@@ -120,8 +113,9 @@
       minmax(220px, 1.6fr)
       minmax(120px, 1fr)
       minmax(140px, 1fr)
+      minmax(140px, 1fr)
       minmax(105px, .8fr)
-      minmax(110px, .8fr)
+      minmax(105px, .8fr)
       88px;
   }
 }
@@ -137,11 +131,10 @@
   }
 
   .actions{
-    text-align: left;
+    justify-content: flex-start;
     padding-top: 6px;
   }
 
-  /* Mostrar etiquetas por celda */
   .cell::before,
   .cellMono::before{
     content: attr(data-label);
@@ -152,7 +145,6 @@
     margin-bottom: 2px;
   }
 
-  /* En móvil sí dejamos que el texto respire */
   .oneLine{
     white-space: normal;
     overflow: visible;
