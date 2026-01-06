@@ -1,13 +1,15 @@
 // src/modulos/configuraciones/ui/catalogo-modal/hooks/useCatalogoModal.ts
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { CatalogoModalProps, FlagsCatalogoModal, FormState } from '../types/catalogoModal.types';
 
 import { getTituloCatalogoModal } from '../utils/catalogoModal.titulo';
 import { getFormularioInicial } from '../utils/catalogoModal.formulario';
 import { buildPayloadCatalogo } from '../utils/catalogoModal.payload';
+import { CarrerasService } from '@/modulos/configuraciones/services/carreras.service';
+import { nextCarreraId } from '../utils/carreras.nextId';
 
 /**
  * Hook central del modal:
@@ -123,6 +125,32 @@ export function useCatalogoModal(props: CatalogoModalProps) {
     await onSave(payload);
   }
 
+  useEffect(() => {
+  let alive = true;
+
+  async function ensureCarreraId() {
+    if (catalog !== 'carreras') return;
+    if (props.mode !== 'create') return;
+
+    // si ya tiene, no lo pises
+    if (String(form.carreraId ?? '').trim()) return;
+
+    // importante: traer también inactivos para no reciclar IDs
+    const all = await CarrerasService.list({ soloActivos: false });
+
+    const nextId = nextCarreraId(all.map((c) => c.carreraId));
+    if (!alive) return;
+
+    setCampo('carreraId', nextId);
+  }
+
+  void ensureCarreraId();
+
+  return () => {
+    alive = false;
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [catalog, props.mode]);
   return {
     titulo,
     escolaridadesOrdenadas,

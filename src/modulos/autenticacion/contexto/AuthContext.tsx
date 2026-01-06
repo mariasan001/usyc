@@ -18,8 +18,7 @@ import { guardarSesion, leerSesion, limpiarSesion } from '../utils/sesion.utils'
 import { destinoPorUsuario } from '../utils/redireccion.utils';
 
 /** Roles válidos hoy (si mañana crecen, agregas aquí y en tipos) */
-const ROLES_VALIDOS: RolUsuario[] = ['ADMIN', 'CAJA', 'CONSULTOR'];
-
+const ROLES_VALIDOS: RolUsuario[] = ['ADMIN', 'CAJERO', 'LECTOR'];
 /** Normaliza roles: asegura RolUsuario[] aunque backend mande strings */
 function normalizarRoles(input: unknown): RolUsuario[] {
   if (!Array.isArray(input)) return [];

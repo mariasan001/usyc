@@ -99,7 +99,21 @@ export const API = {
         plantelId: plantelId ?? undefined,
       }),
   },
-
+  /* ─────────────────────────────────────────
+   * Admin
+   * ───────────────────────────────────────── */
+  admin: {
+    /**
+     * Usuarios (Swagger: Admin - Usuarios)
+     * - POST /api/admin/users                -> crear usuario
+     * - POST /api/admin/users/{userId}/password -> cambiar contraseña
+     */
+    usuarios: {
+      crear: '/api/admin/users',
+      cambiarContrasena: (userId: number) =>
+        `/api/admin/users/${encodeURIComponent(String(userId))}/password`,
+    },
+  },
   /* ─────────────────────────────────────────
    * Auxiliares
    * ───────────────────────────────────────── */

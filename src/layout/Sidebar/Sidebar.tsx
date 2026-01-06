@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import clsx from 'clsx';
 
 import s from './Sidebar.module.css';
@@ -21,26 +21,28 @@ import type { RolUsuario } from '@/modulos/autenticacion/tipos/autenticacion.tip
 
 const EMPTY_ROLES: RolUsuario[] = [];
 
+/** Ajusta a tus roles reales (si ya los cambiaste a CAJERO/LECTOR, ponlos aquí) */
 function normalizarRoles(input: unknown): RolUsuario[] {
-  // ✅ Esto evita el error de tipos y también cuida runtime
-  const allowed: RolUsuario[] = ['ADMIN', 'CAJA', 'CONSULTOR'];
+  const allowed: RolUsuario[] = ['ADMIN', 'CAJERO', 'LECTOR']; // ✅
 
   if (!Array.isArray(input)) return EMPTY_ROLES;
 
-  const roles = input.filter((r): r is RolUsuario => typeof r === 'string' && allowed.includes(r as RolUsuario));
+  const roles = input.filter(
+    (r): r is RolUsuario => typeof r === 'string' && allowed.includes(r as RolUsuario),
+  );
+
   return roles.length ? roles : EMPTY_ROLES;
 }
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
 
   const { collapsed, animating, toggle } = useSidebarColapso();
 
   // ✅ fuente única
-  const { usuario, isAutenticado, logout } = useAuth();
+  const { usuario, isAutenticado, logout, cargando } = useAuth();
 
-  // ✅ roles estable (ya no se crea [] nuevo por render)
+  // ✅ roles estable
   const roles = useMemo(() => normalizarRoles(usuario?.roles), [usuario?.roles]);
 
   const groups = useMemo(() => {
@@ -49,9 +51,13 @@ export default function Sidebar() {
     return agruparPorSeccion(items);
   }, [isAutenticado, roles]);
 
-  function cerrarSesion() {
-    logout();
-    router.push('/iniciar-sesion');
+  // ✅ 1 sola navegación: la hace logout() (AuthContext)
+  async function cerrarSesion(e?: React.MouseEvent) {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+
+    if (cargando) return;
+    await logout();
   }
 
   const subtitle = usuario?.plantelName ? `Sede: ${usuario.plantelName}` : 'Control escolar';

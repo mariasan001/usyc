@@ -1,8 +1,6 @@
 // src/modulos/autenticacion/tipos/autenticacion.tipos.ts
-
-// Roles conocidos por el front (pueden crecer después)
-export type RolUsuario = 'ADMIN' | 'CAJA' | 'CONSULTOR';
-
+// Roles conocidos por el front (alineados a BD / backend)
+export type RolUsuario = 'ADMIN' | 'CAJERO' | 'LECTOR';
 // Credenciales que envía el formulario
 export type CredencialesInicioSesion = {
   usuario: string;

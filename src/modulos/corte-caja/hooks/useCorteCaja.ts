@@ -1,23 +1,17 @@
-// src/modulos/corte-caja/hooks/useCorteCaja.ts
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/modulos/autenticacion/contexto/AuthContext';
 import type { CorteCajaDTO, CorteCajaReciboDTO } from '../types/corte-caja.types';
 import { CorteCajaService } from '../services/useCorteCaja';
 
 type CorteCajaFilters = {
-  /** Fecha del corte (YYYY-MM-DD) */
-  fecha: string;
-
-  /** Plantel opcional. Si viene null => no filtra por plantel */
-  plantelId: number | null;
-
-  /** Buscador local sobre la tabla (no pega al backend) */
-  q: string;
+  fecha: string;              // YYYY-MM-DD
+  plantelId: number | null;   // null = ALL (solo admin)
+  q: string;                  // filtro local
 };
 
 function todayISO(): string {
-  // YYYY-MM-DD en local (suficiente para corte diario)
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -36,28 +30,56 @@ const DEFAULT_FILTERS: CorteCajaFilters = {
 };
 
 export function useCorteCaja() {
+  const { usuario, tieneRol } = useAuth();
+
+  const esAdmin = tieneRol('ADMIN');
+  const plantelUsuarioId = usuario?.plantelId ?? null;
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [data, setData] = useState<CorteCajaDTO | null>(null);
   const [filters, setFilters] = useState<CorteCajaFilters>(DEFAULT_FILTERS);
 
+  /**
+   * ✅ Regla: si NO es admin, forzamos plantelId = plantelUsuarioId
+   * Esto evita que un consultor intente “hackear” el state.
+   */
+  useEffect(() => {
+    if (!usuario) return;
+
+    if (!esAdmin) {
+      // Si no hay plantelId en usuario, no podemos consultar (regla de negocio)
+      if (plantelUsuarioId == null) {
+        setError('Tu usuario no tiene plantel asignado. Contacta a un administrador.');
+        setData(null);
+        return;
+      }
+
+      setFilters((prev) => ({ ...prev, plantelId: plantelUsuarioId }));
+    }
+  }, [usuario, esAdmin, plantelUsuarioId]);
+
   const fetchCorte = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await CorteCajaService.get({
-        fecha: filters.fecha,
-        plantelId: filters.plantelId,
-      });
+      const fecha = filters.fecha;
 
-      // Respuesta defensiva (si algo raro llega)
-      if (!res || typeof res !== 'object') {
-        setData(null);
-        setError('La respuesta del corte de caja llegó vacía o inválida.');
-        return;
+      // ✅ Admin puede mandar null (ALL). No admin => forzado al plantel del usuario.
+      const plantelIdFinal = esAdmin ? filters.plantelId : plantelUsuarioId;
+
+      if (!fecha) throw new Error('Selecciona una fecha válida.');
+
+      if (!esAdmin && plantelIdFinal == null) {
+        throw new Error('Tu usuario no tiene plantel asignado.');
       }
+
+      const res = await CorteCajaService.get({
+        fecha,
+        plantelId: plantelIdFinal,
+      });
 
       setData(res);
     } catch (e) {
@@ -67,12 +89,13 @@ export function useCorteCaja() {
     } finally {
       setLoading(false);
     }
-  }, [filters.fecha, filters.plantelId]);
+  }, [filters.fecha, filters.plantelId, esAdmin, plantelUsuarioId]);
 
-  // Auto-carga al montar y cuando cambien fecha/plantel.
   useEffect(() => {
+    // evita disparar antes de tener usuario para no-admin
+    if (!esAdmin && !usuario) return;
     fetchCorte();
-  }, [fetchCorte]);
+  }, [fetchCorte, esAdmin, usuario]);
 
   const recibosFiltrados = useMemo(() => {
     const items = data?.recibos ?? [];
@@ -80,16 +103,15 @@ export function useCorteCaja() {
     if (!q) return items;
 
     return items.filter((r: CorteCajaReciboDTO) => {
-      const hay =
+      return (
         norm(r.folio).includes(q) ||
         norm(r.folioLegacy).includes(q) ||
         norm(r.alumnoNombre).includes(q) ||
         norm(r.alumnoId).includes(q) ||
         norm(r.concepto).includes(q) ||
         norm(r.estatusDesc).includes(q) ||
-        norm(r.tipoPagoDesc).includes(q);
-
-      return hay;
+        norm(r.tipoPagoDesc).includes(q)
+      );
     });
   }, [data, filters.q]);
 
@@ -104,5 +126,10 @@ export function useCorteCaja() {
     setFilters,
 
     refresh: fetchCorte,
+
+    // ✅ extra: para UI
+    esAdmin,
+    plantelUsuarioId,
+    plantelUsuarioNombre: usuario?.plantelName ?? null,
   };
 }

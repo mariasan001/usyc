@@ -1,0 +1,128 @@
+.page{
+  padding: 18px;
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+}
+
+.header{
+  display:flex;
+  flex-direction:column;
+  gap: 4px;
+}
+
+.title{
+  font-size: 18px;
+  font-weight: 900;
+  color:#101828;
+}
+
+.subtitle{
+  font-size: 13px;
+  color:#5a667f;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 980px){
+  .grid{
+    grid-template-columns: 1.25fr .95fr;
+    align-items:start;
+  }
+}
+
+.alertError,
+.alertOk{
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.alertError{
+  border: 1px solid #f2d6d6;
+  background: #fff5f5;
+  color: #7b1f1f;
+}
+
+.alertOk{
+  border: 1px solid #cfe7d6;
+  background: #f3fbf6;
+  color: #1e5a2f;
+}
+
+.createdBox{
+  border: 1px solid #e7ebf3;
+  background: #fbfcff;
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+.createdTitle{
+  font-weight: 800;
+  color:#1f2a44;
+  margin-bottom: 8px;
+}
+
+.createdGrid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  color:#1f2a44;
+  font-size: 13px;
+}
+
+@media (min-width: 980px){
+  .createdGrid{
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.page{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0; /* clave cuando cambia el sidebar */
+}
+
+.header{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title{
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.subtitle{
+  color: #5b6476;
+  font-size: 13px;
+}
+
+/* ✅ Grid de tarjetas: se adapta con sidebar abierto/cerrado */
+.grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+}
+
+/* cuando el ancho baja (sidebar abierto en pantallas medianas) */
+@media (max-width: 1100px){
+  .grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+.bottom{
+  min-width: 0;
+}

@@ -1,7 +1,3 @@
-
-
-
-// src/app/corte-caja/page.tsx
 'use client';
 
 import AppShell from '@/layout/AppShell/AppShell';
@@ -12,10 +8,22 @@ import CorteCajaFiltersBar from '@/modulos/corte-caja/ui/CorteCajaFiltersBar/Cor
 import CorteCajaTableCard from '@/modulos/corte-caja/ui/CorteCajaTableCard/CorteCajaTableCard';
 
 export default function CorteCajaPage() {
-  const { loading, error, data, recibos, filters, setFilters, refresh } = useCorteCaja();
+  const {
+    loading,
+    error,
+    data,
+    recibos,
+    filters,
+    setFilters,
+    refresh,
+
+    esAdmin,
+    plantelUsuarioId,
+    plantelUsuarioNombre,
+  } = useCorteCaja();
 
   return (
-     <AppShell>
+      <AppShell>
     <main className={s.page}>
       <header className={s.header}>
         <div className={s.title}>Reportes · Corte de caja</div>
@@ -23,12 +31,19 @@ export default function CorteCajaPage() {
       </header>
 
       <section className={s.stack}>
-        <CorteCajaFiltersBar filters={filters} onChange={setFilters} onRefresh={refresh} loading={loading} />
+        <CorteCajaFiltersBar
+          filters={filters}
+          onChange={setFilters}
+          onRefresh={refresh}
+          loading={loading}
+          esAdmin={esAdmin}
+          plantelUsuarioId={plantelUsuarioId}
+          plantelUsuarioNombre={plantelUsuarioNombre}
+        />
 
         <CorteCajaTableCard data={data} recibos={recibos} loading={loading} error={error} />
       </section>
     </main>
     </AppShell>
   );
-  
 }

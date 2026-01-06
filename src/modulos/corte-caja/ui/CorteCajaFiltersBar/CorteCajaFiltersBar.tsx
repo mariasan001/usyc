@@ -1,19 +1,37 @@
-// src/modulos/corte-caja/ui/CorteCajaFiltersBar/CorteCajaFiltersBar.tsx
 'use client';
 
+import { useMemo } from 'react';
 import s from './CorteCajaFiltersBar.module.css';
+
+import { usePlanteles } from '@/modulos/configuraciones/hooks';
 
 export type CorteCajaFiltersUI = {
   fecha: string;
-  plantelId: number | null;
+  plantelId: number | null; // null = ALL (solo admin)
   q: string;
 };
 
 type Updater = CorteCajaFiltersUI | ((prev: CorteCajaFiltersUI) => CorteCajaFiltersUI);
 
-function asIntOrNull(v: string): number | null {
-  const n = Number(v);
-  return Number.isFinite(n) && n >= 0 ? n : null;
+type Props = {
+  filters: CorteCajaFiltersUI;
+  onChange: (next: Updater) => void;
+  onRefresh: () => void;
+  loading?: boolean;
+
+  // ✅ regla por rol
+  esAdmin: boolean;
+  plantelUsuarioId: number | null;
+  plantelUsuarioNombre: string | null;
+};
+
+/** Soporta hooks que expongan `isLoading` o `loading` */
+type LoadingShape = { isLoading?: boolean; loading?: boolean };
+
+function getLoading(x: LoadingShape): boolean {
+  if ('isLoading' in x && typeof x.isLoading === 'boolean') return x.isLoading;
+  if ('loading' in x && typeof x.loading === 'boolean') return x.loading;
+  return false;
 }
 
 export default function CorteCajaFiltersBar({
@@ -21,12 +39,25 @@ export default function CorteCajaFiltersBar({
   onChange,
   onRefresh,
   loading,
-}: {
-  filters: CorteCajaFiltersUI;
-  onChange: (next: Updater) => void;
-  onRefresh: () => void;
-  loading?: boolean;
-}) {
+
+  esAdmin,
+  plantelUsuarioId,
+  plantelUsuarioNombre,
+}: Props) {
+  const plantelesApi = usePlanteles({ soloActivos: true });
+
+  // ✅ aquí está el fix real: ya no usamos plantelesApi.isLoading directo
+  const plantelesLoading = getLoading(plantelesApi);
+
+  const plantelesOptions = useMemo(
+    () =>
+      (plantelesApi.items ?? []).map((p) => ({
+        value: Number(p.id),
+        label: p.name,
+      })),
+    [plantelesApi.items],
+  );
+
   return (
     <div className={s.bar}>
       <div className={s.left}>
@@ -40,15 +71,37 @@ export default function CorteCajaFiltersBar({
           />
         </label>
 
+        {/* ✅ Plantel */}
         <label className={s.field}>
           <span className={s.label}>Plantel</span>
-          <input
-            className={s.input}
-            inputMode="numeric"
-            placeholder="Opcional"
-            value={filters.plantelId ?? ''}
-            onChange={(e) => onChange((prev) => ({ ...prev, plantelId: asIntOrNull(e.target.value) }))}
-          />
+
+          {esAdmin ? (
+            <select
+              className={s.input}
+              value={filters.plantelId == null ? 'ALL' : String(filters.plantelId)}
+              onChange={(e) => {
+                const v = e.target.value;
+                onChange((prev) => ({ ...prev, plantelId: v === 'ALL' ? null : Number(v) }));
+              }}
+              disabled={plantelesLoading}
+            >
+              <option value="ALL">
+                {plantelesLoading ? 'Cargando planteles…' : 'Todos los planteles'}
+              </option>
+
+              {plantelesOptions.map((x) => (
+                <option key={x.value} value={String(x.value)}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select className={s.input} value={String(plantelUsuarioId ?? '')} disabled>
+              <option value={String(plantelUsuarioId ?? '')}>
+                {plantelUsuarioNombre ?? 'Plantel asignado'}
+              </option>
+            </select>
+          )}
         </label>
 
         <label className={s.fieldWide}>

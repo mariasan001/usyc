@@ -10,7 +10,7 @@ export default function SidebarCuenta({
 }: {
   collapsed: boolean;
   animating: boolean;
-  onLogout: () => void;
+  onLogout: (e?: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>;
 }) {
   return (
     <div className={clsx(s.group, s.groupBottom)}>
@@ -18,7 +18,11 @@ export default function SidebarCuenta({
 
       <div className={s.groupItems}>
         <div className={s.itemWrap}>
-          <button type="button" onClick={onLogout} className={clsx(s.item, s.logout)}>
+          <button
+            type="button"
+            onClick={(e) => onLogout(e)} // ✅ pasamos el evento
+            className={clsx(s.item, s.logout)}
+          >
             <span className={s.iconWrap}>
               <LogOut size={18} className={s.icon} />
             </span>
