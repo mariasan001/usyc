@@ -1,11 +1,12 @@
+// src/modulos/corte-caja/ui/CorteCajaTableCard/CorteCajaTableCard.tsx
 'use client';
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Copy, Printer, QrCode, Check, ReceiptText } from 'lucide-react';
+import { Copy, Printer, Check, ReceiptText, BadgeDollarSign, Ban } from 'lucide-react';
 
-import s from './HistoricoTableCard.module.css';
-import type { ReciboHistoricoDTO } from '../../types/historico.types';
+import s from './CorteCajaTableCard.module.css';
+import type { CorteCajaDTO, CorteCajaReciboDTO } from '../../types/corte-caja.types';
 
 function fmtMoney(n: number, currency: string) {
   try {
@@ -26,9 +27,9 @@ function fmtDate(isoLike: string) {
   return new Intl.DateTimeFormat('es-MX', { year: 'numeric', month: 'short', day: '2-digit' }).format(d);
 }
 
-function statusTone(estatusNombre: string, cancelado: boolean) {
+function statusTone(estatusDesc: string, cancelado: boolean) {
   if (cancelado) return 'danger';
-  const t = (estatusNombre ?? '').toLowerCase();
+  const t = (estatusDesc ?? '').toLowerCase();
   if (t.includes('pagado') || t.includes('aplicado') || t.includes('vigente')) return 'ok';
   if (t.includes('pend') || t.includes('por pagar')) return 'warn';
   if (t.includes('cancel')) return 'danger';
@@ -49,12 +50,14 @@ async function copyText(v: string) {
   }
 }
 
-export default function HistoricoTableCard({
-  items,
+export default function CorteCajaTableCard({
+  data,
+  recibos,
   loading,
   error,
 }: {
-  items: ReciboHistoricoDTO[];
+  data: CorteCajaDTO | null;
+  recibos: CorteCajaReciboDTO[];
   loading: boolean;
   error: string | null;
 }) {
@@ -62,13 +65,13 @@ export default function HistoricoTableCard({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const ordered = useMemo(() => {
-    return [...(items ?? [])].sort((a, b) => {
+    return [...(recibos ?? [])].sort((a, b) => {
       const da = new Date(a.fechaPago).getTime();
       const db = new Date(b.fechaPago).getTime();
       if (Number.isNaN(da) || Number.isNaN(db)) return 0;
       return db - da;
     });
-  }, [items]);
+  }, [recibos]);
 
   async function onCopy(key: string, value: string) {
     await copyText(value);
@@ -77,8 +80,13 @@ export default function HistoricoTableCard({
   }
 
   function onPrint(reciboId: number) {
+    // Mantiene tu flujo establecido: /recibos/print lee sessionStorage si existe,
+    // y si no existe, tu print page debe mostrar un error elegante.
     router.push(`/recibos/print?reciboId=${encodeURIComponent(String(reciboId))}`);
   }
+
+  const resumen = data?.resumen ?? null;
+  const porTipo = data?.porTipoPago ?? [];
 
   return (
     <section className={s.card}>
@@ -86,20 +94,101 @@ export default function HistoricoTableCard({
         <div className={s.titleBlock}>
           <div className={s.titleRow}>
             <ReceiptText size={16} />
-            <div className={s.title}>Históricos</div>
+            <div className={s.title}>Corte de caja</div>
           </div>
-          <div className={s.subtitle}>Todos los recibos visibles para tu sesión (por plantel o admin).</div>
+
+          <div className={s.subtitle}>
+            Resumen diario por fecha de pago{data?.plantelId !== undefined ? ' (filtrable por plantel)' : ''}.
+          </div>
         </div>
 
-        <div className={s.countPill}>
-          {ordered.length} {ordered.length === 1 ? 'recibo' : 'recibos'}
+        <div className={s.rightMeta}>
+          <div className={s.countPill}>
+            {ordered.length} {ordered.length === 1 ? 'recibo' : 'recibos'}
+          </div>
         </div>
       </header>
 
       {error ? <div className={s.error}>{error}</div> : null}
 
+      {/* Resumen superior */}
+      {resumen ? (
+        <div className={s.summaryGrid}>
+          <div className={s.summaryCard}>
+            <div className={s.summaryIcon}>
+              <BadgeDollarSign size={18} />
+            </div>
+            <div className={s.summaryMeta}>
+              <div className={s.summaryLabel}>Total recibos</div>
+              <div className={s.summaryValue}>{resumen.totalRecibos}</div>
+            </div>
+          </div>
+
+          <div className={s.summaryCard}>
+            <div className={s.summaryIcon}>
+              <BadgeDollarSign size={18} />
+            </div>
+            <div className={s.summaryMeta}>
+              <div className={s.summaryLabel}>Total monto</div>
+              <div className={s.summaryValue}>{fmtMoney(resumen.totalMonto, 'MXN')}</div>
+            </div>
+          </div>
+
+          <div className={s.summaryCardDanger}>
+            <div className={s.summaryIcon}>
+              <Ban size={18} />
+            </div>
+            <div className={s.summaryMeta}>
+              <div className={s.summaryLabel}>Cancelados</div>
+              <div className={s.summaryValue}>{resumen.totalCancelados}</div>
+            </div>
+          </div>
+
+          <div className={s.summaryCardDanger}>
+            <div className={s.summaryIcon}>
+              <Ban size={18} />
+            </div>
+            <div className={s.summaryMeta}>
+              <div className={s.summaryLabel}>Monto cancelado</div>
+              <div className={s.summaryValue}>{fmtMoney(resumen.totalMontoCancelado, 'MXN')}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Por tipo de pago */}
+      {porTipo.length ? (
+        <div className={s.byType}>
+          <div className={s.byTypeTitle}>Por tipo de pago</div>
+
+          <div className={s.byTypeTableWrap}>
+            <table className={s.byTypeTable}>
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th className={s.tRight}>Recibos</th>
+                  <th className={s.tRight}>Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {porTipo.map((t) => (
+                  <tr key={t.tipoPagoId}>
+                    <td className={s.oneLine} title={t.tipoPagoDesc}>
+                      {t.tipoPagoDesc}
+                    </td>
+                    <td className={s.tRight}>{t.totalRecibos}</td>
+                    <td className={s.tRight}>{fmtMoney(t.totalMonto, 'MXN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Tabla principal */}
       {loading ? (
-        <div className={s.loading}>Cargando recibos…</div>
+        <div className={s.loading}>Cargando corte de caja…</div>
       ) : ordered.length === 0 ? (
         <div className={s.empty}>No hay recibos para mostrar.</div>
       ) : (
@@ -120,10 +209,10 @@ export default function HistoricoTableCard({
 
             <tbody>
               {ordered.map((r) => {
-                const tone = statusTone(r.estatusNombre, r.cancelado);
+                const tone = statusTone(r.estatusDesc, r.cancelado);
                 const money = fmtMoney(r.monto, r.moneda);
-                const keyQr = `qr:${r.reciboId}`;
                 const keyFolio = `folio:${r.reciboId}`;
+                const keyAlumno = `alumno:${r.reciboId}`;
 
                 return (
                   <tr key={r.reciboId}>
@@ -157,8 +246,8 @@ export default function HistoricoTableCard({
                       {money}
                     </td>
 
-                    <td className={s.oneLine} title={r.tipoPagoName}>
-                      {r.tipoPagoName || '—'}
+                    <td className={s.oneLine} title={r.tipoPagoDesc}>
+                      {r.tipoPagoDesc || '—'}
                     </td>
 
                     <td>
@@ -172,9 +261,9 @@ export default function HistoricoTableCard({
                             ? s.badgeDanger
                             : s.badgeNeutral
                         }`}
-                        title={r.cancelado ? 'Cancelado' : r.estatusNombre}
+                        title={r.cancelado ? 'Cancelado' : r.estatusDesc}
                       >
-                        {r.cancelado ? 'Cancelado' : r.estatusNombre || '—'}
+                        {r.cancelado ? 'Cancelado' : r.estatusDesc || '—'}
                       </span>
                     </td>
 
@@ -183,12 +272,12 @@ export default function HistoricoTableCard({
                         <button
                           className={s.primaryBtn}
                           type="button"
-                          onClick={() => onCopy(keyQr, r.qrPayload)}
-                          disabled={!r.qrPayload}
-                          title={r.qrPayload ? 'Copiar QR Payload' : 'Sin QR Payload'}
+                          onClick={() => onCopy(keyAlumno, r.alumnoId)}
+                          disabled={!r.alumnoId}
+                          title="Copiar ID de alumno"
                         >
-                          {copiedKey === keyQr ? <Check size={16} /> : <QrCode size={16} />}
-                          <span>{copiedKey === keyQr ? 'Copiado' : 'Copiar QR'}</span>
+                          {copiedKey === keyAlumno ? <Check size={16} /> : <Copy size={16} />}
+                          <span>{copiedKey === keyAlumno ? 'Copiado' : 'Copiar alumno'}</span>
                         </button>
 
                         <button
@@ -196,17 +285,12 @@ export default function HistoricoTableCard({
                           type="button"
                           onClick={() => onCopy(keyFolio, r.folio)}
                           disabled={!r.folio}
-                          title={r.folio ? 'Copiar folio' : 'Sin folio'}
+                          title="Copiar folio"
                         >
                           {copiedKey === keyFolio ? <Check size={16} /> : <Copy size={16} />}
                         </button>
 
-                        <button
-                          className={s.iconBtn}
-                          type="button"
-                          onClick={() => onPrint(r.reciboId)}
-                          title="Imprimir"
-                        >
+                        <button className={s.iconBtn} type="button" onClick={() => onPrint(r.reciboId)} title="Imprimir">
                           <Printer size={16} />
                         </button>
                       </div>

@@ -1,0 +1,90 @@
+/* src/modulos/corte-caja/ui/CorteCajaFiltersBar/CorteCajaFiltersBar.module.css */
+
+.bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  padding: 12px;
+  border: 1px solid #e7ebf3;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(20, 30, 60, 0.06);
+}
+
+.left {
+  display: grid;
+  grid-template-columns: 160px 140px minmax(260px, 1fr);
+  gap: 10px;
+  align-items: end;
+  width: 100%;
+}
+
+.field,
+.fieldWide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  font-size: 12px;
+  color: #5a667f;
+}
+
+.input {
+  height: 38px;
+  padding: 0 10px;
+
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+
+  font-size: 14px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #cbd6ee;
+  background: #fff;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+}
+
+.refresh {
+  height: 38px;
+  padding: 0 14px;
+
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #0f172a;
+  color: #fff;
+
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.refresh:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .left {
+    grid-template-columns: 1fr;
+  }
+
+  .right {
+    justify-content: flex-end;
+  }
+}

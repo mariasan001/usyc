@@ -14,6 +14,16 @@
  * - Esto NO es el router de Next.js; es solo un “catálogo” de rutas.
  */
 
+function withQuery(base: string, query: Record<string, string | number | boolean | null | undefined>) {
+  const sp = new URLSearchParams();
+  Object.entries(query).forEach(([k, v]) => {
+    if (v === null || v === undefined || v === '') return;
+    sp.set(k, String(v));
+  });
+  const qs = sp.toString();
+  return qs ? `${base}?${qs}` : base;
+}
+
 export const API = {
   /* ─────────────────────────────────────────
    * Catálogos
@@ -25,12 +35,10 @@ export const API = {
 
     /* Conceptos de pago */
     conceptosPago: '/api/catalogos/conceptos-pago',
-    conceptoPagoById: (conceptoId: number) =>
-      `/api/catalogos/conceptos-pago/${conceptoId}`,
+    conceptoPagoById: (conceptoId: number) => `/api/catalogos/conceptos-pago/${conceptoId}`,
     conceptoPagoByCodigo: (codigo: string) =>
       `/api/catalogos/conceptos-pago/por-codigo/${encodeURIComponent(codigo)}`,
-    conceptoPagoActivar: (conceptoId: number) =>
-      `/api/catalogos/conceptos-pago/${conceptoId}/activar`,
+    conceptoPagoActivar: (conceptoId: number) => `/api/catalogos/conceptos-pago/${conceptoId}/activar`,
     conceptoPagoDesactivar: (conceptoId: number) =>
       `/api/catalogos/conceptos-pago/${conceptoId}/desactivar`,
 
@@ -38,8 +46,7 @@ export const API = {
     tiposPago: '/api/catalogos/tipos-pago',
     tipoPagoById: (id: number) => `/api/catalogos/tipos-pago/${id}`,
     tipoPagoActivar: (id: number) => `/api/catalogos/tipos-pago/${id}/activar`,
-    tipoPagoDesactivar: (id: number) =>
-      `/api/catalogos/tipos-pago/${id}/desactivar`,
+    tipoPagoDesactivar: (id: number) => `/api/catalogos/tipos-pago/${id}/desactivar`,
 
     /* Planteles */
     planteles: '/api/catalogos/planteles',
@@ -61,8 +68,7 @@ export const API = {
   alumnos: {
     base: '/api/alumnos',
     byId: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}`,
-    pagosResumen: (alumnoId: string) =>
-      `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
+    pagosResumen: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
   },
 
   /* ─────────────────────────────────────────
@@ -74,9 +80,24 @@ export const API = {
     qr: (id: number) => `/api/recibos/${id}/qr`,
     validarQr: (qrPayload: string) =>
       `/api/recibos/validar-qr?qrPayload=${encodeURIComponent(qrPayload)}`,
-    // ✅ NUEVO: cancelar recibo (Swagger: POST /api/recibos/{reciboId}/cancelar?motivo=...)
+    // ✅ cancelar recibo
     cancelar: (reciboId: number, motivo: string) =>
       `/api/recibos/${reciboId}/cancelar?motivo=${encodeURIComponent(motivo)}`,
+  },
+
+  /* ─────────────────────────────────────────
+   * Reportes
+   * ───────────────────────────────────────── */
+  reportes: {
+    /**
+     * Corte de caja por día.
+     * Swagger: GET /api/reportes/corte-caja?fecha=YYYY-MM-DD&plantelId=...
+     */
+    corteCaja: (fecha: string, plantelId?: number | null) =>
+      withQuery('/api/reportes/corte-caja', {
+        fecha: encodeURIComponent(fecha),
+        plantelId: plantelId ?? undefined,
+      }),
   },
 
   /* ─────────────────────────────────────────
@@ -85,10 +106,4 @@ export const API = {
   aux: {
     recibosPreviosCount: '/api/aux/recibos-previos/count',
   },
-
-    historico: {
-    recibos: '/api/alumnos/filter', // ✅ GET (sin params)
-  },
-  
-
 } as const;

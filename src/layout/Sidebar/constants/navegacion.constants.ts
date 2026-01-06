@@ -1,20 +1,19 @@
 // src/layout/Sidebar/constants/navegacion.constants.ts
 
-import { Users, Receipt, QrCode, Settings,Ban  } from 'lucide-react';
+import { Users, Receipt, QrCode, Settings, Ban } from 'lucide-react';
 import type { ItemNavegacion } from '../types/navegacion.types';
 
 export const ITEMS_NAVEGACION: ItemNavegacion[] = [
-
   // ✅ Gestión (todos ven, acciones se controlan aparte)
   { href: '/alumnos', label: 'Alumnos', icon: Users, grupo: 'GESTIÓN', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
 
-  // { href: '/recibos', label: 'Recibos', icon: Receipt, grupo: 'CAJA', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
-  { href: '/historico', label: 'Históricos', icon: Receipt, grupo: 'CAJA', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
+  // ✅ Caja
+  { href: '/corte-caja', label: 'Corte de caja', icon: Receipt, grupo: 'CAJA', roles: ['ADMIN', 'CAJA', 'CONSULTOR'] },
 
   { href: '/cancelados', label: 'Cancelar recibo', icon: Ban, grupo: 'CAJA', roles: ['ADMIN', 'CAJA'] },
 
   // ✅ Utilidades
-  { href: '/verificar', label: 'Verificar QR', icon: QrCode, grupo: 'UTILIDADES', roles: ['ADMIN', 'CAJA',] },
+  { href: '/verificar', label: 'Verificar QR', icon: QrCode, grupo: 'UTILIDADES', roles: ['ADMIN', 'CAJA'] },
 
   // ✅ Sistema (solo ADMIN)
   { href: '/configuracion', label: 'Configuración', icon: Settings, grupo: 'SISTEMA', roles: ['ADMIN'] },
