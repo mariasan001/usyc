@@ -18,31 +18,32 @@ export default function AlumnosPage() {
   const a = useAlumnos();
   const auth = useAuth();
 
-  const isConsultor = auth.tieneRol('CONSULTOR');
-  const canWrite = auth.tieneRol('ADMIN') || auth.tieneRol('CAJA');
+  // ✅ Nuevo modelo de roles
+  const isLector = auth.tieneRol('LECTOR');
+  const canWrite = auth.tieneRol('ADMIN') || auth.tieneRol('CAJERO');
 
   const [tab, setTab] = useState<AlumnosTabKey>('directorio');
 
-  // ✅ CONSULTOR: siempre directorio (modo lectura)
+  // ✅ LECTOR: siempre directorio (modo lectura)
   const effectiveTab = useMemo<AlumnosTabKey>(() => {
-    if (isConsultor) return 'directorio';
+    if (isLector) return 'directorio';
     // por seguridad: si no puede escribir, tampoco debería entrar a registro
     if (!canWrite && tab === 'registro') return 'directorio';
     return tab;
-  }, [isConsultor, canWrite, tab]);
+  }, [isLector, canWrite, tab]);
 
   return (
     <AppShell>
       <div className={s.page}>
-        {/* ✅ CONSULTOR: NO ve tabs */}
-        {!isConsultor ? (
+        {/* ✅ LECTOR: NO ve tabs */}
+        {!isLector ? (
           <div className={s.topBar}>
             <AlumnosTabs value={effectiveTab} onChange={setTab} />
           </div>
         ) : null}
 
         <div className={s.content}>
-          {/* ✅ Registro solo ADMIN/CAJA */}
+          {/* ✅ Registro solo ADMIN/CAJERO */}
           {effectiveTab === 'registro' && canWrite ? (
             <div className={s.centerPane}>
               <AlumnoRegistroCard />
@@ -61,12 +62,12 @@ export default function AlumnosPage() {
           )}
         </div>
 
-        {/* Drawer: CONSULTOR entra pero solo lectura */}
+        {/* Drawer: LECTOR entra pero solo lectura */}
         <AlumnoDrawer
           open={a.drawerOpen}
           alumno={a.selected}
           onClose={a.closeDrawer}
-          readOnly={isConsultor} // ✅ NUEVO PROP
+          readOnly={isLector}
         />
       </div>
     </AppShell>

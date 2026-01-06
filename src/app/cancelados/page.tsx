@@ -7,13 +7,14 @@ import AppShell from '@/layout/AppShell/AppShell';
 import s from './cancelados.page.module.css';
 
 import { useAuth } from '@/modulos/autenticacion/contexto/AuthContext';
-import CancelarReciboCard from '@/modulos/cancelados/ui/CanceladosTableCard/CanceladosTableCard';
+import CanceladosTableCard from '@/modulos/cancelados/ui/CanceladosTableCard/CanceladosTableCard';
 
 export default function CanceladosPage() {
   const router = useRouter();
   const { listo, tieneRol } = useAuth();
 
-  const canSee = tieneRol('ADMIN') || tieneRol('CAJA');
+  // ✅ Roles nuevos
+  const canSee = tieneRol('ADMIN') || tieneRol('CAJERO');
 
   useEffect(() => {
     if (!listo) return;
@@ -27,7 +28,7 @@ export default function CanceladosPage() {
     <AppShell>
       <div className={s.page}>
         <div className={s.grid}>
-          <CancelarReciboCard />
+          <CanceladosTableCard />
         </div>
       </div>
     </AppShell>
