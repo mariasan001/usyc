@@ -14,12 +14,26 @@
  * - Esto NO es el router de Next.js; es solo un “catálogo” de rutas.
  */
 
-function withQuery(base: string, query: Record<string, string | number | boolean | null | undefined>) {
+/**
+ * Helper para armar querystring sin ensuciar los servicios.
+ * - Omite null/undefined/''
+ * - Convierte todo a string
+ *
+ * ✅ OJO:
+ * - NO hace encode manual (URLSearchParams ya codifica).
+ * - Por eso, aquí NO debes mandar valores ya encodeados (evita doble-encode).
+ */
+function withQuery(
+  base: string,
+  query: Record<string, string | number | boolean | null | undefined>,
+) {
   const sp = new URLSearchParams();
+
   Object.entries(query).forEach(([k, v]) => {
     if (v === null || v === undefined || v === '') return;
     sp.set(k, String(v));
   });
+
   const qs = sp.toString();
   return qs ? `${base}?${qs}` : base;
 }
@@ -80,7 +94,11 @@ export const API = {
     qr: (id: number) => `/api/recibos/${id}/qr`,
     validarQr: (qrPayload: string) =>
       `/api/recibos/validar-qr?qrPayload=${encodeURIComponent(qrPayload)}`,
-    // ✅ cancelar recibo
+
+    /**
+     * ✅ Cancelar recibo
+     * - Swagger: POST /api/recibos/{reciboId}/cancelar?motivo=...
+     */
     cancelar: (reciboId: number, motivo: string) =>
       `/api/recibos/${reciboId}/cancelar?motivo=${encodeURIComponent(motivo)}`,
   },
@@ -92,28 +110,56 @@ export const API = {
     /**
      * Corte de caja por día.
      * Swagger: GET /api/reportes/corte-caja?fecha=YYYY-MM-DD&plantelId=...
+     *
+     * ✅ Nota:
+     * - No hacemos encodeURIComponent(fecha) porque withQuery/URLSearchParams ya codifica.
      */
     corteCaja: (fecha: string, plantelId?: number | null) =>
       withQuery('/api/reportes/corte-caja', {
-        fecha: encodeURIComponent(fecha),
+        fecha,
         plantelId: plantelId ?? undefined,
       }),
   },
+
   /* ─────────────────────────────────────────
    * Admin
    * ───────────────────────────────────────── */
   admin: {
     /**
      * Usuarios (Swagger: Admin - Usuarios)
-     * - POST /api/admin/users                -> crear usuario
-     * - POST /api/admin/users/{userId}/password -> cambiar contraseña
+     * - GET  /api/admin/users
+     *        Query opcional: plantelId, active, roleCode, q
+     * - POST /api/admin/users
+     * - POST /api/admin/users/{userId}/password
      */
     usuarios: {
+      /**
+       * ✅ Listar usuarios con filtros opcionales
+       * Swagger:
+       * GET /api/admin/users?plantelId=3&active=true&roleCode=ADMIN&q=alfred
+       */
+      listar: (params?: {
+        plantelId?: number;
+        active?: boolean;
+        roleCode?: string;
+        q?: string;
+      }) =>
+        withQuery('/api/admin/users', {
+          plantelId: params?.plantelId,
+          active: params?.active,
+          roleCode: params?.roleCode,
+          q: params?.q,
+        }),
+
+      /** ✅ Crear usuario */
       crear: '/api/admin/users',
+
+      /** ✅ Cambiar contraseña */
       cambiarContrasena: (userId: number) =>
         `/api/admin/users/${encodeURIComponent(String(userId))}/password`,
     },
   },
+
   /* ─────────────────────────────────────────
    * Auxiliares
    * ───────────────────────────────────────── */

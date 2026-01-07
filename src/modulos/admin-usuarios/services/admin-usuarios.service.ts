@@ -4,6 +4,7 @@ import { api } from '@/lib/api/api.client';
 import { API } from '@/lib/api/api.routes';
 
 import type {
+  AdminUsuariosListParams,
   CambiarContrasenaPayload,
   CrearUsuarioPayload,
   UsuarioAdminDTO,
@@ -11,12 +12,20 @@ import type {
 
 /**
  * Servicio Admin · Usuarios
- * - Solo ADMIN debería poder usarlo (UI lo oculta por rol).
- * - La seguridad REAL la impone el backend.
+ * - UI solo lo muestra a ADMIN, pero el backend manda.
  */
 export const AdminUsuariosService = {
   /**
-   * Crea usuario:
+   * Listar usuarios
+   * GET /api/admin/users?plantelId&active&roleCode&q
+   */
+  listar: (params?: AdminUsuariosListParams) =>
+    api<UsuarioAdminDTO[]>(API.admin.usuarios.listar(params), {
+      method: 'GET',
+    }),
+
+  /**
+   * Crear usuario
    * POST /api/admin/users
    */
   crear: (payload: CrearUsuarioPayload) =>
@@ -26,7 +35,7 @@ export const AdminUsuariosService = {
     }),
 
   /**
-   * Cambiar contraseña:
+   * Cambiar contraseña
    * POST /api/admin/users/{userId}/password
    */
   cambiarContrasena: (userId: number, payload: CambiarContrasenaPayload) =>

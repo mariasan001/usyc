@@ -1,0 +1,259 @@
+.card{
+  border: 1px solid #e7ebf3;
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(20, 30, 60, .06);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.title{
+  font-weight: 800;
+  font-size: 14px;
+  color: #0b1220;
+}
+
+.sub{
+  margin-top: 4px;
+  font-size: 12px;
+  color: #5a667f;
+}
+
+.actions{
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+}
+
+.btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.btnPrimary{
+  background: #111827;
+  color: #fff;
+}
+
+.btnSoft{
+  background: #f3f6ff;
+  border-color: #dfe7ff;
+  color: #1f2a44;
+}
+
+.btnGhost{
+  background: transparent;
+  border-color: #e7ebf3;
+  color: #1f2a44;
+}
+
+.filters{
+  display:grid;
+  grid-template-columns: 160px 150px 180px 1fr auto;
+  gap: 10px;
+  align-items:end;
+}
+
+.filterField,
+.filterFieldWide{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filterField label,
+.filterFieldWide label{
+  font-size: 12px;
+  color: #5a667f;
+  font-weight: 700;
+}
+
+.filterField input,
+.filterFieldWide input,
+.filterField select{
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #0b1220;
+  outline: none;
+}
+
+.filterField input:focus,
+.filterFieldWide input:focus,
+.filterField select:focus{
+  border-color: #c9d7ff;
+  box-shadow: 0 0 0 4px rgba(90, 120, 255, .12);
+}
+
+.searchWrap{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+  padding: 0 12px;
+}
+
+.searchWrap svg{
+  flex: 0 0 auto;
+  opacity: .65;
+}
+
+.searchWrap input{
+  border: 0;
+  background: transparent;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  outline: none;
+}
+
+.filterBtns{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+}
+
+.alertError{
+  border: 1px solid #f2d6d6;
+  background: #fff5f5;
+  color: #7b1f1f;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.tableWrap{
+  border: 1px solid #e7ebf3;
+  border-radius: 16px;
+  overflow: auto;
+  background: #fff;
+}
+
+.table{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 980px;
+}
+
+.table thead th{
+  position: sticky;
+  top: 0;
+  background: #f7f9fd;
+  border-bottom: 1px solid #e7ebf3;
+  font-size: 12px;
+  color: #5a667f;
+  text-align: left;
+  padding: 10px 12px;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.table tbody td{
+  border-bottom: 1px solid #eef2fb;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #0b1220;
+  white-space: nowrap;
+}
+
+.table tbody tr:hover td{
+  background: #fbfcff;
+}
+
+.empty{
+  padding: 18px 12px;
+  color: #5a667f;
+  text-align: center;
+}
+
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid transparent;
+}
+
+.badgeOk{
+  border-color: #cfe7d6;
+  background: #f3fbf6;
+  color: #145a2e;
+}
+
+.badgeOff{
+  border-color: #e7ebf3;
+  background: #f7f9fd;
+  color: #5a667f;
+}
+
+.rolesCell{
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skelRow td{
+  padding: 12px;
+}
+
+.skel{
+  display:block;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eef2fb 0%, #f7f9fd 50%, #eef2fb 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.1s infinite;
+}
+
+@keyframes shimmer{
+  0%{ background-position: 0% 0; }
+  100%{ background-position: 200% 0; }
+}
+
+@media (max-width: 1100px){
+  .filters{
+    grid-template-columns: 1fr 1fr;
+  }
+  .filterBtns{
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
