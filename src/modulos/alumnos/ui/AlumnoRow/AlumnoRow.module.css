@@ -236,3 +236,55 @@
     display: block;
   }
 }
+/* Columna de acciones (derecha) */
+.actions{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Botón de ícono (Editar) */
+.iconBtn{
+  width: 36px;
+  height: 36px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+  border: 1px solid #e6ebf5;
+  background: #ffffff;
+
+  color: #2b3448;
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    background .15s ease,
+    border-color .15s ease,
+    box-shadow .15s ease,
+    transform .08s ease;
+}
+
+.iconBtn:hover{
+  background: #f6f8fc;
+  border-color: #d9e2f2;
+}
+
+.iconBtn:active{
+  transform: translateY(1px);
+}
+
+.iconBtn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(82, 132, 255, .18);
+  border-color: #8fb2ff;
+}
+
+.iconBtn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}

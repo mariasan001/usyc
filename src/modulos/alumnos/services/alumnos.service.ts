@@ -2,7 +2,7 @@ import { api } from '@/lib/api/api.client';
 import { API } from '@/lib/api/api.routes';
 import { qs } from '@/lib/api/api.qs';
 
-import type { Alumno, AlumnoCreate, Page } from '../types/alumno.types';
+import type { Alumno, AlumnoCreate, AlumnoUpdate, Page } from '../types/alumno.types';
 import type { RecibosPreviosCountResponse } from '../types/recibos-previos.types';
 
 export type AlumnosListParams = {
@@ -20,6 +20,13 @@ export const AlumnosService = {
   getById: (alumnoId: string) =>
     api<Alumno>(API.alumnos.byId(alumnoId)),
 
+  /**
+   * ✅ PUT /api/alumnos/update/{alumnoId}
+   * Actualiza la información del alumno (sin cambiar alumno_id).
+   */
+  update: (alumnoId: string, payload: AlumnoUpdate) =>
+    api<Alumno>(API.alumnos.update(alumnoId), { method: 'PUT', body: payload }),
+
   // GET /api/alumnos?page=0&size=20&sort=...
   list: (params?: AlumnosListParams) => {
     const safe: AlumnosListParams = {
@@ -36,4 +43,4 @@ export const AlumnosService = {
     api<RecibosPreviosCountResponse>(
       `${API.aux.recibosPreviosCount}${qs({ nombre: nombreCompleto })}`,
     ),
-};
+} as const;

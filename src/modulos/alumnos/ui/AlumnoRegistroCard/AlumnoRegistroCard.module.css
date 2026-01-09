@@ -466,3 +466,55 @@
 .card{
   position: relative;
 }
+/* ─────────────────────────────────────────
+   Botón secundario (Cancelar edición)
+───────────────────────────────────────── */
+.secondaryBtn{
+  height: 44px;
+  padding: 0 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border-radius: 12px;
+  border: 1px solid #e6ebf5;
+  background: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  color: #2b3448;
+
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    background .15s ease,
+    border-color .15s ease,
+    box-shadow .15s ease,
+    transform .08s ease;
+}
+
+.secondaryBtn:hover{
+  background: #f6f8fc;
+  border-color: #d9e2f2;
+}
+
+.secondaryBtn:active{
+  transform: translateY(1px);
+}
+
+.secondaryBtn:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(82, 132, 255, .18);
+  border-color: #8fb2ff;
+}
+
+/* Disabled */
+.secondaryBtn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+}

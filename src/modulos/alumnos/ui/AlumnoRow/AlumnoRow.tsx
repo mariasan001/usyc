@@ -1,6 +1,7 @@
 // src/modulos/alumnos/ui/AlumnoRow/AlumnoRow.tsx
 'use client';
 
+import { Pencil } from 'lucide-react';
 import s from './AlumnoRow.module.css';
 
 import type { Alumno } from '../../types/alumno.types';
@@ -14,17 +15,22 @@ function estadoLabel(activo: boolean) {
 export default function AlumnoRow({
   alumno,
   onOpen,
+  onEdit,
 }: {
   alumno: Alumno;
   onOpen: () => void;
+
+  /**
+   * ✅ Editar (opcional)
+   * - Si no viene, no se pinta el botón y jamás se llama.
+   */
+  onEdit?: () => void;
 }) {
   const carrerasApi = useCarreras({ soloActivos: true });
 
   const escolaridadNombre = alumno.escolaridadNombre ?? '—';
   const programaNombre = alumno.carreraNombre ?? '—';
-
-  // ✅ ajusta el campo si tu backend lo llama distinto
-  const plantelNombre = (alumno as unknown as { plantelNombre?: string }).plantelNombre ?? '—';
+  const plantelNombre = alumno.plantelNombre ?? '—';
 
   const fechaIngreso = alumno.fechaIngreso ?? null;
 
@@ -53,7 +59,7 @@ export default function AlumnoRow({
       <div className={`${s.cell} ${s.oneLine}`} data-label="Escolaridad" title={escolaridadNombre}>
         {escolaridadNombre}
       </div>
-      
+
       <div className={`${s.cell} ${s.oneLine}`} data-label="Programa" title={programaNombre}>
         {programaNombre}
       </div>
@@ -76,7 +82,19 @@ export default function AlumnoRow({
         </span>
       </div>
 
-      <div className={`${s.actions} rowActions`}>
+      <div className={s.actions}>
+        {onEdit ? (
+          <button
+            className={s.iconBtn}
+            onClick={onEdit}
+            type="button"
+            aria-label={`Editar alumno ${alumno.matricula}`}
+            title="Editar"
+          >
+            <Pencil size={16} />
+          </button>
+        ) : null}
+
         <button className={s.btn} onClick={onOpen} type="button">
           Ver
         </button>

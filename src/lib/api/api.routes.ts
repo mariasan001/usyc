@@ -81,8 +81,18 @@ export const API = {
    * ───────────────────────────────────────── */
   alumnos: {
     base: '/api/alumnos',
+
+    // GET /api/alumnos/{alumnoId}
     byId: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}`,
+
+    // GET /api/alumnos/{alumnoId}/pagos-resumen
     pagosResumen: (alumnoId: string) => `/api/alumnos/${encodeURIComponent(alumnoId)}/pagos-resumen`,
+
+    /**
+     * ✅ Actualizar alumno (sin cambiar alumno_id)
+     * Swagger: PUT /api/alumnos/update/{alumnoId}
+     */
+    update: (alumnoId: string) => `/api/alumnos/update/${encodeURIComponent(alumnoId)}`,
   },
 
   /* ─────────────────────────────────────────

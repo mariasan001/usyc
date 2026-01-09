@@ -42,3 +42,17 @@ export type Page<T> = {
   empty: boolean;
   numberOfElements?: number;
 };
+
+export type AlumnoUpdate = {
+  nombreCompleto: string;
+  matricula: string;
+
+  escolaridadId: number;
+  carreraId?: string | null;
+
+  fechaIngreso: string;          // YYYY-MM-DD
+  fechaTermino?: string | null;  // YYYY-MM-DD | null
+
+  activo: boolean;
+  plantelId: number;
+};

@@ -21,7 +21,14 @@ type Props = {
   onOpen: (alumnoId: string) => void;
   onRefresh: () => void;
   onPageChange: (page: number) => void;
+
+  // ✅ nuevo (opcional)
+  canEdit?: boolean;
+
+  // ✅ si ya agregaste onEdit en el flujo
+  onEdit?: (alumno: Alumno) => void;
 };
+
 
 export default function AlumnosTableCard({
   pageData,
@@ -30,6 +37,7 @@ export default function AlumnosTableCard({
   filters,
   onChangeFilters,
   onOpen,
+  onEdit,  // ✅
   onRefresh,
   onPageChange,
 }: Props) {
@@ -80,7 +88,12 @@ export default function AlumnosTableCard({
           ) : (
             <div className={s.body}>
               {items.map((a) => (
-                <AlumnoRow key={a.alumnoId} alumno={a} onOpen={() => onOpen(a.alumnoId)} />
+                <AlumnoRow
+                  key={a.alumnoId}
+                  alumno={a}
+                  onOpen={() => onOpen(a.alumnoId)}
+                  onEdit={onEdit ? () => onEdit(a) : undefined}
+                />
               ))}
 
               {hasRows ? <div className={s.bottomPad} /> : null}
