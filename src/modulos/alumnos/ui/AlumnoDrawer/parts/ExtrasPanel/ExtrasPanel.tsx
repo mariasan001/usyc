@@ -7,6 +7,9 @@ import s from './ExtrasPanel.module.css';
 import { useTiposPago } from '@/modulos/configuraciones/hooks/useTiposPago';
 import type { TipoPago } from '@/modulos/configuraciones/types/tiposPago.types';
 
+import { useConceptosPago } from '@/modulos/configuraciones/hooks/useConceptosPago';
+import type { ConceptoPago } from '@/modulos/configuraciones/types/conceptosPago.types';
+
 function todayISO() {
   const d = new Date();
   const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -22,12 +25,10 @@ function todayISO() {
 function normalizeMoneyRaw(v: string) {
   const cleaned = v.replace(/[^\d.]/g, '');
 
-  // Solo 1 punto permitido
   const parts = cleaned.split('.');
   const intPart = parts[0] ?? '';
   const decPart = parts[1] ?? '';
 
-  // Máximo 2 decimales
   const dec2 = decPart.slice(0, 2);
 
   return parts.length > 1 ? `${intPart}.${dec2}` : intPart;
@@ -35,8 +36,7 @@ function normalizeMoneyRaw(v: string) {
 
 /**
  * Formatea visualmente con separador de miles (MX)
- * - Mantiene los decimales tal cual se van escribiendo (incluye "1242.")
- * - El state sigue siendo crudo ("1242.5")
+ * - Mantiene los decimales tal cual se van escribiendo
  */
 function formatMoneyDisplay(raw: string) {
   if (!raw) return '';
@@ -48,9 +48,7 @@ function formatMoneyDisplay(raw: string) {
     Number.isFinite(intNum) ? intNum : 0,
   );
 
-  // Si el usuario ya tecleó punto, lo respetamos aunque no haya decimales aún
   if (raw.includes('.')) return `${intFormatted}.${decRaw ?? ''}`;
-
   return intFormatted;
 }
 
@@ -61,8 +59,8 @@ function toNumber(v: string) {
 }
 
 export default function ExtrasPanel({
-  extraConcept,
-  setExtraConcept,
+  extraConceptoId,
+  setExtraConceptoId,
 
   extraAmount,
   setExtraAmount,
@@ -76,8 +74,8 @@ export default function ExtrasPanel({
   onAddExtra,
   submitting,
 }: {
-  extraConcept: string;
-  setExtraConcept: (v: string) => void;
+  extraConceptoId: number;
+  setExtraConceptoId: (v: number) => void;
 
   extraAmount: string;
   setExtraAmount: (v: string) => void;
@@ -93,6 +91,7 @@ export default function ExtrasPanel({
   submitting?: boolean;
 }) {
   const tiposPago = useTiposPago({ soloActivos: true });
+  const conceptos = useConceptosPago({ soloActivos: true });
 
   // ✅ default tipoPagoId: primer activo
   useEffect(() => {
@@ -101,9 +100,16 @@ export default function ExtrasPanel({
     if (typeof first?.id === 'number') setExtraTipoPagoId(first.id);
   }, [extraTipoPagoId, tiposPago.items, setExtraTipoPagoId]);
 
+  // ✅ default conceptoId: primer activo
+  useEffect(() => {
+    if (extraConceptoId > 0) return;
+    const first = conceptos.items?.[0];
+    if (typeof first?.conceptoId === 'number') setExtraConceptoId(first.conceptoId);
+  }, [extraConceptoId, conceptos.items, setExtraConceptoId]);
+
   const amountNum = useMemo(() => toNumber(extraAmount), [extraAmount]);
 
-  const conceptOk = extraConcept.trim().length >= 3;
+  const conceptOk = extraConceptoId > 0;
   const amountOk = Number.isFinite(amountNum) && amountNum > 0;
   const dateOk = !!extraDate;
   const tipoOk = extraTipoPagoId > 0;
@@ -114,12 +120,18 @@ export default function ExtrasPanel({
     dateOk &&
     tipoOk &&
     !tiposPago.isLoading &&
+    !conceptos.isLoading &&
     !submitting;
 
   const tipoPagoLabel = useMemo(() => {
     const found = (tiposPago.items ?? []).find((x: TipoPago) => x.id === extraTipoPagoId);
     return found ? `${found.name} (${found.code})` : '';
   }, [tiposPago.items, extraTipoPagoId]);
+
+  const conceptoLabel = useMemo(() => {
+    const found = (conceptos.items ?? []).find((c: ConceptoPago) => c.conceptoId === extraConceptoId);
+    return found ? `${found.nombre} (${found.codigo})` : '';
+  }, [conceptos.items, extraConceptoId]);
 
   return (
     <section className={s.panel}>
@@ -129,20 +141,40 @@ export default function ExtrasPanel({
       </div>
 
       <div className={s.grid}>
+        {/* ✅ CONCEPTO (CATÁLOGO) */}
         <div className={s.formRow}>
           <label className={s.label}>Concepto</label>
-          <input
-            className={`${s.input} ${!conceptOk && extraConcept ? s.inputInvalid : ''}`}
-            value={extraConcept}
-            onChange={(e) => setExtraConcept(e.target.value)}
-            placeholder="Ej. Curso de verano"
-            maxLength={80}
-          />
-          {!conceptOk && extraConcept ? (
-            <div className={s.fieldHint}>Escribe un concepto más claro (mín. 3 letras).</div>
+
+          <select
+            className={`${s.select} ${!conceptOk ? s.inputInvalid : ''}`}
+            value={String(extraConceptoId || 0)}
+            onChange={(e) => setExtraConceptoId(Number(e.target.value))}
+            disabled={conceptos.isLoading || (conceptos.items?.length ?? 0) === 0}
+          >
+            {conceptos.isLoading ? (
+              <option value="0">Cargando conceptos…</option>
+            ) : (conceptos.items?.length ?? 0) === 0 ? (
+              <option value="0">No hay conceptos activos</option>
+            ) : (
+              <>
+                <option value="0">Selecciona…</option>
+                {(conceptos.items ?? []).map((c) => (
+                  <option key={c.conceptoId} value={c.conceptoId}>
+                    {c.nombre} ({c.codigo})
+                  </option>
+                ))}
+              </>
+            )}
+          </select>
+
+          {conceptoLabel ? (
+            <div className={s.fieldHint}>Seleccionado: {conceptoLabel}</div>
+          ) : !conceptOk ? (
+            <div className={s.fieldHint}>Selecciona un concepto.</div>
           ) : null}
         </div>
 
+        {/* MONTO */}
         <div className={s.formRow}>
           <label className={s.label}>Monto</label>
           <input
@@ -160,6 +192,7 @@ export default function ExtrasPanel({
           ) : null}
         </div>
 
+        {/* FECHA */}
         <div className={s.formRow}>
           <label className={s.label}>Fecha</label>
           <input
@@ -172,6 +205,7 @@ export default function ExtrasPanel({
           {!dateOk ? <div className={s.fieldHint}>Selecciona la fecha del pago.</div> : null}
         </div>
 
+        {/* TIPO DE PAGO */}
         <div className={s.formRow}>
           <label className={s.label}>Tipo de pago</label>
           <select
@@ -196,9 +230,7 @@ export default function ExtrasPanel({
             )}
           </select>
 
-          {tipoPagoLabel ? (
-            <div className={s.fieldHint}>Seleccionado: {tipoPagoLabel}</div>
-          ) : null}
+          {tipoPagoLabel ? <div className={s.fieldHint}>Seleccionado: {tipoPagoLabel}</div> : null}
         </div>
       </div>
 

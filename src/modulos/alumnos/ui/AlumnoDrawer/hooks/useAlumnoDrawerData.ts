@@ -3,9 +3,14 @@
 import { useMemo, useState } from 'react';
 import type { Alumno } from '../../../types/alumno.types';
 
-import type { DrawerTab, ProjectionRow, PagoRealRow, Totals } from '../types/alumno-drawer.types';
+import type {
+  DrawerTab,
+  ProjectionRow,
+  PagoRealRow,
+  Totals,
+} from '../types/alumno-drawer.types';
+
 import type { AlumnoPagosResumenDTO } from '../types/alumno-pagos-resumen.types';
-import type { ReciboConcepto } from '../types/recibos.types';
 
 import { useAlumnoPagosResumen } from './useAlumnoPagosResumen';
 
@@ -27,15 +32,7 @@ function periodoFromISO(iso: string) {
   return (iso ?? '').slice(0, 7);
 }
 
-/** ✅ Convierte string del back a union ReciboConcepto */
-function toReciboConcepto(v: string): ReciboConcepto {
-  const x = String(v ?? '').toUpperCase().trim();
-  if (x === 'INSCRIPCION') return 'INSCRIPCION';
-  if (x === 'MENSUALIDAD') return 'MENSUALIDAD';
-  return 'OTRO';
-}
-
-/** ✅ Normaliza el QR (por inconsistencia qrPayload vs qrPayLoad) */
+/** ✅ Normaliza QR por inconsistencia del backend */
 function normalizeQr(p: { qrPayload?: string; qrPayLoad?: string }): string {
   const a = (p.qrPayload ?? '').trim();
   if (a) return a;
@@ -81,7 +78,8 @@ export function useAlumnoDrawerData({ alumno }: Args) {
   const montoInscripcion = data?.montoInscripcion ?? 0;
 
   /* ─────────────────────────────────────────
-    Pagos reales -> UI (✅ ahora sí llena todo PagoRealRow)
+    Pagos reales -> UI
+    ✅ conceptos dinámicos (string)
   ────────────────────────────────────────── */
   const pagosReales: PagoRealRow[] = useMemo(() => {
     const list = data?.pagosReales ?? [];
@@ -93,63 +91,62 @@ export function useAlumnoDrawerData({ alumno }: Args) {
         reciboId: p.reciboId,
         folio: p.folio,
 
-        // ✅ si el back no manda fechaEmision, usamos fechaPago como fallback
         fechaEmision: p.fechaEmision ?? p.fechaPago,
         fechaPago: p.fechaPago,
 
-        // ✅ si el back no manda alumnoId aquí, usamos el del hook/alumno
         alumnoId: p.alumnoId ?? alumnoId,
         alumnoNombre: p.alumnoNombre ?? nombreCompleto,
 
-        // ✅ tipado fuerte
-        concepto: toReciboConcepto(String(p.concepto)),
+        // ✅ SIN union, SIN normalizar
+        concepto: String(p.concepto),
+
         monto: p.monto,
         moneda: p.moneda,
 
-        // ✅ si no viene estatusCodigo, armamos uno razonable
-        estatusCodigo: p.estatusCodigo ?? (p.cancelado ? 'CANCELADO' : 'PAGADO'),
+        estatusCodigo:
+          p.estatusCodigo ?? (p.cancelado ? 'CANCELADO' : 'PAGADO'),
         estatusNombre: p.estatusNombre,
 
-        // ✅ si no vienen tipoPago*, fallback
         tipoPagoId: p.tipoPagoId ?? 0,
         tipoPagoCodigo: p.tipoPagoCodigo ?? '',
         tipoPagoNombre: p.tipoPagoNombre ?? '',
 
         cancelado: !!p.cancelado,
 
-        // ✅ normalizado
         qrPayload: normalizeQr(p),
         qrPayLoad: p.qrPayLoad,
       }));
   }, [data?.pagosReales, alumnoId, nombreCompleto]);
 
   /* ─────────────────────────────────────────
-    Proyección -> UI + reciboId “colgado”
-    (✅ conceptCode ahora es ReciboConcepto)
+    Proyección -> UI
+    ✅ conceptos dinámicos (string)
   ────────────────────────────────────────── */
   const projection: ProjectionRow[] = useMemo(() => {
     const list = data?.proyeccion ?? [];
-    const pagosValidos = (data?.pagosReales ?? []).filter((p) => !p.cancelado);
+    const pagosValidos = (data?.pagosReales ?? []).filter(
+      (p) => !p.cancelado
+    );
 
     const paidMap = new Map<string, number>();
     for (const p of pagosValidos) {
       const per = periodoFromISO(p.fechaPago);
-      const concepto = toReciboConcepto(String(p.concepto));
+      const concepto = String(p.concepto);
       paidMap.set(`${per}|${concepto}`, p.reciboId);
     }
 
     return list.map((x, i) => {
-      const estadoUpper = String(x.estado ?? '').toUpperCase();
-      const concept = toReciboConcepto(String(x.conceptoCodigo));
+      const concepto = String(x.conceptoCodigo);
+      const reciboId = paidMap.get(`${x.periodo}|${concepto}`);
 
-      const reciboId = paidMap.get(`${x.periodo}|${concept}`);
+      const estadoUpper = String(x.estado ?? '').toUpperCase();
       const isPaid = estadoUpper === 'PAGADO' || typeof reciboId === 'number';
 
       return {
         idx: i + 1,
         periodo: x.periodo,
         dueDate: x.fechaVencimiento,
-        conceptCode: concept, // ✅ ya no string
+        conceptCode: concepto,
         amount: x.monto,
         estado: x.estado,
         isPaid,
@@ -159,7 +156,7 @@ export function useAlumnoDrawerData({ alumno }: Args) {
   }, [data?.proyeccion, data?.pagosReales]);
 
   /* ─────────────────────────────────────────
-    Totales (deja solo lo que tu Totals define)
+    Totales
   ────────────────────────────────────────── */
   const totals: Totals = useMemo(() => {
     const totalPlan = data?.totalProyectado ?? 0;
@@ -170,7 +167,9 @@ export function useAlumnoDrawerData({ alumno }: Args) {
     const pendientes = projection.length - pagados;
 
     const t = todayISO();
-    const vencidos = projection.filter((x) => !x.isPaid && cmpISO(x.dueDate, t) < 0).length;
+    const vencidos = projection.filter(
+      (x) => !x.isPaid && cmpISO(x.dueDate, t) < 0
+    ).length;
 
     return {
       totalPlan,

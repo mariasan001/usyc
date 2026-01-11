@@ -25,6 +25,10 @@ import PayModal from './parts/PayModal/PayModal';
 import { useAlumnoDrawerData } from './hooks/useAlumnoDrawerData';
 import { RecibosService } from '../../services/recibos.service';
 
+// ✅ NUEVO: conceptos (catálogo)
+import { useConceptosPago } from '@/modulos/configuraciones/hooks/useConceptosPago';
+import type { ConceptoPago } from '@/modulos/configuraciones/types/conceptosPago.types';
+
 function todayISO() {
   const d = new Date();
   const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -86,6 +90,9 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
 
   const canWrite = !readOnly;
 
+  // ✅ Catálogo conceptos (para poder resolver el código al hacer submit)
+  const conceptosPago = useConceptosPago({ soloActivos: true });
+
   // ✅ CONSULTOR: si intenta caer en EXTRAS, lo regresamos
   useEffect(() => {
     if (!canWrite && d.tab === 'EXTRAS') d.setTab('PAGOS');
@@ -101,7 +108,7 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
   // =========================
   // EXTRAS (FORM + SUBMIT)
   // =========================
-  const [extraConcept, setExtraConcept] = useState('');
+  const [extraConceptoId, setExtraConceptoId] = useState(0); // ✅ ya no string
   const [extraAmount, setExtraAmount] = useState('');
   const [extraDate, setExtraDate] = useState(todayISO());
   const [extraTipoPagoId, setExtraTipoPagoId] = useState(0);
@@ -205,28 +212,38 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
 
     setExtraError(null);
 
-    const conceptOk = extraConcept.trim().length >= 3;
+    const conceptOk = extraConceptoId > 0;
     const amountNum = toMoneyNumber(extraAmount);
     const amountOk = Number.isFinite(amountNum) && amountNum > 0;
     const dateOk = !!extraDate;
     const tipoOk = extraTipoPagoId > 0;
 
-    if (!conceptOk) return setExtraError('Escribe un concepto más claro (mín. 3 letras).');
+    if (!conceptOk) return setExtraError('Selecciona un concepto.');
     if (!amountOk) return setExtraError('Ingresa un monto mayor a 0.');
     if (!dateOk) return setExtraError('Selecciona la fecha del pago.');
     if (!tipoOk) return setExtraError('Selecciona un tipo de pago.');
     if (!d.alumnoId) return setExtraError('No hay alumno seleccionado.');
+
+    const conceptoSel = (conceptosPago.items ?? []).find(
+      (c: ConceptoPago) => c.conceptoId === extraConceptoId,
+    );
+
+    if (!conceptoSel) {
+      return setExtraError('El concepto seleccionado no existe o ya no está activo.');
+    }
 
     setExtraSaving(true);
 
     try {
       const payload: ReciboCreateDTO = {
         alumnoId: d.alumnoId,
-        concepto: 'OTRO',
+        // ✅ ya no OTRO: mandamos el CÓDIGO real del concepto
+        concepto: conceptoSel.codigo,
         montoManual: amountNum,
         fechaPago: extraDate,
         tipoPagoId: extraTipoPagoId,
-        comentario: extraConcept.trim(),
+        // ✅ comentario opcional: mandamos el nombre (puedes cambiarlo después)
+        comentario: conceptoSel.nombre,
       };
 
       const created = await RecibosService.create(payload);
@@ -240,7 +257,7 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
 
       await d.reload();
 
-      setExtraConcept('');
+      setExtraConceptoId(0);
       setExtraAmount('');
       setExtraDate(todayISO());
       setExtraError(null);
@@ -263,7 +280,6 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
 
       <StickySummary totals={d.totals} />
 
-      {/* ✅ puedes dejar tabs igual, pero CONSULTOR no entra a EXTRAS por el efecto */}
       <DrawerTabs tab={d.tab} onChange={d.setTab} />
 
       {d.loading ? <div className={s.mutedBox}>Cargando…</div> : null}
@@ -285,7 +301,6 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
       {d.tab === 'PROYECCION' ? (
         <ProyeccionPanel
           rows={d.projection}
-          // ✅ CONSULTOR: NO abre el modal
           onPay={(row) => {
             if (!canWrite) return;
             setPayRow(row);
@@ -298,14 +313,13 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
 
       {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
 
-      {/* ✅ EXTRAS solo ADMIN/CAJA */}
       {d.tab === 'EXTRAS' && canWrite ? (
         <>
           {extraError ? <div className={s.errorBox}>{extraError}</div> : null}
 
           <ExtrasPanel
-            extraConcept={extraConcept}
-            setExtraConcept={setExtraConcept}
+            extraConceptoId={extraConceptoId}
+            setExtraConceptoId={setExtraConceptoId}
             extraAmount={extraAmount}
             setExtraAmount={setExtraAmount}
             extraDate={extraDate}
@@ -318,7 +332,6 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
         </>
       ) : null}
 
-      {/* ✅ PayModal solo ADMIN/CAJA */}
       {canWrite ? (
         <PayModal
           open={payOpen}

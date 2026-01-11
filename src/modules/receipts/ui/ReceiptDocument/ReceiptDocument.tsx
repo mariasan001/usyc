@@ -172,14 +172,10 @@ export default function ReceiptDocument({
         <header className={s.header}>
           <div className={s.headerLeft}>
             <div className={s.logoWrap}>
-              <Image
-                alt="Logo"
-                src="/img/USYC-logo.png"
-                width={92}
-                height={92}
-                className={s.logo}
-                priority
-              />
+            <div className={s.logoWrap}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/img/USYC-logo.png" alt="Logo" className={s.logo} />
+            </div>
             </div>
 
             <div className={s.folioMini}>

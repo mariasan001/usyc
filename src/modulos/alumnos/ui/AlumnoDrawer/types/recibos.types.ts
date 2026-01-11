@@ -1,14 +1,14 @@
-export type ReciboConcepto = 'INSCRIPCION' | 'MENSUALIDAD' | 'OTRO';
-
 export type ReciboCreateDTO = {
   alumnoId: string;
-  concepto: ReciboConcepto;
+
+  // ✅ ahora es libre, el back valida
+  concepto: string;
+
   montoManual: number;
   fechaPago: string; // YYYY-MM-DD
   tipoPagoId: number;
   comentario?: string;
 };
-
 export type ReciboDTOApi = {
   reciboId: number;
   folio: string;

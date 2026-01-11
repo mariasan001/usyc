@@ -1,5 +1,3 @@
-// src/modulos/alumnos/ui/AlumnoDrawer/types/pagos-reales.dto.ts
-import type { ReciboConcepto } from './recibos.types';
 
 export type PagoRealDTO = {
   reciboId: number;
@@ -13,7 +11,7 @@ export type PagoRealDTO = {
   alumnoNombre?: string;
 
   // el back puede mandar string; si es consistente, cámbialo a ReciboConcepto
-  concepto: ReciboConcepto | string;
+  concepto: string;
 
   monto: number;
   moneda: string;
