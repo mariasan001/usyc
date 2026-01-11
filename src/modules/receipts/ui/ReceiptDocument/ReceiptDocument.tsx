@@ -1,8 +1,6 @@
-// src/modules/receipts/ui/ReceiptDocument/ReceiptDocument.tsx
 'use client';
 
 import { useMemo } from 'react';
-import Image from 'next/image';
 
 import type { ReceiptTemplateSettings } from '@/modules/receipts/utils/receipt-template.settings';
 import { RecibosService } from '@/modulos/alumnos/services/recibos.service';
@@ -31,9 +29,10 @@ export type ReceiptPrint = {
   Helpers
 ───────────────────────────────────────── */
 function fmtMoney(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(
-    Number.isFinite(n) ? n : 0,
-  );
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(Number.isFinite(n) ? n : 0);
 }
 
 function safeDate(v?: string) {
@@ -123,7 +122,7 @@ function numberToSpanishWords(num: number): string {
 
   if (num < 1000) return threeDigits(num);
 
-  if (num < 1000000) {
+  if (num < 1_000_000) {
     const miles = Math.floor(num / 1000);
     const rest = num % 1000;
     const milesText = miles === 1 ? 'mil' : `${threeDigits(miles)} mil`;
@@ -160,7 +159,10 @@ export default function ReceiptDocument({
   const carreraNombre = safeText(receipt.carreraNombre, '—');
   const qrPayload = safeText(receipt.qrPayload, '');
 
-  const montoLetras = useMemo(() => toMoneyWordsMXN(receipt.monto ?? 0), [receipt.monto]);
+  const montoLetras = useMemo(
+    () => toMoneyWordsMXN(receipt.monto ?? 0),
+    [receipt.monto],
+  );
 
   const moneda = safeText(receipt.moneda, 'MXN');
 
@@ -172,10 +174,8 @@ export default function ReceiptDocument({
         <header className={s.header}>
           <div className={s.headerLeft}>
             <div className={s.logoWrap}>
-            <div className={s.logoWrap}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/USYC-logo.png" alt="Logo" className={s.logo} />
-            </div>
+              <img src="/img/usyc-logo.png" alt="Logo" className={s.logo} />
             </div>
 
             <div className={s.folioMini}>
@@ -186,7 +186,9 @@ export default function ReceiptDocument({
 
           <div className={s.headerCenter}>
             <div className={s.headerTitle}>RECIBO DE CAJA</div>
-            <div className={s.headerSub}>{safeText(settings.plantelName, 'PLANTEL')}</div>
+            <div className={s.headerSub}>
+              {safeText(settings.plantelName, 'PLANTEL')}
+            </div>
           </div>
 
           <div className={s.headerRight}>
@@ -225,7 +227,8 @@ export default function ReceiptDocument({
             <div className={s.totalRow}>
               <div className={s.label}>TOTAL:</div>
               <div className={s.totalPill}>
-                {fmtMoney(receipt.monto)} <span className={s.currency}>{moneda}</span>
+                {fmtMoney(receipt.monto)}{' '}
+                <span className={s.currency}>{moneda}</span>
               </div>
             </div>
 
@@ -244,7 +247,9 @@ export default function ReceiptDocument({
             {cancelled ? (
               <div className={s.cancelBox}>
                 <div className={s.cancelTitle}>Motivo de cancelación</div>
-                <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
+                <div className={s.cancelReason}>
+                  {safeText(receipt.cancelReason)}
+                </div>
               </div>
             ) : null}
           </section>
@@ -254,7 +259,6 @@ export default function ReceiptDocument({
               <QrImgApi src={qrSrc} />
             </div>
 
-            {/* ✅ QR Payload abajo del QR */}
             {qrPayload ? (
               <div className={s.payloadBox}>
                 <div className={s.payloadTitle}>QR PAYLOAD</div>
