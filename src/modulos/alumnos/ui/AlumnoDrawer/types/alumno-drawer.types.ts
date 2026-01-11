@@ -1,5 +1,4 @@
 // src/modulos/alumnos/ui/AlumnoDrawer/types/alumno-drawer.types.ts
-import type { ReciboConcepto } from './recibos.types';
 
 export type DrawerTab = 'RESUMEN' | 'PROYECCION' | 'PAGOS' | 'EXTRAS';
 
@@ -9,7 +8,7 @@ export type ProjectionRow = {
   idx: number;
   periodo: string;        // "2025-12"
   dueDate: string;        // "2025-12-01"
-  conceptCode: ReciboConcepto; // ✅ antes string -> ahora el union real del backend
+  conceptCode: string; // ✅ antes string -> ahora el union real del backend
   amount: number;
   estado: string;         // texto que venga del back
   isPaid: boolean;
@@ -26,7 +25,7 @@ export type PagoRealRow = {
   alumnoId: string;       // viene del back
   alumnoNombre?: string;
 
-  concepto: ReciboConcepto; // ✅ si el back manda string libre, aquí puedes dejar string,
+  concepto: string; // ✅ si el back manda string libre, aquí puedes dejar string,
                             // pero lo ideal es alinear con ReciboConcepto
   monto: number;
   moneda: string;
