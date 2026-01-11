@@ -204,71 +204,74 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
   // =========================
   // CREAR EXTRA (solo ADMIN/CAJA)
   // =========================
-  async function onAddExtra() {
-    if (!canWrite) {
-      setExtraError('No tienes permisos para registrar pagos extras (solo lectura).');
-      return;
-    }
+async function onAddExtra() {
+  if (!canWrite) {
+    setExtraError('No tienes permisos para registrar pagos extras (solo lectura).');
+    return;
+  }
 
+  setExtraError(null);
+
+  const conceptOk = extraConceptoId > 0;
+  const amountNum = toMoneyNumber(extraAmount);
+  const amountOk = Number.isFinite(amountNum) && amountNum > 0;
+  const dateOk = !!extraDate;
+  const tipoOk = extraTipoPagoId > 0;
+
+  if (!conceptOk) return setExtraError('Selecciona un concepto.');
+  if (!amountOk) return setExtraError('Ingresa un monto mayor a 0.');
+  if (!dateOk) return setExtraError('Selecciona la fecha del pago.');
+  if (!tipoOk) return setExtraError('Selecciona un tipo de pago.');
+  if (!d.alumnoId) return setExtraError('No hay alumno seleccionado.');
+
+  const conceptoSel = (conceptosPago.items ?? []).find(
+    (c) => c.conceptoId === extraConceptoId
+  );
+
+  if (!conceptoSel) {
+    return setExtraError('El concepto seleccionado no existe o ya no está activo.');
+  }
+
+  setExtraSaving(true);
+
+  try {
+    const payload: ReciboCreateDTO = {
+      alumnoId: d.alumnoId,
+      concepto: conceptoSel.nombre,
+      montoManual: amountNum,
+      fechaPago: extraDate,
+      tipoPagoId: extraTipoPagoId,
+      comentario: conceptoSel.nombre,
+    };
+
+    // 🧪 DEBUG — esto es lo importante
+    console.log('[DEBUG] ReciboCreate payload:', payload);
+    console.log('[DEBUG] ReciboCreate payload JSON:', JSON.stringify(payload, null, 2));
+
+    const created = await RecibosService.create(payload);
+
+    cacheReciboForPrint({
+      ...created,
+      matricula: created.matricula ?? d.matricula,
+      carreraNombre: created.carreraNombre ?? d.carNombre,
+      qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
+    });
+
+    await d.reload();
+
+    setExtraConceptoId(0);
+    setExtraAmount('');
+    setExtraDate(todayISO());
     setExtraError(null);
 
-    const conceptOk = extraConceptoId > 0;
-    const amountNum = toMoneyNumber(extraAmount);
-    const amountOk = Number.isFinite(amountNum) && amountNum > 0;
-    const dateOk = !!extraDate;
-    const tipoOk = extraTipoPagoId > 0;
-
-    if (!conceptOk) return setExtraError('Selecciona un concepto.');
-    if (!amountOk) return setExtraError('Ingresa un monto mayor a 0.');
-    if (!dateOk) return setExtraError('Selecciona la fecha del pago.');
-    if (!tipoOk) return setExtraError('Selecciona un tipo de pago.');
-    if (!d.alumnoId) return setExtraError('No hay alumno seleccionado.');
-
-    const conceptoSel = (conceptosPago.items ?? []).find(
-      (c: ConceptoPago) => c.conceptoId === extraConceptoId,
-    );
-
-    if (!conceptoSel) {
-      return setExtraError('El concepto seleccionado no existe o ya no está activo.');
-    }
-
-    setExtraSaving(true);
-
-    try {
-      const payload: ReciboCreateDTO = {
-        alumnoId: d.alumnoId,
-        // ✅ ya no OTRO: mandamos el CÓDIGO real del concepto
-        concepto: conceptoSel.codigo,
-        montoManual: amountNum,
-        fechaPago: extraDate,
-        tipoPagoId: extraTipoPagoId,
-        // ✅ comentario opcional: mandamos el nombre (puedes cambiarlo después)
-        comentario: conceptoSel.nombre,
-      };
-
-      const created = await RecibosService.create(payload);
-
-      cacheReciboForPrint({
-        ...created,
-        matricula: created.matricula ?? d.matricula,
-        carreraNombre: created.carreraNombre ?? d.carNombre,
-        qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
-      });
-
-      await d.reload();
-
-      setExtraConceptoId(0);
-      setExtraAmount('');
-      setExtraDate(todayISO());
-      setExtraError(null);
-
-      d.setTab('PAGOS');
-    } catch (err) {
-      setExtraError(safeMessage(err) || 'No se pudo registrar el pago extra.');
-    } finally {
-      setExtraSaving(false);
-    }
+    d.setTab('PAGOS');
+  } catch (err) {
+    setExtraError(safeMessage(err) || 'No se pudo registrar el pago extra.');
+  } finally {
+    setExtraSaving(false);
   }
+}
+
 
   return (
     <div className={s.content}>
