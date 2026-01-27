@@ -10,15 +10,21 @@
   place-items: center;
   padding: 18px;
 }
-
 .modal{
+  /* lo que ya tienes */
   width: min(680px, 100%);
   background: #ffffff;
   border: 1px solid #e7ebf3;
   border-radius: 18px;
   box-shadow: 0 30px 80px rgba(16, 24, 40, 0.22);
   overflow: hidden;
+
+  /* ✅ nuevo: para que el modal nunca se “salga” del viewport */
+  max-height: calc(100dvh - 36px);
+  display: flex;
+  flex-direction: column;
 }
+
 
 .head{
   display: flex;
@@ -66,10 +72,15 @@
   cursor: not-allowed;
 }
 
-/* FORM */
 .form{
+  /* lo que ya tienes */
   padding: 14px 16px 16px 16px;
+
+  /* ✅ nuevo: el contenido scrollea, no el backdrop */
+  overflow: auto;
+  flex: 1 1 auto;
 }
+
 
 .field{
   display: flex;
@@ -204,7 +215,14 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+
+  /* ✅ sticky dentro del contenedor scrolleable */
+  position: sticky;
+  bottom: 0;
+
+  background: #ffffff;
   padding-top: 14px;
+  padding-bottom: 14px;
   margin-top: 10px;
   border-top: 1px solid #eef2f7;
 }
@@ -256,4 +274,96 @@
 .primary:disabled{
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* ===== Carreras: Conceptos ===== */
+.sectionTitle{
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #111827;
+  letter-spacing: 0.01em;
+}
+
+.conceptos{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.conceptoCard{
+  border: 1px solid #e7ebf3;
+  background: #fbfcfe;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.conceptoActions{
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.addRow{
+  height: 42px;
+  border-radius: 14px;
+  border: 1px dashed #dbe3f2;
+  background: #ffffff;
+  color: #0a0a0a;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.addRow:hover{
+  background: #f7f9fd;
+}
+
+/* switch inline solo para conceptos (no toca el check global) */
+.checkInline{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a0a0a;
+}
+
+.checkInline input{
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid #e7ebf3;
+  background: #f2f4f8;
+  appearance: none;
+  position: relative;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.checkInline input::after{
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  transition: left 140ms ease;
+  box-shadow: 0 6px 14px rgba(16, 24, 40, 0.10);
+}
+
+.checkInline input:checked{
+  background: rgba(17, 24, 39, 0.92);
+  border-color: rgba(17, 24, 39, 0.92);
+}
+
+.checkInline input:checked::after{
+  left: 22px;
 }

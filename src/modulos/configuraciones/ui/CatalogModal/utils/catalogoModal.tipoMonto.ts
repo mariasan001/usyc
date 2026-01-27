@@ -18,9 +18,9 @@ function normalizarClave(raw: unknown): string {
 
 /**
  * Decide tipoMonto por CÓDIGO o NOMBRE.
- * - INSCRIPCION / INS / INSCR... -> CARRERA-INSCRIPCION
- * - MENSUALIDAD / MENS / MEN...   -> CARRERA-MENSUALIDAD
- * - otro -> MONTO-MANUAL
+ * - INSCRIPCION / INS / INSCR... -> CARRERA_INSCRIPCION
+ * - MENSUALIDAD / MENS / MEN...   -> CARRERA_MENSUALIDAD
+ * - otro -> MONTO_MANUAL
  */
 export function calcularTipoMontoConcepto(args: {
   codigo?: unknown;
@@ -55,7 +55,16 @@ export function calcularTipoMontoConcepto(args: {
  * Etiqueta bonita para UI (no afecta payload).
  */
 export function etiquetarTipoMonto(tipoMonto: string): string {
-  if (tipoMonto === 'CARRERA-INSCRIPCION') return 'Carrera_Inscripción';
-  if (tipoMonto === 'CARRERA-MENSUALIDAD') return 'Carrera_Mensualidad';
-  return 'Monto_manual';
+  const t = String(tipoMonto ?? '').trim().toUpperCase();
+
+  if (t === 'CARRERA_INSCRIPCION' || t === 'CARRERA-INSCRIPCION') {
+    return 'Carrera / Inscripción';
+  }
+
+  if (t === 'CARRERA_MENSUALIDAD' || t === 'CARRERA-MENSUALIDAD') {
+    return 'Carrera / Mensualidad';
+  }
+
+  return 'Monto manual';
 }
+

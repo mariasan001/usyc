@@ -18,6 +18,7 @@ export function useCarreras(initialParams: ListParams = { soloActivos: true }) {
   const reload = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
     try {
       let data: Carrera[] = [];
 
@@ -41,65 +42,77 @@ export function useCarreras(initialParams: ListParams = { soloActivos: true }) {
     void reload();
   }, [reload]);
 
-  const create = useCallback(async (payload: CarreraCreate) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      const created = await CarrerasService.create(payload);
-      await reload();
-      return created;
-    } catch (e) {
-      setError(e);
-      throw e;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reload]);
+  const create = useCallback(
+    async (payload: CarreraCreate) => {
+      setIsSaving(true);
+      setError(null);
+      try {
+        const created = await CarrerasService.create(payload);
+        await reload();
+        return created;
+      } catch (e) {
+        setError(e);
+        throw e;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [reload],
+  );
 
-  const update = useCallback(async (carreraId: string, payload: CarreraUpdate) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      const updated = await CarrerasService.update(carreraId, payload);
-      await reload();
-      return updated;
-    } catch (e) {
-      setError(e);
-      throw e;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reload]);
+  const update = useCallback(
+    async (carreraId: string, payload: CarreraUpdate) => {
+      setIsSaving(true);
+      setError(null);
+      try {
+        const updated = await CarrerasService.update(carreraId, payload);
+        await reload();
+        return updated;
+      } catch (e) {
+        setError(e);
+        throw e;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [reload],
+  );
 
-  const activar = useCallback(async (carreraId: string) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      await CarrerasService.activar(carreraId);
-      await reload();
-    } catch (e) {
-      setError(e);
-      throw e;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reload]);
+  const activar = useCallback(
+    async (carreraId: string) => {
+      setIsSaving(true);
+      setError(null);
+      try {
+        await CarrerasService.activar(carreraId);
+        await reload();
+      } catch (e) {
+        setError(e);
+        throw e;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [reload],
+  );
 
-  const desactivar = useCallback(async (carreraId: string) => {
-    setIsSaving(true);
-    setError(null);
-    try {
-      await CarrerasService.desactivar(carreraId);
-      await reload();
-    } catch (e) {
-      setError(e);
-      throw e;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [reload]);
+  const desactivar = useCallback(
+    async (carreraId: string) => {
+      setIsSaving(true);
+      setError(null);
+      try {
+        await CarrerasService.desactivar(carreraId);
+        await reload();
+      } catch (e) {
+        setError(e);
+        throw e;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [reload],
+  );
 
-  const state = useMemo(
+  return useMemo(
     () => ({
       items,
       params,
@@ -113,8 +126,18 @@ export function useCarreras(initialParams: ListParams = { soloActivos: true }) {
       activar,
       desactivar,
     }),
-    [items, params, isLoading, isSaving, error, reload, setParams, create, update, activar, desactivar],
+    [
+      items,
+      params,
+      isLoading,
+      isSaving,
+      error,
+      reload,
+      setParams,
+      create,
+      update,
+      activar,
+      desactivar,
+    ],
   );
-
-  return state;
 }

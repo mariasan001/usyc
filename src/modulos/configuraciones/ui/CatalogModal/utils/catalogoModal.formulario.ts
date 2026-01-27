@@ -11,6 +11,21 @@ export function comoObjeto(v: unknown): Record<string, unknown> {
   return {};
 }
 
+function asNumber(v: unknown, fallback: number): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function asBoolean(v: unknown, fallback: boolean): boolean {
+  if (typeof v === 'boolean') return v;
+  return fallback;
+}
+
+function asString(v: unknown, fallback = ''): string {
+  return typeof v === 'string' ? v : fallback;
+}
+
 /**
  * Crea el estado inicial del formulario según catálogo y modo.
  * Importante: esta función SOLO define defaults.
@@ -33,22 +48,52 @@ export function getFormularioInicial(args: {
     };
   }
 
-  // ✅ CARRERAS
+  // ✅ CARRERAS (NUEVA ESTRUCTURA: conceptos[])
   if (catalog === 'carreras') {
     const fallbackEscolaridadId =
       typeof init.escolaridadId === 'number'
         ? init.escolaridadId
         : escolaridadesOrdenadas[0]?.id ?? 0;
 
+    const conceptosRaw = Array.isArray(init.conceptos) ? init.conceptos : [];
+
+    const conceptos = conceptosRaw.map((row) => {
+      const r = comoObjeto(row);
+
+      return {
+        conceptoId: asNumber(r.conceptoId, 0),
+        monto: asNumber(r.monto, 0),
+        cantidad: asNumber(r.cantidad, 1),
+        activo: asBoolean(r.activo, true),
+
+        // solo UI (cuando viene de list/get)
+        conceptoCodigo:
+          typeof r.conceptoCodigo === 'string' ? r.conceptoCodigo : undefined,
+        conceptoNombre:
+          typeof r.conceptoNombre === 'string' ? r.conceptoNombre : undefined,
+      };
+    });
+
     return {
-      carreraId: init.carreraId ?? '',
+      carreraId: asString(init.carreraId, ''),
       escolaridadId: fallbackEscolaridadId,
-      nombre: init.nombre ?? '',
-      montoMensual: Number(init.montoMensual ?? 0),
-      montoInscripcion: Number(init.montoInscripcion ?? 0),
-      duracionAnios: Number(init.duracionAnios ?? 0),
-      duracionMeses: Number(init.duracionMeses ?? 0),
-      activo: init.activo ?? true,
+      nombre: asString(init.nombre, ''),
+      duracionAnios: asNumber(init.duracionAnios, 0),
+      duracionMeses: asNumber(init.duracionMeses, 0),
+      activo: asBoolean(init.activo, true),
+
+      // 👇 nueva estructura
+      conceptos: conceptos.length
+        ? conceptos
+        : [
+            {
+              conceptoId: 0,
+              monto: 0,
+              cantidad: 1,
+              activo: true,
+            },
+          ],
+
       __mode: mode, // útil para debug interno si algún día se requiere; opcional
     };
   }

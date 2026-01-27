@@ -1,4 +1,5 @@
 // src/modulos/configuraciones/ui/catalogo-modal/types/catalogoModal.types.ts
+
 import type { Escolaridad } from '@/modulos/configuraciones/types/escolaridades.types';
 import { CatalogKey } from '../../CatalogTabs/types/catalogoTabs.types';
 
@@ -52,4 +53,28 @@ export type FlagsCatalogoModal = {
   showCodigo: boolean;
 
   placeholderCodigo: string;
+};
+
+/**
+ * ✅ Extras SOLO para Carreras (no afectan a otros catálogos):
+ * Tipos auxiliares para manejar "conceptos" dentro de una carrera.
+ */
+export type CarreraConceptoFormRow = {
+  conceptoId: number;
+  monto: number;
+  cantidad: number;
+  activo: boolean;
+
+  // Solo UI (cuando viene de list/get)
+  conceptoCodigo?: string;
+  conceptoNombre?: string;
+};
+
+/**
+ * ✅ Opción para selects de conceptos de pago (Carreras).
+ */
+export type ConceptoPagoOption = {
+  conceptoId: number;
+  codigo: string;
+  nombre: string;
 };

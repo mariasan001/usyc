@@ -24,100 +24,129 @@ export function buildPayloadCatalogo(args: {
   if (catalog === 'escolaridades') {
     return mode === 'create'
       ? {
-          codigo: String(form.codigo ?? '').trim(),
-          nombre: String(form.nombre ?? '').trim(),
+          codigo: String((form as Record<string, unknown>).codigo ?? '').trim(),
+          nombre: String((form as Record<string, unknown>).nombre ?? '').trim(),
         }
       : {
-          nombre: String(form.nombre ?? '').trim(),
+          nombre: String((form as Record<string, unknown>).nombre ?? '').trim(),
         };
   }
 
-  // ✅ CARRERAS
+  // ✅ CARRERAS (NUEVA ESTRUCTURA: conceptos[])
   if (catalog === 'carreras') {
+    const f = form as Record<string, unknown>;
+
+    // conceptos: [{ conceptoId, monto, cantidad, activo }]
+    const conceptosRaw = Array.isArray(f.conceptos) ? (f.conceptos as unknown[]) : [];
+
+    const conceptos = conceptosRaw
+      .map((row) => {
+        const r = row as Record<string, unknown>;
+
+        const conceptoId = Number(r.conceptoId ?? 0);
+        const monto = Number(r.monto ?? 0);
+        const cantidad = Number(r.cantidad ?? 0);
+        const activo = !!r.activo;
+
+        return { conceptoId, monto, cantidad, activo };
+      })
+      // ✅ solo filas válidas (conceptoId > 0)
+      .filter((x) => Number.isFinite(x.conceptoId) && x.conceptoId > 0)
+      // ✅ normaliza números (evita NaN)
+      .map((x) => ({
+        ...x,
+        monto: Number.isFinite(x.monto) ? x.monto : 0,
+        cantidad: Number.isFinite(x.cantidad) ? x.cantidad : 0,
+      }));
+
     return mode === 'create'
       ? {
-          carreraId: String(form.carreraId ?? '').trim(),
-          escolaridadId: Number(form.escolaridadId ?? 0),
-          nombre: String(form.nombre ?? '').trim(),
-          montoMensual: Number(form.montoMensual ?? 0),
-          montoInscripcion: Number(form.montoInscripcion ?? 0),
-          duracionAnios: Number(form.duracionAnios ?? 0),
-          duracionMeses: Number(form.duracionMeses ?? 0),
-          activo: !!form.activo,
+          carreraId: String(f.carreraId ?? '').trim(),
+          escolaridadId: Number(f.escolaridadId ?? 0),
+          nombre: String(f.nombre ?? '').trim(),
+          duracionAnios: Number(f.duracionAnios ?? 0),
+          duracionMeses: Number(f.duracionMeses ?? 0),
+          activo: !!f.activo,
+          conceptos,
         }
       : {
-          escolaridadId: Number(form.escolaridadId ?? 0),
-          nombre: String(form.nombre ?? '').trim(),
-          montoMensual: Number(form.montoMensual ?? 0),
-          montoInscripcion: Number(form.montoInscripcion ?? 0),
-          duracionAnios: Number(form.duracionAnios ?? 0),
-          duracionMeses: Number(form.duracionMeses ?? 0),
-          activo: !!form.activo,
+          escolaridadId: Number(f.escolaridadId ?? 0),
+          nombre: String(f.nombre ?? '').trim(),
+          duracionAnios: Number(f.duracionAnios ?? 0),
+          duracionMeses: Number(f.duracionMeses ?? 0),
+          activo: !!f.activo,
+          conceptos,
         };
   }
 
   // ✅ CONCEPTOS PAGO
-    if (catalog === 'conceptosPago') {
-    const codigo = String(form.codigo ?? '').trim().toUpperCase();
+  if (catalog === 'conceptosPago') {
+    const f = form as Record<string, unknown>;
+    const codigo = String(f.codigo ?? '').trim().toUpperCase();
+
     const tipoMonto = calcularTipoMontoConcepto({
-        codigo,
-        nombre: form.nombre,
+      codigo,
+      nombre: f.nombre,
     });
 
     return mode === 'create'
-        ? {
-            codigo,
-            nombre: String(form.nombre ?? '').trim(),
-            descripcion: String(form.descripcion ?? '').trim(),
-            tipoMonto,
-            activo: !!form.activo,
-        }
-        : {
-            nombre: String(form.nombre ?? '').trim(),
-            descripcion: String(form.descripcion ?? '').trim(),
-            tipoMonto,
-            activo: !!form.activo,
-        };
-    }
-  // ✅ TIPOS DE PAGO
-  if (catalog === 'tiposPago') {
-    return mode === 'create'
       ? {
-          code: String(form.code ?? '').trim(),
-          name: String(form.name ?? '').trim(),
-          active: !!form.active,
+          codigo,
+          nombre: String(f.nombre ?? '').trim(),
+          descripcion: String(f.descripcion ?? '').trim(),
+          tipoMonto,
+          activo: !!f.activo,
         }
       : {
-          name: String(form.name ?? '').trim(),
-          active: !!form.active,
+          nombre: String(f.nombre ?? '').trim(),
+          descripcion: String(f.descripcion ?? '').trim(),
+          tipoMonto,
+          activo: !!f.activo,
+        };
+  }
+
+  // ✅ TIPOS DE PAGO
+  if (catalog === 'tiposPago') {
+    const f = form as Record<string, unknown>;
+    return mode === 'create'
+      ? {
+          code: String(f.code ?? '').trim(),
+          name: String(f.name ?? '').trim(),
+          active: !!f.active,
+        }
+      : {
+          name: String(f.name ?? '').trim(),
+          active: !!f.active,
         };
   }
 
   // ✅ PLANTELES
   if (catalog === 'planteles') {
+    const f = form as Record<string, unknown>;
     return mode === 'create'
       ? {
-          code: String(form.code ?? '').trim(),
-          name: String(form.name ?? '').trim(),
-          address: String(form.address ?? '').trim(),
-          active: !!form.active,
+          code: String(f.code ?? '').trim(),
+          name: String(f.name ?? '').trim(),
+          address: String(f.address ?? '').trim(),
+          active: !!f.active,
         }
       : {
-          name: String(form.name ?? '').trim(),
-          address: String(form.address ?? '').trim(),
-          active: !!form.active,
+          name: String(f.name ?? '').trim(),
+          address: String(f.address ?? '').trim(),
+          active: !!f.active,
         };
   }
 
   // ✅ ESTATUS RECIBO
   if (catalog === 'estatusRecibo') {
+    const f = form as Record<string, unknown>;
     return mode === 'create'
       ? {
-          codigo: String(form.codigo ?? '').trim(),
-          nombre: String(form.nombre ?? '').trim(),
+          codigo: String(f.codigo ?? '').trim(),
+          nombre: String(f.nombre ?? '').trim(),
         }
       : {
-          nombre: String(form.nombre ?? '').trim(),
+          nombre: String(f.nombre ?? '').trim(),
         };
   }
 

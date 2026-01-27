@@ -1,15 +1,34 @@
-// src/modulos/configuraciones/ui/catalogo-modal/hooks/useCatalogoModal.ts
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 
-import type { CatalogoModalProps, FlagsCatalogoModal, FormState } from '../types/catalogoModal.types';
+import type {
+  CatalogoModalProps,
+  FlagsCatalogoModal,
+  FormState,
+} from '../types/catalogoModal.types';
 
 import { getTituloCatalogoModal } from '../utils/catalogoModal.titulo';
 import { getFormularioInicial } from '../utils/catalogoModal.formulario';
 import { buildPayloadCatalogo } from '../utils/catalogoModal.payload';
+
+// ✅ Carreras: generar carreraId
 import { CarrerasService } from '@/modulos/configuraciones/services/carreras.service';
 import { nextCarreraId } from '../utils/carreras.nextId';
+
+// ✅ Carreras: traer conceptos para select
+import { conceptosPagoService } from '@/modulos/configuraciones/services/conceptosPago.service';
+
+type ConceptoSelectItem = {
+  conceptoId: number;
+  codigo: string;
+  nombre: string;
+};
+
+function readString(form: FormState, key: string): string {
+  const v = form[key];
+  return typeof v === 'string' ? v : '';
+}
 
 /**
  * Hook central del modal:
@@ -26,7 +45,12 @@ export function useCatalogoModal(props: CatalogoModalProps) {
     escolaridadesOptions = [],
   } = props;
 
-  const titulo = useMemo(() => getTituloCatalogoModal(catalog, mode), [catalog, mode]);
+  const saving = !!isSaving;
+
+  const titulo = useMemo(
+    () => getTituloCatalogoModal(catalog, mode),
+    [catalog, mode],
+  );
 
   const escolaridadesOrdenadas = useMemo(() => {
     return [...escolaridadesOptions].sort((a, b) =>
@@ -119,41 +143,104 @@ export function useCatalogoModal(props: CatalogoModalProps) {
    */
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (isSaving) return;
+    if (saving) return;
 
     const payload = buildPayloadCatalogo({ catalog, mode, form });
     await onSave(payload);
   }
 
+  // =========================
+  // CARRERAS: asegurar carreraId (create)
+  // =========================
   useEffect(() => {
-  let alive = true;
+    let alive = true;
 
-  async function ensureCarreraId() {
-    if (catalog !== 'carreras') return;
-    if (props.mode !== 'create') return;
+    async function ensureCarreraId() {
+      if (catalog !== 'carreras') return;
+      if (mode !== 'create') return;
 
-    // si ya tiene, no lo pises
-    if (String(form.carreraId ?? '').trim()) return;
+      // si ya tiene, no lo pises
+      if (readString(form, 'carreraId').trim()) return;
 
-    // importante: traer también inactivos para no reciclar IDs
-    const all = await CarrerasService.list({ soloActivos: false });
+      // importante: traer también inactivos para no reciclar IDs
+      const all = await CarrerasService.list({ soloActivos: false });
 
-    const nextId = nextCarreraId(all.map((c) => c.carreraId));
-    if (!alive) return;
+      const nextId = nextCarreraId(all.map((c) => c.carreraId));
+      if (!alive) return;
 
-    setCampo('carreraId', nextId);
-  }
+      setCampo('carreraId', nextId);
+    }
 
-  void ensureCarreraId();
+    void ensureCarreraId();
 
-  return () => {
-    alive = false;
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [catalog, props.mode]);
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog, mode]);
+
+  // =========================
+  // CARRERAS: catálogo conceptos (para select)
+  // =========================
+  const [conceptosPagoOrdenados, setConceptosPagoOrdenados] = useState<
+    ConceptoSelectItem[]
+  >([]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadConceptosPago() {
+      if (catalog !== 'carreras') {
+        setConceptosPagoOrdenados([]);
+        return;
+      }
+
+      try {
+        const items = await conceptosPagoService.list({ soloActivos: true });
+
+        if (!alive) return;
+
+        const mapped = (items ?? [])
+          .map((x) => {
+            const raw = x as Record<string, unknown>;
+
+            const conceptoId =
+              typeof raw.conceptoId === 'number'
+                ? raw.conceptoId
+                : typeof raw.id === 'number'
+                  ? raw.id
+                  : 0;
+
+            const codigo = typeof raw.codigo === 'string' ? raw.codigo : '';
+            const nombre = typeof raw.nombre === 'string' ? raw.nombre : '';
+
+            return {
+              conceptoId: Number(conceptoId),
+              codigo,
+              nombre,
+            };
+          })
+          .filter((x) => Number.isFinite(x.conceptoId) && x.conceptoId > 0)
+          .sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+        setConceptosPagoOrdenados(mapped);
+      } catch {
+        if (!alive) return;
+        setConceptosPagoOrdenados([]);
+      }
+    }
+
+    void loadConceptosPago();
+
+    return () => {
+      alive = false;
+    };
+  }, [catalog]);
+
   return {
     titulo,
     escolaridadesOrdenadas,
+    conceptosPagoOrdenados, // 👈 solo lo usa carreras en la UI
     form,
     setCampo,
     flags,
