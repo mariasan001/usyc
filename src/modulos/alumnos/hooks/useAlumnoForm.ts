@@ -33,6 +33,72 @@ type AlumnoCreateConMigracion = AlumnoCreate & {
 };
 
 /**
+ * Helpers locales (carreras nueva estructura)
+ * - NO cambia el type Carrera global
+ * - NO introduce any
+ */
+
+function normalizarClave(raw: unknown): string {
+  return String(raw ?? '')
+    .trim()
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quita acentos
+    .replace(/[^A-Z0-9\s-]/g, ''); // limpia símbolos
+}
+
+function getConceptosDeCarrera(carrera: Carrera | null): Array<Record<string, unknown>> {
+  if (!carrera) return [];
+
+  const obj = carrera as unknown as Record<string, unknown>;
+  const raw = obj.conceptos;
+
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((x) => (x && typeof x === 'object' ? (x as Record<string, unknown>) : null))
+    .filter((x): x is Record<string, unknown> => Boolean(x));
+}
+
+/**
+ * Intenta derivar el monto mensual desde conceptos.
+ * - Busca por nombre/código parecido a MENSUALIDAD / MENS / MEN
+ * - Suma monto * cantidad de los conceptos “mensuales” activos
+ * - Si no encuentra, regresa 0
+ */
+function montoMensualDesdeConceptos(conceptos: Array<Record<string, unknown>>): number {
+  let total = 0;
+
+  for (const c of conceptos) {
+    const activo = typeof c.activo === 'boolean' ? c.activo : true;
+    if (!activo) continue;
+
+    const codigo = normalizarClave(c.conceptoCodigo);
+    const nombre = normalizarClave(c.conceptoNombre);
+
+    const pareceMensual =
+      codigo === 'MENSUALIDAD' ||
+      codigo.startsWith('MENS') ||
+      codigo.startsWith('MEN') ||
+      nombre === 'MENSUALIDAD' ||
+      nombre.startsWith('MENSUALIDAD') ||
+      nombre.startsWith('MENS') ||
+      nombre.startsWith('MEN');
+
+    if (!pareceMensual) continue;
+
+    const monto = Number(c.monto ?? 0);
+    const cantidad = Number(c.cantidad ?? 1);
+
+    const montoSafe = Number.isFinite(monto) ? monto : 0;
+    const cantidadSafe = Number.isFinite(cantidad) ? cantidad : 1;
+
+    total += montoSafe * cantidadSafe;
+  }
+
+  return Number.isFinite(total) ? total : 0;
+}
+
+/**
  * Hook del formulario de registro de alumno.
  *
  * Objetivos:
@@ -128,7 +194,10 @@ export function useAlumnoForm() {
    * - Primaria/Secundaria/Bach => “Nivel académico”
    * - Resto => “Carrera”
    */
-  const etiquetaPrograma = useMemo(() => etiquetaProgramaPorEscolaridad(escolaridadSel), [escolaridadSel]);
+  const etiquetaPrograma = useMemo(
+    () => etiquetaProgramaPorEscolaridad(escolaridadSel),
+    [escolaridadSel],
+  );
 
   /**
    * Regla: una vez seleccionada la escolaridad, el programa debe seleccionarse.
@@ -152,11 +221,9 @@ export function useAlumnoForm() {
     return carrerasFiltradas.find((c) => String(c.carreraId) === String(carreraId)) ?? null;
   }, [carreraId, carrerasFiltradas]);
 
+  // =========================
   // Derivados (siempre desde el programa seleccionado)
-  const precioMensual = useMemo<number>(() => {
-    const directo = typeof carreraSel?.montoMensual === 'number' ? carreraSel.montoMensual : 0;
-    return directo || leerNumeroOpcional(carreraSel, 'montoMensual');
-  }, [carreraSel]);
+  // =========================
 
   const duracionMeses = useMemo<number>(() => {
     const anios = typeof carreraSel?.duracionAnios === 'number' ? carreraSel.duracionAnios : 0;
@@ -167,6 +234,36 @@ export function useAlumnoForm() {
 
     return aniosSafe * 12 + mesesSafe;
   }, [carreraSel]);
+
+  /**
+   * ✅ Nueva lógica:
+   * Antes: carreraSel.montoMensual (ya no existe en el type/estructura nueva)
+   * Ahora:
+   * - intenta derivar desde carreraSel.conceptos
+   * - fallback: totalProyectado / duración (estimado)
+   */
+  const precioMensual = useMemo<number>(() => {
+    if (!carreraSel) return 0;
+
+    const conceptos = getConceptosDeCarrera(carreraSel);
+    const mensualDesdeConceptos = montoMensualDesdeConceptos(conceptos);
+
+    if (mensualDesdeConceptos > 0) return mensualDesdeConceptos;
+
+    const total =
+      (typeof (carreraSel as unknown as Record<string, unknown>).totalProyectado === 'number'
+        ? Number((carreraSel as unknown as Record<string, unknown>).totalProyectado)
+        : 0) || leerNumeroOpcional(carreraSel, 'totalProyectado');
+
+    const totalSafe = Number.isFinite(total) ? total : 0;
+
+    if (totalSafe > 0 && duracionMeses > 0) {
+      // Estimado mensual (si no hay concepto “mensualidad” explícito)
+      return Math.round(totalSafe / duracionMeses);
+    }
+
+    return 0;
+  }, [carreraSel, duracionMeses]);
 
   const fechaTermino = useMemo<string>(() => {
     if (!fechaIngreso) return '—';
@@ -246,8 +343,6 @@ export function useAlumnoForm() {
     const matriculaTrim = matricula.trim();
 
     if (!nombreMayus) return setFormError('Falta el nombre.');
-
-  
     if (!matriculaTrim) return setFormError('Falta la matrícula.');
     if (!escolaridadId) return setFormError('Selecciona una escolaridad.');
     if (!plantelId) return setFormError('Selecciona un plantel.');
@@ -277,14 +372,14 @@ export function useAlumnoForm() {
 
       const created = await alumnoCreate.create(payload);
 
-   setSuccessFlash(
-  created && typeof created === 'object' && 'alumnoId' in created && created.alumnoId
-    ? `Alumno creado: ${String(created.alumnoId)}`
-    : 'Alumno creado ✅',
-);
+      setSuccessFlash(
+        created && typeof created === 'object' && 'alumnoId' in created && created.alumnoId
+          ? `Alumno creado: ${String(created.alumnoId)}`
+          : 'Alumno creado ✅',
+      );
 
-// auto-hide
-setTimeout(() => setSuccessFlash(null), 2500);
+      // auto-hide
+      setTimeout(() => setSuccessFlash(null), 2500);
 
       return created;
     } catch (e: unknown) {
