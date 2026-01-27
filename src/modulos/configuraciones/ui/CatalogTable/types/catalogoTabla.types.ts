@@ -28,10 +28,23 @@ export type FilaCatalogo = Record<string, unknown> & {
 
   // carreras extras
   escolaridadNombre?: string;
+
+  // ⚠️ legacy (si aún existiera en alguna versión)
   montoMensual?: number;
   montoInscripcion?: number;
+
   duracionAnios?: number;
   duracionMeses?: number;
+
+  // ✅ nuevo (estructura actual de carreras)
+  totalProyectado?: number;
+
+  /**
+   * ✅ nuevo:
+   * En carreras, "conceptos" llega como arreglo.
+   * No tipamos fuerte aquí para no amarrar la tabla a un solo catálogo.
+   */
+  conceptos?: unknown;
 };
 
 /**

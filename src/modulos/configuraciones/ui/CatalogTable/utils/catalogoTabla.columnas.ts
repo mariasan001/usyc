@@ -16,15 +16,25 @@ export function adivinarColumnas(item: FilaCatalogo): string[] {
 
   // ✅ 2) Carreras
   if (tieneCampo(item, 'carreraId')) {
-    const cols = [
+    // Base mínima (nueva estructura)
+    const cols: string[] = [
       'carreraId',
       'nombre',
       'escolaridadNombre',
-      'montoMensual',
-      'montoInscripcion',
       'duracionAnios',
       'duracionMeses',
     ];
+
+    // ✅ Compatibilidad: si aún vinieran campos legacy, los mostramos
+    if (tieneCampo(item, 'montoMensual')) cols.push('montoMensual');
+    if (tieneCampo(item, 'montoInscripcion')) cols.push('montoInscripcion');
+
+    // ✅ Nuevo: total proyectado
+    if (tieneCampo(item, 'totalProyectado')) cols.push('totalProyectado');
+
+    // ✅ Nuevo: conceptos (array)
+    if (tieneCampo(item, 'conceptos')) cols.push('conceptos');
+
     if (tieneCampo(item, 'activo')) cols.push('activo');
     return cols;
   }

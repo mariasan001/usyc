@@ -42,6 +42,10 @@ export function tituloColumna(key: string): string {
     duracionAnios: 'Años',
     duracionMeses: 'Meses',
 
+    // ✅ nuevo (carreras)
+    totalProyectado: 'Total proyectado',
+    conceptos: 'Conceptos',
+
     tipoMonto: 'Tipo de monto',
   };
 
