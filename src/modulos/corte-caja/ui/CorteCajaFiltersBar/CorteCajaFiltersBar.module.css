@@ -3,6 +3,126 @@
 .bar {
   display: flex;
   gap: 12px;
+  align-items: stretch;
+  justify-content: space-between;
+
+  padding: 12px;
+  border: 1px solid #e7ebf3;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(20, 30, 60, 0.06);
+}
+
+/* Filtros */
+.left {
+  display: grid;
+  grid-template-columns: 160px 160px minmax(260px, 1fr);
+  grid-auto-rows: auto;
+  gap: 10px;
+  align-items: end;
+  width: 100%;
+  min-width: 0;
+}
+
+.field,
+.fieldWide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fieldWide {
+  grid-column: 1 / -1; /* ✅ ocupar toda la fila */
+}
+
+.label {
+  font-size: 12px;
+  color: #5a667f;
+}
+
+.input {
+  height: 40px;
+  padding: 0 12px;
+
+  border-radius: 12px;
+  border: 1px solid #e7ebf3;
+  background: #f7f9fd;
+
+  font-size: 14px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #cbd6ee;
+  background: #fff;
+}
+
+/* Acciones */
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.btnPrimary,
+.btnSecondary {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+/* ✅ Refrescar: botón principal */
+.btnPrimary {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+/* ✅ Descargar: secundario (para que no se vea “doble”) */
+.btnSecondary {
+  background: #fff;
+  color: #0f172a;
+  border-color: #e7ebf3;
+}
+
+.btnPrimary:disabled,
+.btnSecondary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: #f7f9fd;
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .bar {
+    flex-direction: column;
+  }
+
+  .left {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldWide {
+    grid-column: auto;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+.bar {
+  display: flex;
+  gap: 12px;
   align-items: flex-end;
   justify-content: space-between;
 
@@ -15,7 +135,7 @@
 
 .left {
   display: grid;
-  grid-template-columns: 160px 140px minmax(260px, 1fr);
+  grid-template-columns: 160px 160px minmax(220px, 1fr) minmax(280px, 1fr);
   gap: 10px;
   align-items: end;
   width: 100%;
@@ -54,9 +174,11 @@
 .right {
   display: flex;
   align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-.refresh {
+.btn {
   height: 38px;
   padding: 0 14px;
 
@@ -67,14 +189,15 @@
 
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.refresh:disabled {
+.btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .bar {
     flex-direction: column;
     align-items: stretch;

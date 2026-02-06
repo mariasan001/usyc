@@ -1,3 +1,4 @@
+// src/modulos/corte-caja/hooks/useCorteCaja.ts
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,9 +7,10 @@ import type { CorteCajaDTO, CorteCajaReciboDTO } from '../types/corte-caja.types
 import { CorteCajaService } from '../services/useCorteCaja';
 
 type CorteCajaFilters = {
-  fecha: string;              // YYYY-MM-DD
-  plantelId: number | null;   // null = ALL (solo admin)
-  q: string;                  // filtro local
+  fechaInicio: string;         // YYYY-MM-DD
+  fechaFin: string;            // YYYY-MM-DD
+  plantelId: number | null;    // null = ALL (solo admin)
+  q: string;                   // filtro local
 };
 
 function todayISO(): string {
@@ -24,7 +26,8 @@ function norm(v?: string) {
 }
 
 const DEFAULT_FILTERS: CorteCajaFilters = {
-  fecha: todayISO(),
+  fechaInicio: todayISO(),
+  fechaFin: todayISO(),
   plantelId: null,
   q: '',
 };
@@ -65,19 +68,26 @@ export function useCorteCaja() {
     setError(null);
 
     try {
-      const fecha = filters.fecha;
+      const { fechaInicio, fechaFin } = filters;
 
       // ✅ Admin puede mandar null (ALL). No admin => forzado al plantel del usuario.
       const plantelIdFinal = esAdmin ? filters.plantelId : plantelUsuarioId;
 
-      if (!fecha) throw new Error('Selecciona una fecha válida.');
+      if (!fechaInicio) throw new Error('Selecciona una fecha de inicio válida.');
+      if (!fechaFin) throw new Error('Selecciona una fecha fin válida.');
+
+      // Regla simple: no permitir rango invertido (si lo necesitas al revés, lo ajustamos)
+      if (fechaInicio > fechaFin) {
+        throw new Error('La fecha de inicio no puede ser mayor que la fecha fin.');
+      }
 
       if (!esAdmin && plantelIdFinal == null) {
         throw new Error('Tu usuario no tiene plantel asignado.');
       }
 
-      const res = await CorteCajaService.get({
-        fecha,
+      const res = await CorteCajaService.getRango({
+        fechaInicio,
+        fechaFin,
         plantelId: plantelIdFinal,
       });
 
@@ -89,7 +99,7 @@ export function useCorteCaja() {
     } finally {
       setLoading(false);
     }
-  }, [filters.fecha, filters.plantelId, esAdmin, plantelUsuarioId]);
+  }, [filters.fechaInicio, filters.fechaFin, filters.plantelId, esAdmin, plantelUsuarioId]);
 
   useEffect(() => {
     // evita disparar antes de tener usuario para no-admin

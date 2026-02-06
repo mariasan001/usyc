@@ -1,12 +1,13 @@
+// src/modulos/corte-caja/ui/CorteCajaFiltersBar/CorteCajaFiltersBar.tsx
 'use client';
 
 import { useMemo } from 'react';
 import s from './CorteCajaFiltersBar.module.css';
-
 import { usePlanteles } from '@/modulos/configuraciones/hooks';
 
 export type CorteCajaFiltersUI = {
-  fecha: string;
+  fechaInicio: string;
+  fechaFin: string;
   plantelId: number | null; // null = ALL (solo admin)
   q: string;
 };
@@ -16,7 +17,10 @@ type Updater = CorteCajaFiltersUI | ((prev: CorteCajaFiltersUI) => CorteCajaFilt
 type Props = {
   filters: CorteCajaFiltersUI;
   onChange: (next: Updater) => void;
+
   onRefresh: () => void;
+  onDownloadPdf: () => void; // ✅ NUEVO: PDF lo genera el frontend
+
   loading?: boolean;
 
   // ✅ regla por rol
@@ -25,7 +29,6 @@ type Props = {
   plantelUsuarioNombre: string | null;
 };
 
-/** Soporta hooks que expongan `isLoading` o `loading` */
 type LoadingShape = { isLoading?: boolean; loading?: boolean };
 
 function getLoading(x: LoadingShape): boolean {
@@ -38,6 +41,7 @@ export default function CorteCajaFiltersBar({
   filters,
   onChange,
   onRefresh,
+  onDownloadPdf,
   loading,
 
   esAdmin,
@@ -45,8 +49,7 @@ export default function CorteCajaFiltersBar({
   plantelUsuarioNombre,
 }: Props) {
   const plantelesApi = usePlanteles({ soloActivos: true });
-
-  // ✅ aquí está el fix real: ya no usamos plantelesApi.isLoading directo
+  // ✅ fix: no asumimos shape único del hook
   const plantelesLoading = getLoading(plantelesApi);
 
   const plantelesOptions = useMemo(
@@ -61,13 +64,25 @@ export default function CorteCajaFiltersBar({
   return (
     <div className={s.bar}>
       <div className={s.left}>
+        {/* ✅ Rango: inicio */}
         <label className={s.field}>
-          <span className={s.label}>Fecha</span>
+          <span className={s.label}>Inicio</span>
           <input
             className={s.input}
             type="date"
-            value={filters.fecha}
-            onChange={(e) => onChange((prev) => ({ ...prev, fecha: e.target.value }))}
+            value={filters.fechaInicio}
+            onChange={(e) => onChange((prev) => ({ ...prev, fechaInicio: e.target.value }))}
+          />
+        </label>
+
+        {/* ✅ Rango: fin */}
+        <label className={s.field}>
+          <span className={s.label}>Fin</span>
+          <input
+            className={s.input}
+            type="date"
+            value={filters.fechaFin}
+            onChange={(e) => onChange((prev) => ({ ...prev, fechaFin: e.target.value }))}
           />
         </label>
 
@@ -116,8 +131,18 @@ export default function CorteCajaFiltersBar({
       </div>
 
       <div className={s.right}>
-        <button className={s.refresh} onClick={onRefresh} type="button" disabled={!!loading}>
+        <button className={s.btn} onClick={onRefresh} type="button" disabled={!!loading}>
           {loading ? 'Cargando…' : 'Refrescar'}
+        </button>
+
+        <button
+          className={`${s.btn} ${s.btnGhost}`}
+          onClick={onDownloadPdf}
+          type="button"
+          disabled={!!loading || !filters.fechaInicio || !filters.fechaFin}
+          title="Genera y descarga el PDF con los datos visibles"
+        >
+          Descargar PDF
         </button>
       </div>
     </div>

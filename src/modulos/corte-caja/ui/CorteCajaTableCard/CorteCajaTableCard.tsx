@@ -88,6 +88,14 @@ export default function CorteCajaTableCard({
   const resumen = data?.resumen ?? null;
   const porTipo = data?.porTipoPago ?? [];
 
+  // Texto de rango (solo UI)
+  const rangoTexto =
+    data?.fechaInicio && data?.fechaFin
+      ? data.fechaInicio === data.fechaFin
+        ? fmtDate(data.fechaInicio)
+        : `${fmtDate(data.fechaInicio)} → ${fmtDate(data.fechaFin)}`
+      : null;
+
   return (
     <section className={s.card}>
       <header className={s.header}>
@@ -98,7 +106,7 @@ export default function CorteCajaTableCard({
           </div>
 
           <div className={s.subtitle}>
-            Resumen diario por fecha de pago{data?.plantelId !== undefined ? ' (filtrable por plantel)' : ''}.
+            Resumen por rango de fecha de pago{rangoTexto ? ` · ${rangoTexto}` : ''}.
           </div>
         </div>
 
@@ -290,7 +298,12 @@ export default function CorteCajaTableCard({
                           {copiedKey === keyFolio ? <Check size={16} /> : <Copy size={16} />}
                         </button>
 
-                        <button className={s.iconBtn} type="button" onClick={() => onPrint(r.reciboId)} title="Imprimir">
+                        <button
+                          className={s.iconBtn}
+                          type="button"
+                          onClick={() => onPrint(r.reciboId)}
+                          title="Imprimir"
+                        >
                           <Printer size={16} />
                         </button>
                       </div>
