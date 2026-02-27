@@ -7,7 +7,6 @@ import { Printer, ReceiptText, Calendar } from 'lucide-react';
 import s from './PagosPanel.module.css';
 import type { PagoRealRow } from '../../types/alumno-drawer.types';
 
-/** ✅ Para soportar el backend inconsistente sin usar any */
 type MaybeQrPayLoad = { qrPayLoad?: string };
 
 function hasQrPayLoad(v: unknown): v is MaybeQrPayLoad {

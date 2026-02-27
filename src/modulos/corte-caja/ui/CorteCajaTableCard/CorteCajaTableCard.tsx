@@ -24,7 +24,11 @@ function fmtMoney(n: number, currency: string) {
 function fmtDate(isoLike: string) {
   const d = new Date(isoLike);
   if (Number.isNaN(d.getTime())) return isoLike || '—';
-  return new Intl.DateTimeFormat('es-MX', { year: 'numeric', month: 'short', day: '2-digit' }).format(d);
+  return new Intl.DateTimeFormat('es-MX', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+  }).format(d);
 }
 
 function statusTone(estatusDesc: string, cancelado: boolean) {
@@ -79,10 +83,17 @@ export default function CorteCajaTableCard({
     window.setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 900);
   }
 
-  function onPrint(reciboId: number) {
-    // Mantiene tu flujo establecido: /recibos/print lee sessionStorage si existe,
-    // y si no existe, tu print page debe mostrar un error elegante.
-    router.push(`/recibos/print?reciboId=${encodeURIComponent(String(reciboId))}`);
+  function onPrint(reciboId: number, alumnoId?: string | null) {
+    
+    const rid = encodeURIComponent(String(reciboId));
+    const aid = (alumnoId ?? '').trim();
+
+    if (aid) {
+      router.push(`/recibos/print?reciboId=${rid}&alumnoId=${encodeURIComponent(aid)}`);
+      return;
+    }
+
+    router.push(`/recibos/print?reciboId=${rid}`);
   }
 
   const resumen = data?.resumen ?? null;
@@ -264,10 +275,10 @@ export default function CorteCajaTableCard({
                           tone === 'ok'
                             ? s.badgeOk
                             : tone === 'warn'
-                            ? s.badgeWarn
-                            : tone === 'danger'
-                            ? s.badgeDanger
-                            : s.badgeNeutral
+                              ? s.badgeWarn
+                              : tone === 'danger'
+                                ? s.badgeDanger
+                                : s.badgeNeutral
                         }`}
                         title={r.cancelado ? 'Cancelado' : r.estatusDesc}
                       >
@@ -301,7 +312,7 @@ export default function CorteCajaTableCard({
                         <button
                           className={s.iconBtn}
                           type="button"
-                          onClick={() => onPrint(r.reciboId)}
+                          onClick={() => onPrint(r.reciboId, r.alumnoId)}
                           title="Imprimir"
                         >
                           <Printer size={16} />
