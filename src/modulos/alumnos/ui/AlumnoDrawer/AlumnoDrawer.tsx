@@ -25,7 +25,7 @@ import PayModal from './parts/PayModal/PayModal';
 import { useAlumnoDrawerData } from './hooks/useAlumnoDrawerData';
 import { RecibosService } from '../../services/recibos.service';
 
-// ✅ NUEVO: conceptos (catálogo)
+// ✅ Catálogo conceptos (para resolver el código al hacer submit)
 import { useConceptosPago } from '@/modulos/configuraciones/hooks/useConceptosPago';
 import type { ConceptoPago } from '@/modulos/configuraciones/types/conceptosPago.types';
 
@@ -51,6 +51,34 @@ function safeMessage(err: unknown) {
   }
 }
 
+/**
+ * ✅ Resolver "concepto" para el payload:
+ * - Algunos backends esperan "código" (COLEGIATURA / INSCRIPCION / OTRO)
+ * - Tu UI a veces tiene "nombre" (Colegiatura / Inscripción)
+ *
+ * Esta función prioriza codigo/code si existen, si no cae a nombre.
+ * (sin any)
+ */
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+function readStringProp(obj: unknown, key: string): string | null {
+  if (!isObject(obj)) return null;
+  const val = obj[key];
+  return typeof val === 'string' && val.trim() ? val.trim() : null;
+}
+
+function resolveConceptoForCreate(concepto: ConceptoPago): string {
+  // intenta codigo → code → nombre
+  return (
+    readStringProp(concepto, 'codigo') ||
+    readStringProp(concepto, 'code') ||
+    readStringProp(concepto, 'nombre') ||
+    ''
+  );
+}
+
 export default function AlumnoDrawer({
   open,
   alumno,
@@ -60,7 +88,7 @@ export default function AlumnoDrawer({
   open: boolean;
   alumno: Alumno | null;
   onClose: () => void;
-  readOnly?: boolean; // ✅ NUEVO
+  readOnly?: boolean;
 }) {
   if (!open) return null;
 
@@ -90,7 +118,7 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
 
   const canWrite = !readOnly;
 
-  // ✅ Catálogo conceptos (para poder resolver el código al hacer submit)
+  // ✅ Catálogo conceptos (para resolver código y mandar lo correcto al backend)
   const conceptosPago = useConceptosPago({ soloActivos: true });
 
   // ✅ CONSULTOR: si intenta caer en EXTRAS, lo regresamos
@@ -108,7 +136,7 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
   // =========================
   // EXTRAS (FORM + SUBMIT)
   // =========================
-  const [extraConceptoId, setExtraConceptoId] = useState(0); // ✅ ya no string
+  const [extraConceptoId, setExtraConceptoId] = useState(0);
   const [extraAmount, setExtraAmount] = useState('');
   const [extraDate, setExtraDate] = useState(todayISO());
   const [extraTipoPagoId, setExtraTipoPagoId] = useState(0);
@@ -131,9 +159,9 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
       const p = d.pagosReales.find((x) => x.reciboId === reciboId);
       if (!p) return;
 
-      const qr = (p.qrPayload ?? (p as unknown as { qrPayLoad?: unknown }).qrPayLoad ?? '')
-        .toString()
-        .trim() || undefined;
+      // backend inconsistente: qrPayload o qrPayLoad
+      const maybe = p as unknown as { qrPayLoad?: unknown };
+      const qr = (p.qrPayload ?? maybe.qrPayLoad ?? '').toString().trim() || undefined;
 
       const dto: ReciboDTO = {
         reciboId: p.reciboId,
@@ -166,8 +194,18 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
     }
   }
 
+  /**
+   * ✅ Fix clave:
+   * Mandar alumnoId en la URL del print page.
+   * Así /recibos/print puede reconstruir el recibo con pagos-resumen
+   * cuando no exista sessionStorage (otro navegador / refresh / incógnito).
+   */
   function openPrint(reciboId: number) {
-    router.push(`/recibos/print?reciboId=${reciboId}`);
+    if (!d.alumnoId) return;
+
+    router.push(
+      `/recibos/print?reciboId=${reciboId}&alumnoId=${encodeURIComponent(d.alumnoId)}`,
+    );
   }
 
   function openReceipt(reciboId: number) {
@@ -204,82 +242,81 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
   // =========================
   // CREAR EXTRA (solo ADMIN/CAJA)
   // =========================
-async function onAddExtra() {
-  if (!canWrite) {
-    setExtraError('No tienes permisos para registrar pagos extras (solo lectura).');
-    return;
-  }
+  async function onAddExtra() {
+    if (!canWrite) {
+      setExtraError('No tienes permisos para registrar pagos extras (solo lectura).');
+      return;
+    }
 
-  setExtraError(null);
-
-  const conceptOk = extraConceptoId > 0;
-  const amountNum = toMoneyNumber(extraAmount);
-  const amountOk = Number.isFinite(amountNum) && amountNum > 0;
-  const dateOk = !!extraDate;
-  const tipoOk = extraTipoPagoId > 0;
-
-  if (!conceptOk) return setExtraError('Selecciona un concepto.');
-  if (!amountOk) return setExtraError('Ingresa un monto mayor a 0.');
-  if (!dateOk) return setExtraError('Selecciona la fecha del pago.');
-  if (!tipoOk) return setExtraError('Selecciona un tipo de pago.');
-  if (!d.alumnoId) return setExtraError('No hay alumno seleccionado.');
-
-  const conceptoSel = (conceptosPago.items ?? []).find(
-    (c) => c.conceptoId === extraConceptoId
-  );
-
-  if (!conceptoSel) {
-    return setExtraError('El concepto seleccionado no existe o ya no está activo.');
-  }
-
-  setExtraSaving(true);
-
-  try {
-    const payload: ReciboCreateDTO = {
-      alumnoId: d.alumnoId,
-      concepto: conceptoSel.nombre,
-      montoManual: amountNum,
-      fechaPago: extraDate,
-      tipoPagoId: extraTipoPagoId,
-      comentario: conceptoSel.nombre,
-    };
-
-    // 🧪 DEBUG — esto es lo importante
-    console.log('[DEBUG] ReciboCreate payload:', payload);
-    console.log('[DEBUG] ReciboCreate payload JSON:', JSON.stringify(payload, null, 2));
-
-    const created = await RecibosService.create(payload);
-
-    cacheReciboForPrint({
-      ...created,
-      matricula: created.matricula ?? d.matricula,
-      carreraNombre: created.carreraNombre ?? d.carNombre,
-      qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
-    });
-
-    await d.reload();
-
-    setExtraConceptoId(0);
-    setExtraAmount('');
-    setExtraDate(todayISO());
     setExtraError(null);
 
-    d.setTab('PAGOS');
-  } catch (err) {
-    setExtraError(safeMessage(err) || 'No se pudo registrar el pago extra.');
-  } finally {
-    setExtraSaving(false);
-  }
-}
+    const conceptOk = extraConceptoId > 0;
+    const amountNum = toMoneyNumber(extraAmount);
+    const amountOk = Number.isFinite(amountNum) && amountNum > 0;
+    const dateOk = !!extraDate;
+    const tipoOk = extraTipoPagoId > 0;
 
+    if (!conceptOk) return setExtraError('Selecciona un concepto.');
+    if (!amountOk) return setExtraError('Ingresa un monto mayor a 0.');
+    if (!dateOk) return setExtraError('Selecciona la fecha del pago.');
+    if (!tipoOk) return setExtraError('Selecciona un tipo de pago.');
+    if (!d.alumnoId) return setExtraError('No hay alumno seleccionado.');
+
+    const conceptoSel = (conceptosPago.items ?? []).find((c) => c.conceptoId === extraConceptoId);
+
+    if (!conceptoSel) {
+      return setExtraError('El concepto seleccionado no existe o ya no está activo.');
+    }
+
+    // ✅ Aseguramos que mandamos el valor correcto (codigo/code si existe)
+    const conceptoForBackend = resolveConceptoForCreate(conceptoSel);
+    if (!conceptoForBackend) {
+      return setExtraError('No se pudo resolver el concepto para el backend.');
+    }
+
+    setExtraSaving(true);
+
+    try {
+      const payload: ReciboCreateDTO = {
+        alumnoId: d.alumnoId,
+        concepto: conceptoForBackend,
+        montoManual: amountNum,
+        fechaPago: extraDate,
+        tipoPagoId: extraTipoPagoId,
+        comentario: conceptoSel.nombre, // comentario visible (opcional)
+      };
+
+      // 🧪 DEBUG — útil cuando el backend truena al generar QR
+      console.log('[DEBUG] ReciboCreate payload:', payload);
+      console.log('[DEBUG] ReciboCreate payload JSON:', JSON.stringify(payload, null, 2));
+
+      const created = await RecibosService.create(payload);
+
+      cacheReciboForPrint({
+        ...created,
+        matricula: created.matricula ?? d.matricula,
+        carreraNombre: created.carreraNombre ?? d.carNombre,
+        qrPayload: (created.qrPayload ?? '').toString().trim() || undefined,
+      });
+
+      await d.reload();
+
+      setExtraConceptoId(0);
+      setExtraAmount('');
+      setExtraDate(todayISO());
+      setExtraError(null);
+
+      d.setTab('PAGOS');
+    } catch (err) {
+      setExtraError(safeMessage(err) || 'No se pudo registrar el pago extra.');
+    } finally {
+      setExtraSaving(false);
+    }
+  }
 
   return (
     <div className={s.content}>
-      <IdentityPill
-        nombreCompleto={d.nombreCompleto}
-        matricula={d.matricula}
-        activo={d.activo}
-      />
+      <IdentityPill nombreCompleto={d.nombreCompleto} matricula={d.matricula} activo={d.activo} />
 
       <StickySummary totals={d.totals} />
 

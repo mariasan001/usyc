@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { ReceiptTemplateSettings } from '@/modules/receipts/utils/receipt-template.settings';
 import { RecibosService } from '@/modulos/alumnos/services/recibos.service';
@@ -133,22 +133,51 @@ function numberToSpanishWords(num: number): string {
   return String(num);
 }
 
+/* ─────────────────────────────────────────
+  QR UI (con fallback)
+───────────────────────────────────────── */
 function QrImgApi({ src }: { src: string }) {
+  const [bad, setBad] = useState(false);
+
+  if (!src || bad) {
+    return (
+      <div className={s.qrFallback}>
+        <div className={s.qrFallbackTitle}>QR no disponible</div>
+        <div className={s.qrFallbackHint}>Puedes imprimir igual.</div>
+      </div>
+    );
+  }
+
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt="QR del recibo" className={s.qrImg} />;
+  return (
+    <img
+      src={src}
+      alt="QR del recibo"
+      className={s.qrImg}
+      onError={() => setBad(true)}
+    />
+  );
 }
 
 export default function ReceiptDocument({
   receipt,
   settings,
   reciboId,
+  qrSrc, // ✅ nuevo (opcional)
 }: {
   receipt: ReceiptPrint;
   settings: ReceiptTemplateSettings;
   reciboId: number;
+  qrSrc?: string;
 }) {
   const folioDisplay = useMemo(() => folioFull(receipt.folio), [receipt.folio]);
-  const qrSrc = useMemo(() => RecibosService.qrUrl(reciboId), [reciboId]);
+
+  // ✅ si viene qrSrc (del hook), úsalo; si no, caemos al service (compatibilidad)
+  const resolvedQrSrc = useMemo(() => {
+    const provided = (qrSrc ?? '').trim();
+    if (provided) return provided;
+    return RecibosService.qrUrl(reciboId);
+  }, [qrSrc, reciboId]);
 
   const cancelled = receipt.status === 'CANCELLED';
 
@@ -159,11 +188,7 @@ export default function ReceiptDocument({
   const carreraNombre = safeText(receipt.carreraNombre, '—');
   const qrPayload = safeText(receipt.qrPayload, '');
 
-  const montoLetras = useMemo(
-    () => toMoneyWordsMXN(receipt.monto ?? 0),
-    [receipt.monto],
-  );
-
+  const montoLetras = useMemo(() => toMoneyWordsMXN(receipt.monto ?? 0), [receipt.monto]);
   const moneda = safeText(receipt.moneda, 'MXN');
 
   return (
@@ -186,9 +211,7 @@ export default function ReceiptDocument({
 
           <div className={s.headerCenter}>
             <div className={s.headerTitle}>RECIBO DE CAJA</div>
-            <div className={s.headerSub}>
-              {safeText(settings.plantelName, 'PLANTEL')}
-            </div>
+            <div className={s.headerSub}>{safeText(settings.plantelName, 'PLANTEL')}</div>
           </div>
 
           <div className={s.headerRight}>
@@ -227,8 +250,7 @@ export default function ReceiptDocument({
             <div className={s.totalRow}>
               <div className={s.label}>TOTAL:</div>
               <div className={s.totalPill}>
-                {fmtMoney(receipt.monto)}{' '}
-                <span className={s.currency}>{moneda}</span>
+                {fmtMoney(receipt.monto)} <span className={s.currency}>{moneda}</span>
               </div>
             </div>
 
@@ -247,16 +269,14 @@ export default function ReceiptDocument({
             {cancelled ? (
               <div className={s.cancelBox}>
                 <div className={s.cancelTitle}>Motivo de cancelación</div>
-                <div className={s.cancelReason}>
-                  {safeText(receipt.cancelReason)}
-                </div>
+                <div className={s.cancelReason}>{safeText(receipt.cancelReason)}</div>
               </div>
             ) : null}
           </section>
 
           <aside className={s.qrSide}>
             <div className={s.qrFrame}>
-              <QrImgApi src={qrSrc} />
+              <QrImgApi src={resolvedQrSrc} />
             </div>
 
             {qrPayload ? (

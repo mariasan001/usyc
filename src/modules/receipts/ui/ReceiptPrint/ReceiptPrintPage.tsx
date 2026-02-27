@@ -1,7 +1,6 @@
-// src/app/recibos/print/page.tsx (o donde tengas tu print page)
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, Printer, AlertTriangle } from 'lucide-react';
@@ -10,15 +9,11 @@ import Button from '@/shared/ui/Button/Button';
 import Card from '@/shared/ui/Card/Card';
 import Badge from '@/shared/ui/Badge/Badge';
 
-import ReceiptDocument, {
-  type ReceiptPrint,
-} from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
-
+import ReceiptDocument from '@/modules/receipts/ui/ReceiptDocument/ReceiptDocument';
 import { loadReceiptSettings } from '@/modules/receipts/utils/receipt-template.settings';
 
-import type { ReciboDTO } from '@/modulos/alumnos/ui/AlumnoDrawer/types/recibos.types';
-
 import s from './ReceiptPrintPage.module.css';
+import { useReceiptPrint } from '@/modulos/alumnos/hooks/useReceiptPrint';
 
 function parseReciboId(sp: URLSearchParams): number | null {
   const v = sp.get('reciboId');
@@ -27,80 +22,32 @@ function parseReciboId(sp: URLSearchParams): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function readReciboFromSession(reciboId: number): ReciboDTO | null {
-  try {
-    const raw = sessionStorage.getItem(`recibo:${reciboId}`);
-    if (!raw) return null;
-    return JSON.parse(raw) as ReciboDTO;
-  } catch {
-    return null;
-  }
-}
-
-function mapReciboToReceipt(dto: ReciboDTO): ReceiptPrint {
-  return {
-    folio: dto.folio,
-    fechaPago: dto.fechaPago,
-
-    concepto: dto.concepto,
-    monto: dto.monto ?? 0,
-    moneda: dto.moneda ?? 'MXN',
-
-    status: dto.cancelado ? 'CANCELLED' : 'VALID',
-    cancelReason: undefined,
-
-    alumnoNombre: dto.alumnoNombre,
-    matricula: dto.matricula ?? dto.alumnoId, // si no hay matricula real, cae a alumnoId
-    carreraNombre: dto.carreraNombre ?? '—',
-
-    qrPayload: (dto.qrPayload ?? '').trim() || undefined,
-  };
+function parseAlumnoId(sp: URLSearchParams): string | null {
+  const v = sp.get('alumnoId');
+  const t = (v ?? '').trim();
+  return t ? t : null;
 }
 
 export default function ReceiptPrintPage() {
   const sp = useSearchParams();
   const settings = useMemo(() => loadReceiptSettings(), []);
-  const reciboId = useMemo(() => parseReciboId(sp), [sp]);
 
-  const [item, setItem] = useState<ReceiptPrint | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string>('');
+  const reciboId = useMemo(() => parseReciboId(sp), [sp]);
+  const alumnoId = useMemo(() => parseAlumnoId(sp), [sp]);
+
+  const { loading, error, receipt, qrSrc } = useReceiptPrint({ reciboId, alumnoId }); // ✅ qrSrc
 
   const didAutoPrint = useRef(false);
 
   useEffect(() => {
-    setLoading(true);
-    setErr('');
-    setItem(null);
-
-    if (!reciboId) {
-      setLoading(false);
-      setErr('Falta reciboId en la URL.');
-      return;
-    }
-
-    const dto = readReciboFromSession(reciboId);
-    if (!dto) {
-      setLoading(false);
-      setErr(
-        `No se encontró el recibo en sesión (recibo:${reciboId}). Vuelve al drawer y usa “Imprimir comprobante” para cachearlo.`,
-      );
-      return;
-    }
-
-    setItem(mapReciboToReceipt(dto));
-    setLoading(false);
-  }, [reciboId]);
-
-  useEffect(() => {
     if (loading) return;
-    if (!item) return;
+    if (!receipt) return;
     if (didAutoPrint.current) return;
 
     didAutoPrint.current = true;
-    const t = setTimeout(() => window.print(), 450);
+    const t = window.setTimeout(() => window.print(), 650);
     return () => clearTimeout(t);
-  }, [loading, item]);
+  }, [loading, receipt]);
 
   return (
     <div className={s.wrap}>
@@ -112,33 +59,42 @@ export default function ReceiptPrintPage() {
         <div className={s.right}>
           <Badge tone="info">{reciboId ? `Recibo #${reciboId}` : '—'}</Badge>
 
-          <Button onClick={() => window.print()} leftIcon={<Printer size={16} />} disabled={!item}>
+          <Button
+            onClick={() => window.print()}
+            leftIcon={<Printer size={16} />}
+            disabled={!receipt}
+          >
             Imprimir
           </Button>
         </div>
       </div>
 
-      {err ? (
+      {error ? (
         <Card
           title="No se pudo cargar el comprobante"
-          subtitle="Este print page solo usa sessionStorage (no llama GET /recibos/{id})."
+          subtitle="Se intentó sessionStorage y luego se reconstruyó desde pagos-resumen."
           right={
             <Badge tone="warn">
               <AlertTriangle size={14} /> Aviso
             </Badge>
           }
         >
-          <div className={s.missing}>{err}</div>
+          <div className={s.missing}>{error}</div>
         </Card>
       ) : null}
 
       {loading ? <div className={s.loading}>Cargando recibo…</div> : null}
-      {!loading && !item ? <div className={s.loading}>No hay recibo para imprimir.</div> : null}
+      {!loading && !receipt ? <div className={s.loading}>No hay recibo para imprimir.</div> : null}
 
       <div className={s.pages}>
-        {item && reciboId ? (
+        {receipt && reciboId ? (
           <div className={s.printPage}>
-            <ReceiptDocument receipt={item} settings={settings} reciboId={reciboId} />
+            <ReceiptDocument
+              receipt={receipt}
+              settings={settings}
+              reciboId={reciboId}
+              qrSrc={qrSrc} // ✅ se lo pasamos al doc
+            />
           </div>
         ) : null}
       </div>

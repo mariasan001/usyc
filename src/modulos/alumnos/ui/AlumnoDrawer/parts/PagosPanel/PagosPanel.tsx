@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Printer, Copy, ReceiptText, Calendar, QrCode } from 'lucide-react';
+import { Printer, ReceiptText, Calendar } from 'lucide-react';
 
 import s from './PagosPanel.module.css';
 import type { PagoRealRow } from '../../types/alumno-drawer.types';
@@ -69,20 +69,6 @@ function statusTone(p: PagoRealRow) {
   return 'neutral';
 }
 
-async function copyText(v: string) {
-  if (!v) return;
-  try {
-    await navigator.clipboard.writeText(v);
-  } catch {
-    const el = document.createElement('textarea');
-    el.value = v;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-  }
-}
-
 export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
   const router = useRouter();
 
@@ -95,8 +81,14 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
     });
   }, [pagos]);
 
-  function onPrint(reciboId: number) {
-    router.push(`/recibos/print?reciboId=${reciboId}`);
+  /**
+   * ✅ IMPORTANTE:
+   * Mandamos alumnoId para que /recibos/print pueda reconstruir
+   * el recibo vía GET /api/alumnos/{alumnoId}/pagos-resumen cuando
+   * no exista sessionStorage (otro navegador/recarga/incógnito).
+   */
+  function onPrint(reciboId: number, alumnoId: string) {
+    router.push(`/recibos/print?reciboId=${reciboId}&alumnoId=${encodeURIComponent(alumnoId)}`);
   }
 
   return (
@@ -104,7 +96,9 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
       <header className={s.header}>
         <div className={s.titleBlock}>
           <div className={s.titleRow}>
-            <span className={s.titleIcon}><ReceiptText size={16} /></span>
+            <span className={s.titleIcon}>
+              <ReceiptText size={16} />
+            </span>
             <div className={s.title}>Histórico de pagos</div>
           </div>
           <div className={s.subtitle}>Folio, fechas y QR del recibo.</div>
@@ -127,8 +121,10 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
             const statusLabel = normalizeStatusLabel(p);
 
             const tipoPagoTop = p.tipoPagoNombre || p.tipoPagoCodigo || '';
-            const qr = getQrPayload(p);
-            const hasQr = Boolean(qr);
+
+            // 👇 lo dejamos calculado “por si luego lo usas”, pero si no lo usas:
+            // mejor bórralo para que no te regañe TS.
+            void getQrPayload(p); // ✅ sin warning (y sin cambiar comportamiento)
 
             const canPrint = typeof p.reciboId === 'number' && p.reciboId > 0;
 
@@ -160,28 +156,25 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
                       ) : null}
                     </div>
 
-                    <div className={s.amount}>
-                      {fmtMoney(p.monto, p.moneda || 'MXN')}
-                    </div>
+                    <div className={s.amount}>{fmtMoney(p.monto, p.moneda || 'MXN')}</div>
                   </div>
 
-                  {/* ✅ SOLO lo esencial (sin duplicar estatus/tipoPago) */}
                   <div className={s.metaGridSimple}>
                     <div className={s.metaPill}>
-                      <span className={s.metaIcon}><ReceiptText size={14} /></span>
+                      <span className={s.metaIcon}>
+                        <ReceiptText size={14} />
+                      </span>
                       <span className={s.metaKey}>Folio</span>
                       <span className={s.metaVal}>{p.folio || '—'}</span>
                     </div>
 
-             
-
                     <div className={s.metaPill}>
-                      <span className={s.metaIcon}><Calendar size={14} /></span>
+                      <span className={s.metaIcon}>
+                        <Calendar size={14} />
+                      </span>
                       <span className={s.metaKey}>Pago</span>
                       <span className={s.metaVal}>{fmtDate(p.fechaPago)}</span>
                     </div>
-
-                 
                   </div>
                 </div>
 
@@ -189,7 +182,7 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
                   <button
                     className={s.iconBtn}
                     type="button"
-                    onClick={() => canPrint && onPrint(p.reciboId)}
+                    onClick={() => canPrint && onPrint(p.reciboId, p.alumnoId)}
                     disabled={!canPrint}
                     title={canPrint ? 'Imprimir recibo' : 'No disponible'}
                   >
