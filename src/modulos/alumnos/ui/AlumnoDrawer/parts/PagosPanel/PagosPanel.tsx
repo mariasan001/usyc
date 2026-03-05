@@ -1,11 +1,16 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { Printer, ReceiptText, Calendar } from 'lucide-react';
 
 import s from './PagosPanel.module.css';
 import type { PagoRealRow } from '../../types/alumno-drawer.types';
+
+type Props = {
+  pagos: PagoRealRow[];
+  alumnoId: string;
+  onPrint: (reciboId: number, alumnoId: string) => void;
+};
 
 type MaybeQrPayLoad = { qrPayLoad?: string };
 
@@ -17,7 +22,6 @@ function getQrPayload(p: PagoRealRow): string {
   const a = (p.qrPayload ?? '').trim();
   if (a) return a;
 
-  // si por alguna razón el mapper no lo normalizó y llega qrPayLoad
   if (hasQrPayLoad(p)) {
     const b = (p.qrPayLoad ?? '').trim();
     if (b) return b;
@@ -35,7 +39,6 @@ function fmtMoney(n: number, currency = 'MXN') {
       maximumFractionDigits: 2,
     }).format(value);
 
-    // ✅ Moneda al lado del precio (MXN $2,500.00)
     return `${currency} ${money}`;
   } catch {
     return `${currency} $${value.toFixed(2)}`;
@@ -68,9 +71,7 @@ function statusTone(p: PagoRealRow) {
   return 'neutral';
 }
 
-export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
-  const router = useRouter();
-
+export default function PagosPanel({ pagos, alumnoId, onPrint }: Props) {
   const ordered = useMemo(() => {
     return [...pagos].sort((a, b) => {
       const da = new Date(a.fechaPago).getTime();
@@ -79,16 +80,6 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
       return db - da;
     });
   }, [pagos]);
-
-  /**
-   * ✅ IMPORTANTE:
-   * Mandamos alumnoId para que /recibos/print pueda reconstruir
-   * el recibo vía GET /api/alumnos/{alumnoId}/pagos-resumen cuando
-   * no exista sessionStorage (otro navegador/recarga/incógnito).
-   */
-  function onPrint(reciboId: number, alumnoId: string) {
-    router.push(`/recibos/print?reciboId=${reciboId}&alumnoId=${encodeURIComponent(alumnoId)}`);
-  }
 
   return (
     <section className={s.panel}>
@@ -121,9 +112,8 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
 
             const tipoPagoTop = p.tipoPagoNombre || p.tipoPagoCodigo || '';
 
-            // 👇 lo dejamos calculado “por si luego lo usas”, pero si no lo usas:
-            // mejor bórralo para que no te regañe TS.
-            void getQrPayload(p); // ✅ sin warning (y sin cambiar comportamiento)
+            // Si no lo usas, bórralo. Si lo quieres tener listo, lo “tocamos” sin warning:
+            void getQrPayload(p);
 
             const canPrint = typeof p.reciboId === 'number' && p.reciboId > 0;
 
@@ -181,7 +171,7 @@ export default function PagosPanel({ pagos }: { pagos: PagoRealRow[] }) {
                   <button
                     className={s.iconBtn}
                     type="button"
-                    onClick={() => canPrint && onPrint(p.reciboId, p.alumnoId)}
+                    onClick={() => canPrint && onPrint(p.reciboId, alumnoId)}
                     disabled={!canPrint}
                     title={canPrint ? 'Imprimir recibo' : 'No disponible'}
                   >

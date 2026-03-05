@@ -1,21 +1,23 @@
- 'use client';
+'use client';
 
 import s from './ProyeccionPanel.module.css';
 import type { ProjectionRow } from '../../types/alumno-drawer.types';
 
 export default function ProyeccionPanel({
   rows,
+  alumnoId,
   onPay,
   onReceipt,
   onExportPdf,
 }: {
   rows: ProjectionRow[];
+  alumnoId: string;
+
   onPay: (row: ProjectionRow) => void;
 
-  // navega a /recibos/print?reciboId=...
-  onReceipt: (reciboId: number) => void;
+  // ✅ ahora mandamos alumnoId para reconstruir sin sessionStorage
+  onReceipt: (reciboId: number, alumnoId: string) => void;
 
-  // ✅ nuevo: exportar reporte
   onExportPdf: () => void;
 }) {
   return (
@@ -27,12 +29,7 @@ export default function ProyeccionPanel({
         </div>
 
         <div className={s.actions}>
-          <button
-            className={s.secondaryBtn}
-            type="button"
-            onClick={onExportPdf}
-            title="Exportar reporte de proyección"
-          >
+          <button className={s.secondaryBtn} type="button" onClick={onExportPdf} title="Exportar reporte de proyección">
             Exportar PDF
           </button>
         </div>
@@ -65,9 +62,7 @@ export default function ProyeccionPanel({
                 <div>{r.conceptCode}</div>
                 <div className={`${s.mono} ${s.right}`}>${r.amount.toFixed(2)}</div>
 
-                <div className={isPaid ? s.paid : s.pending}>
-                  {isPaid ? 'Pagado' : (r.estado ?? 'Pendiente')}
-                </div>
+                <div className={isPaid ? s.paid : s.pending}>{isPaid ? 'Pagado' : (r.estado ?? 'Pendiente')}</div>
 
                 <div className={s.right}>
                   {!isPaid ? (
@@ -78,18 +73,13 @@ export default function ProyeccionPanel({
                     <button
                       className={s.linkBtn}
                       type="button"
-                      onClick={() => onReceipt(r.reciboId!)}
+                      onClick={() => onReceipt(r.reciboId!, alumnoId)}
                       title={`Imprimir comprobante #${r.reciboId}`}
                     >
                       Imprimir
                     </button>
                   ) : (
-                    <button
-                      className={s.linkBtnDisabled}
-                      type="button"
-                      disabled
-                      title="Pagado, pero falta reciboId para imprimir"
-                    >
+                    <button className={s.linkBtnDisabled} type="button" disabled title="Pagado, pero falta reciboId para imprimir">
                       Imprimir
                     </button>
                   )}

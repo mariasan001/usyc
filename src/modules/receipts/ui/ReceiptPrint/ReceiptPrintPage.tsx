@@ -35,7 +35,7 @@ export default function ReceiptPrintPage() {
   const reciboId = useMemo(() => parseReciboId(sp), [sp]);
   const alumnoId = useMemo(() => parseAlumnoId(sp), [sp]);
 
-  const { loading, error, receipt, qrSrc } = useReceiptPrint({ reciboId, alumnoId }); // ✅ qrSrc
+  const { loading, error, receipt, qrSrc } = useReceiptPrint({ reciboId, alumnoId });
 
   const didAutoPrint = useRef(false);
 
@@ -59,11 +59,7 @@ export default function ReceiptPrintPage() {
         <div className={s.right}>
           <Badge tone="info">{reciboId ? `Recibo #${reciboId}` : '—'}</Badge>
 
-          <Button
-            onClick={() => window.print()}
-            leftIcon={<Printer size={16} />}
-            disabled={!receipt}
-          >
+          <Button onClick={() => window.print()} leftIcon={<Printer size={16} />} disabled={!receipt}>
             Imprimir
           </Button>
         </div>
@@ -72,7 +68,7 @@ export default function ReceiptPrintPage() {
       {error ? (
         <Card
           title="No se pudo cargar el comprobante"
-          subtitle="Se intentó sessionStorage y luego se reconstruyó desde pagos-resumen."
+          subtitle=" pagos-resumen."
           right={
             <Badge tone="warn">
               <AlertTriangle size={14} /> Aviso
@@ -89,12 +85,7 @@ export default function ReceiptPrintPage() {
       <div className={s.pages}>
         {receipt && reciboId ? (
           <div className={s.printPage}>
-            <ReceiptDocument
-              receipt={receipt}
-              settings={settings}
-              reciboId={reciboId}
-              qrSrc={qrSrc} // ✅ se lo pasamos al doc
-            />
+            <ReceiptDocument receipt={receipt} settings={settings} reciboId={reciboId} qrSrc={qrSrc} />
           </div>
         ) : null}
       </div>

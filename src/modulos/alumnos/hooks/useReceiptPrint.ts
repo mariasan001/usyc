@@ -15,7 +15,10 @@ import type { ReciboDTO } from '@/modulos/alumnos/ui/AlumnoDrawer/types/recibos.
 
 /* ─────────────────────────────────────────
   Session cache helpers (turbo)
+  - Esto NO es la fuente de verdad
+  - Solo acelera el flujo cuando vienes desde el Drawer
 ───────────────────────────────────────── */
+
 function readReciboFromSession(reciboId: number): ReciboDTO | null {
   try {
     const raw = sessionStorage.getItem(`recibo:${reciboId}`);
@@ -31,37 +34,74 @@ function safeText(v?: string | null, fallback = '—') {
   return t ? t : fallback;
 }
 
+/** ✅ util sin any: leer string opcional de un objeto desconocido */
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+function readOptionalString(obj: unknown, key: string): string | undefined {
+  if (!isObject(obj)) return undefined;
+  const val = obj[key];
+  if (typeof val !== 'string') return undefined;
+  const t = val.trim();
+  return t ? t : undefined;
+}
+
+/** ✅ resuelve plantel sin asumir forma del backend */
+function resolvePlantelNombre(v: unknown): string | undefined {
+  // prioridad: plantel (como viene en pagosReales) → plantelNombre (si lo agregan después)
+  return readOptionalString(v, 'plantel') ?? readOptionalString(v, 'plantelNombre');
+}
+
 function mapReciboToReceipt(dto: ReciboDTO): ReceiptPrint {
   return {
     folio: dto.folio,
     fechaPago: dto.fechaPago,
+
     concepto: dto.concepto,
     monto: dto.monto ?? 0,
     moneda: dto.moneda ?? 'MXN',
+
     status: dto.cancelado ? 'CANCELLED' : 'VALID',
     cancelReason: undefined,
+
     alumnoNombre: dto.alumnoNombre,
     matricula: dto.matricula ?? dto.alumnoId,
     carreraNombre: dto.carreraNombre ?? '—',
+
     qrPayload: (dto.qrPayload ?? '').trim() || undefined,
+
+    // ✅ NUEVO
+    plantelNombre: resolvePlantelNombre(dto),
   };
 }
 
 function mapPagoToReceipt(p: PagoRealDTO, resumen: AlumnoPagosResumenDTO): ReceiptPrint {
-  const qr = (p.qrPayload ?? '').trim() || (p.qrPayLoad ?? '').trim() || undefined;
+  // backend inconsistente: qrPayload / qrPayLoad
+  const qr =
+    (p.qrPayload ?? '').toString().trim() ||
+    (p.qrPayLoad ?? '').toString().trim() ||
+    undefined;
 
   return {
     folio: safeText(p.folio, '—'),
     fechaPago: safeText(p.fechaPago, '—'),
+
     concepto: safeText(p.concepto, 'Colegiatura'),
     monto: Number.isFinite(p.monto) ? p.monto : 0,
     moneda: safeText(p.moneda, 'MXN'),
+
     status: p.cancelado ? 'CANCELLED' : 'VALID',
     cancelReason: undefined,
+
     alumnoNombre: safeText(resumen.alumnoNombre, '—'),
     matricula: safeText(resumen.alumnoId, '—'),
     carreraNombre: safeText(resumen.carreraNombre, '—'),
+
     qrPayload: qr,
+
+    // ✅ NUEVO
+    plantelNombre: resolvePlantelNombre(p),
   };
 }
 
@@ -72,7 +112,12 @@ export function useReceiptPrint(args: { reciboId: number | null; alumnoId: strin
   const [error, setError] = useState<string>('');
   const [receipt, setReceipt] = useState<ReceiptPrint | null>(null);
 
-  // QR por URL del backend (mantenemos compatibilidad)
+  /**
+   * QR por URL (img)
+   * Nota: si auth es por cookie y esto corre cross-domain,
+   * puede fallar en incógnito/otro navegador si no hay sesión.
+   * (ReceiptDocument ya tiene fallback visual)
+   */
   const qrSrc = useMemo(() => {
     if (!reciboId) return '';
     return RecibosService.qrUrl(reciboId);
@@ -101,16 +146,16 @@ export function useReceiptPrint(args: { reciboId: number | null; alumnoId: strin
         return;
       }
 
-      // 2) Fallback: API pagos-resumen
+      // 2) Fallback: API pagos-resumen (fuente de verdad)
       if (!alumnoId) {
         setLoading(false);
-        setError('Falta alumnoId. Vuelve al Histórico de pagos y reintenta imprimir.');
+        setError('Falta alumnoId. Vuelve al histórico y reintenta imprimir.');
         return;
       }
 
       try {
         const resumen = await AlumnosPagosService.getResumen(alumnoId);
-        const pago = resumen.pagosReales.find((x) => x.reciboId === reciboId);
+        const pago = (resumen.pagosReales ?? []).find((x) => x.reciboId === reciboId);
 
         if (!pago) {
           setLoading(false);
@@ -128,7 +173,7 @@ export function useReceiptPrint(args: { reciboId: number | null; alumnoId: strin
       }
     }
 
-    run();
+    void run();
     return () => {
       alive = false;
     };

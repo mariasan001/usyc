@@ -6,7 +6,7 @@ export type PagoRealDTO = {
   // tu screenshot trae fechaPago seguro; fechaEmision puede o no venir
   fechaPago: string;         // ISO / YYYY-MM-DD
   fechaEmision?: string;
-
+  plantel?: string;
   alumnoId?: string;
   alumnoNombre?: string;
 

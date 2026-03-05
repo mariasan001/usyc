@@ -10,19 +10,16 @@ import s from './ReceiptDocument.module.css';
 export type ReceiptPrint = {
   folio: string;
   fechaPago: string; // YYYY-MM-DD
-
   concepto: string;
   monto: number;
   moneda?: string; // "MXN"
-
   status: 'VALID' | 'CANCELLED';
   cancelReason?: string;
-
   alumnoNombre?: string;
   matricula?: string;
   carreraNombre?: string;
-
   qrPayload?: string;
+  plantelNombre?: string; // "TENANGO", "TOLUCA", etc.
 };
 
 /* ─────────────────────────────────────────
@@ -149,21 +146,14 @@ function QrImgApi({ src }: { src: string }) {
   }
 
   // eslint-disable-next-line @next/next/no-img-element
-  return (
-    <img
-      src={src}
-      alt="QR del recibo"
-      className={s.qrImg}
-      onError={() => setBad(true)}
-    />
-  );
+  return <img src={src} alt="QR del recibo" className={s.qrImg} onError={() => setBad(true)} />;
 }
 
 export default function ReceiptDocument({
   receipt,
   settings,
   reciboId,
-  qrSrc, // ✅ nuevo (opcional)
+  qrSrc, // ✅ opcional desde hook
 }: {
   receipt: ReceiptPrint;
   settings: ReceiptTemplateSettings;
@@ -172,7 +162,7 @@ export default function ReceiptDocument({
 }) {
   const folioDisplay = useMemo(() => folioFull(receipt.folio), [receipt.folio]);
 
-  // ✅ si viene qrSrc (del hook), úsalo; si no, caemos al service (compatibilidad)
+  // ✅ si viene qrSrc, úsalo; si no, caemos al service (compatibilidad)
   const resolvedQrSrc = useMemo(() => {
     const provided = (qrSrc ?? '').trim();
     if (provided) return provided;
@@ -209,10 +199,16 @@ export default function ReceiptDocument({
             </div>
           </div>
 
-          <div className={s.headerCenter}>
-            <div className={s.headerTitle}>RECIBO DE CAJA</div>
-            <div className={s.headerSub}>{safeText(settings.plantelName, 'PLANTEL')}</div>
+        <div className={s.headerCenter}>
+          <div className={s.headerTitle}>RECIBO DE CAJA</div>
+
+          <div className={s.headerSub}>
+            <span className={s.headerSubLabel}>PLANTEL: </span>{' '}
+            <span className={s.headerSubValue}>
+              {safeText(receipt.plantelNombre, safeText(settings.plantelName, 'PLANTEL'))}
+            </span>
           </div>
+        </div>
 
           <div className={s.headerRight}>
             <div className={s.headerRightTitle}>CONTROL ESCOLAR</div>

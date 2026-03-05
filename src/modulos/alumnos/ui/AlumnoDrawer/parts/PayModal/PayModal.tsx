@@ -16,14 +16,14 @@ function todayISO() {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-function isManualConcept(conceptCode: string) {
-  return conceptCode === 'OTRO';
-}
-
 function toMoneyNumber(v: string) {
   const cleaned = String(v ?? '').replace(/,/g, '').trim();
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : 0;
+}
+
+function moneyToInputValue(n: number) {
+  return Number.isFinite(n) ? n.toFixed(2) : '0.00';
 }
 
 export default function PayModal({
@@ -39,7 +39,7 @@ export default function PayModal({
   onClose: () => void;
   onSubmit: (payload: ReciboCreateDTO) => Promise<void>;
 }) {
-  // ✅ Hooks SIEMPRE, sin returns antes
+  // ✅ Hooks SIEMPRE (sin returns antes)
   const [mounted, setMounted] = useState(false);
 
   const tiposPago = useTiposPago({ soloActivos: true });
@@ -49,23 +49,36 @@ export default function PayModal({
 
   const [dateISO, setDateISO] = useState<string>(todayISO());
   const [comentario, setComentario] = useState('');
-  const [montoManual, setMontoManual] = useState<string>('');
+
+  /**
+   * ✅ NUEVO:
+   * - El monto SIEMPRE es editable (por si un alumno tiene un monto distinto).
+   * - Se autocompleta con el monto de la proyección cuando se abre el modal o cambia la fila.
+   * - No rompe la lógica porque el backend seguirá validando según concepto/reglas.
+   */
+  const [montoEditable, setMontoEditable] = useState<string>('');
+
   const [tipoPagoId, setTipoPagoId] = useState<number>(0);
 
   useEffect(() => setMounted(true), []);
 
+  // Reset al abrir / cambiar fila
   useEffect(() => {
     if (!open) return;
 
     setDateISO(todayISO());
     setComentario('');
-    setMontoManual('');
 
+    // ✅ Autocomplete: trae monto de la proyección, pero editable
+    setMontoEditable(moneyToInputValue(amountFromProjection));
+
+    // default tipo pago (si existe)
     const first = tiposPago.items?.[0];
     setTipoPagoId(typeof first?.id === 'number' ? first.id : 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, row?.idx]);
 
+  // Si tiposPago carga después, elige el primero si aún no hay selección
   useEffect(() => {
     if (!open) return;
     if (tipoPagoId) return;
@@ -76,24 +89,20 @@ export default function PayModal({
 
   const helpText = useMemo(() => {
     if (!conceptCode) return '';
-    return isManualConcept(conceptCode)
-      ? 'Este concepto requiere que captures el monto.'
-      : 'Este concepto ya tiene monto establecido (no editable).';
+    return 'El monto se autocompleta, pero puedes ajustarlo si este alumno tiene un importe distinto.';
   }, [conceptCode]);
 
   const totalPreview = useMemo(() => {
     if (!conceptCode) return 0;
-    if (isManualConcept(conceptCode)) return toMoneyNumber(montoManual);
-    return Number.isFinite(amountFromProjection) ? amountFromProjection : 0;
-  }, [conceptCode, amountFromProjection, montoManual]);
+    return toMoneyNumber(montoEditable);
+  }, [conceptCode, montoEditable]);
 
-  // ✅ ESTE useMemo DEBE IR ANTES DE LOS RETURNS
   const tipoPagoLabel = useMemo(() => {
     const found = (tiposPago.items ?? []).find((x: TipoPago) => x.id === tipoPagoId);
     return found ? `${found.name} (${found.code})` : '';
   }, [tiposPago.items, tipoPagoId]);
 
-  // ✅ AHORA SÍ: returns al final (ya no rompe el orden)
+  // ✅ returns hasta el final (no rompe orden de hooks)
   if (!open) return null;
   if (!mounted) return null;
 
@@ -108,10 +117,15 @@ export default function PayModal({
   async function handleSave() {
     if (!row) return;
 
+    /**
+     * ✅ FIX TS:
+     * Tu ReciboCreateDTO exige montoManual: number
+     * entonces aquí SIEMPRE lo mandamos (nunca undefined).
+     */
     const payload: ReciboCreateDTO = {
       alumnoId,
       concepto: row.conceptCode,
-      montoManual: totalPreview, // ✅ siempre > 0
+      montoManual: totalPreview, // ✅ siempre number
       fechaPago: dateISO,
       tipoPagoId,
       comentario: comentario.trim() ? comentario.trim() : undefined,
@@ -150,17 +164,13 @@ export default function PayModal({
 
             <div className={s.field}>
               <label className={s.label}>Monto</label>
-              {isManualConcept(conceptCode) ? (
-                <input
-                  className={s.input}
-                  value={montoManual}
-                  onChange={(e) => setMontoManual(e.target.value)}
-                  inputMode="decimal"
-                  placeholder="0.00"
-                />
-              ) : (
-                <input className={s.input} value={amountFromProjection.toFixed(2)} readOnly />
-              )}
+              <input
+                className={s.input}
+                value={montoEditable}
+                onChange={(e) => setMontoEditable(e.target.value)}
+                inputMode="decimal"
+                placeholder="0.00"
+              />
             </div>
 
             <div className={s.field}>

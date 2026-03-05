@@ -1,4 +1,5 @@
 export type PagoRealDTO = {
+  plantel: string;
   reciboId: number;
   folio: string;
   fechaEmision: string; // YYYY-MM-DD

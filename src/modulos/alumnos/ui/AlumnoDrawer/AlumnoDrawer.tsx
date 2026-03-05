@@ -1,4 +1,3 @@
-// src/modulos/alumnos/ui/AlumnoDrawer/AlumnoDrawer.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -53,10 +52,7 @@ function safeMessage(err: unknown) {
 
 /**
  * ✅ Resolver "concepto" para el payload:
- * - Algunos backends esperan "código" (COLEGIATURA / INSCRIPCION / OTRO)
- * - Tu UI a veces tiene "nombre" (Colegiatura / Inscripción)
- *
- * Esta función prioriza codigo/code si existen, si no cae a nombre.
+ * - Prioriza codigo/code si existen, si no cae a nombre.
  * (sin any)
  */
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -70,7 +66,6 @@ function readStringProp(obj: unknown, key: string): string | null {
 }
 
 function resolveConceptoForCreate(concepto: ConceptoPago): string {
-  // intenta codigo → code → nombre
   return (
     readStringProp(concepto, 'codigo') ||
     readStringProp(concepto, 'code') ||
@@ -195,23 +190,28 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
   }
 
   /**
-   * ✅ Fix clave:
-   * Mandar alumnoId en la URL del print page.
-   * Así /recibos/print puede reconstruir el recibo con pagos-resumen
-   * cuando no exista sessionStorage (otro navegador / refresh / incógnito).
+   * ✅ FIX CLAVE:
+   * Siempre mandamos alumnoId en la URL del print.
+   * Así /recibos/print reconstruye con GET /api/alumnos/{alumnoId}/pagos-resumen
+   * si no existe sessionStorage (otro navegador / refresh / incógnito).
    */
-  function openPrint(reciboId: number) {
-    if (!d.alumnoId) return;
+  function openPrint(reciboId: number, alumnoId: string) {
+    const a = (alumnoId ?? '').trim();
+    if (!a) return;
 
     router.push(
-      `/recibos/print?reciboId=${reciboId}&alumnoId=${encodeURIComponent(d.alumnoId)}`,
+      `/recibos/print?reciboId=${encodeURIComponent(String(reciboId))}&alumnoId=${encodeURIComponent(a)}`,
     );
   }
 
   function openReceipt(reciboId: number) {
     if (d.loading) return;
+
+    // turbo (opcional): si venimos desde drawer, cacheamos
     cacheFromPagosReales(reciboId);
-    openPrint(reciboId);
+
+    // fuente de verdad: print puede reconstruir por API con alumnoId
+    openPrint(reciboId, d.alumnoId);
   }
 
   // =========================
@@ -263,12 +263,10 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
     if (!d.alumnoId) return setExtraError('No hay alumno seleccionado.');
 
     const conceptoSel = (conceptosPago.items ?? []).find((c) => c.conceptoId === extraConceptoId);
-
     if (!conceptoSel) {
       return setExtraError('El concepto seleccionado no existe o ya no está activo.');
     }
 
-    // ✅ Aseguramos que mandamos el valor correcto (codigo/code si existe)
     const conceptoForBackend = resolveConceptoForCreate(conceptoSel);
     if (!conceptoForBackend) {
       return setExtraError('No se pudo resolver el concepto para el backend.');
@@ -283,12 +281,8 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
         montoManual: amountNum,
         fechaPago: extraDate,
         tipoPagoId: extraTipoPagoId,
-        comentario: conceptoSel.nombre, // comentario visible (opcional)
+        comentario: conceptoSel.nombre, // opcional (visible)
       };
-
-      // 🧪 DEBUG — útil cuando el backend truena al generar QR
-      console.log('[DEBUG] ReciboCreate payload:', payload);
-      console.log('[DEBUG] ReciboCreate payload JSON:', JSON.stringify(payload, null, 2));
 
       const created = await RecibosService.create(payload);
 
@@ -341,17 +335,24 @@ function AlumnoDrawerInner({ alumno, readOnly }: { alumno: Alumno; readOnly: boo
       {d.tab === 'PROYECCION' ? (
         <ProyeccionPanel
           rows={d.projection}
+          alumnoId={d.alumnoId}
           onPay={(row) => {
             if (!canWrite) return;
             setPayRow(row);
             setPayOpen(true);
           }}
-          onReceipt={(reciboId) => openReceipt(reciboId)}
+          onReceipt={(reciboId, alumnoId) => openPrint(reciboId, alumnoId)}
           onExportPdf={exportProjectionPdf}
         />
       ) : null}
 
-      {d.tab === 'PAGOS' ? <PagosPanel pagos={d.pagosReales} /> : null}
+      {d.tab === 'PAGOS' ? (
+        <PagosPanel
+          pagos={d.pagosReales}
+          alumnoId={d.alumnoId}
+          onPrint={(reciboId: number, alumnoId: string) => openPrint(reciboId, alumnoId)}
+        />
+      ) : null}
 
       {d.tab === 'EXTRAS' && canWrite ? (
         <>
